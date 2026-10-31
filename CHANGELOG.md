@@ -14,6 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ## v1.0.1-pre
 
+- DevEx: Added `install-from-github-release.py`, a stdlib-only script that installs a released wheel from any GitHub repository.
+
 ---
 
 ## v1.0.0 [released: 2026-10-31]

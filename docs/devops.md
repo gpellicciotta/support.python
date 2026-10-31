@@ -41,15 +41,16 @@ This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packa
 ### Scripts
 Cross-platform Python scripts under `scripts/`; each supports `--help` and `--version`.
 
-| Script                         | Purpose                                                                             |
-| :----------------------------- | :---------------------------------------------------------------------------------- |
-| `bootstrap-dev-environment.py` | Create the venv, install, lint, test, and build                                     |
-| `devops.py`                    | Run `lint`, `test`, `build`, `check`, or `clean` in the venv                        |
-| `kill-processes.py`            | Terminate processes by PID while protecting the script and its ancestors            |
-| `backup-git-repos.py`          | Back up Git repos to bare mirrors and encrypted 7-Zip archives; restore from either |
-| `reset-history.py`             | Restart a repo from one root commit and recreate its GitHub remote (destructive)    |
-| `migrate-namespace.py`         | Rename a namespace word across paths, text, version, and changelog, then release    |
-| `extract-release-notes.py`     | Print one version's CHANGELOG.md section for GitHub Release notes                   |
+| Script                           | Purpose                                                                             |
+| :------------------------------- | :---------------------------------------------------------------------------------- |
+| `bootstrap-dev-environment.py`   | Create the venv, install, lint, test, and build                                     |
+| `devops.py`                      | Run `lint`, `test`, `build`, `check`, or `clean` in the venv                        |
+| `kill-processes.py`              | Terminate processes by PID while protecting the script and its ancestors            |
+| `backup-git-repos.py`            | Back up Git repos to bare mirrors and encrypted 7-Zip archives; restore from either |
+| `reset-history.py`               | Restart a repo from one root commit and recreate its GitHub remote (destructive)    |
+| `migrate-namespace.py`           | Rename a namespace word across paths, text, version, and changelog, then release    |
+| `extract-release-notes.py`       | Print one version's CHANGELOG.md section for GitHub Release notes                   |
+| `install-from-github-release.py` | Install a released wheel from any GitHub repo (defaults to this project)            |
 
 `_cli_common.py`, `_tool_common.py`, `_harness.py`, and `_repo_common.py` are shared helper modules.
 
