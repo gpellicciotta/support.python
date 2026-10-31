@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "support-python"
+version = "1.0.0-pre"
+description = "General-purpose Python support library and CLI"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.9"
+authors = [
+  { name = "Giovanni Pellicciotta" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.6.0", "build>=1.0.0"]
+
+[project.urls]
+Repository = "https://github.com/gpellicciotta/support.python"
+
+[project.scripts]
+support-python = "support_python.cli:main"
+
+[tool.ruff]
+line-length = 132
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
