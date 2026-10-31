@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
@@ -11,6 +12,12 @@ from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 GIT_ENV = ["-c", "user.name=Test", "-c", "user.email=test@example.com"]
+GIT_IDENTITY = {
+    "GIT_AUTHOR_NAME": "Test",
+    "GIT_AUTHOR_EMAIL": "test@example.com",
+    "GIT_COMMITTER_NAME": "Test",
+    "GIT_COMMITTER_EMAIL": "test@example.com",
+}
 
 CHANGELOG = """# Versioned Changes
 
@@ -56,6 +63,7 @@ class TestRepoScripts(unittest.TestCase):
             input=stdin,
             text=True,
             capture_output=True,
+            env={**os.environ, **GIT_IDENTITY},
         )
 
     def test_rewrite_then_freeze(self) -> None:
