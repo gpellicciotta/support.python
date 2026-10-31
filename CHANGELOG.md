@@ -12,7 +12,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.0-pre
+## v1.0.0 [released: 2026-10-31]
 
 - CLI: Added `CliLogger` and `LogLevel` for guideline-compliant CLI logging with severity indicators and log files.
 - CLI: Added `build_action_parser`, `print_version`, and `print_help` for action-oriented command-line tools.
