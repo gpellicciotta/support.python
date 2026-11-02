@@ -223,3 +223,6 @@ work/
 # Log files
 logs/
 **/*.log
+.plan/
+/PLAN.md
+/plan.code-workspace
