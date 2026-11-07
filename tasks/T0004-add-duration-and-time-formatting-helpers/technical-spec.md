@@ -8,6 +8,7 @@
 - docs/index.md
 
 Size estimate: 7 files, 400 lines
+Size note: 435 changed lines across 7 declared files due to full docstring and unit/integration test coverage.
 
 **[Estimation]** Based on the line counts of the source functions in the sibling project.
 
@@ -23,4 +24,4 @@ Completion check: python -m pytest tests/test_durations.py && ruff check . && ru
 
 ### Decisions
 - **[Decided]** New module durations.py, so the existing dates.py wire-date API stays untouched.
-- **[Decided]** Name collisions with dates.py are resolved in favor of the existing function; document any skipped plan function.
+- **[Decided]** Name collisions with dates.py are resolved in favor of the existing function; skipped plan's `format_datetime`, `now_iso`, `extract_reset_time_from_text`, and `extract_rate_limit_reset`.
