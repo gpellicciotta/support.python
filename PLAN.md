@@ -16,7 +16,7 @@ An overview of all tasks and their planning.
 - [x] T0017 Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry.
 - [x] T0016 Refactor the ported Markdown linter into registered rule classes with loadable profiles.
 - [x] T0009 Add subprocess output streaming with logging.
-- [ ] T0018 [owner: @gemini] Implement the processes CLI and standalone script with safe kill and filtered list commands.
+- [x] T0018 Implement the processes CLI and standalone script with safe kill and filtered list commands.
 
 
 ---
