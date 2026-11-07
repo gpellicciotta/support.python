@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2593.2, input: 662578, output: 125098, cache_read: 27062786}
+review_status: pending
+review_round: 1
 ---
 # T0015: Port the agent-files sync into support_python unchanged with an agent-files CLI and ported tests
 
@@ -66,4 +70,7 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_update_glob
   - Files touched: 5.
   - Lines touched: 26.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
