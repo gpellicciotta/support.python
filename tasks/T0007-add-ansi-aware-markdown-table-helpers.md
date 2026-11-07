@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1722.0, input: 324322, output: 61208, cache_read: 5957198}
+review_status: pending
+review_round: 1
 ---
 # T0007: Add ANSI-aware Markdown table helpers
 
@@ -56,4 +60,7 @@ Add ANSI-aware Markdown table helpers to support_python, extracted from the plan
   - Files touched: 7.
   - Lines touched: 626.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
