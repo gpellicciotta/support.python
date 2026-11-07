@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2044.8, input: 976078, output: 48250, cache_read: 23124486}
+review_status: pending
+review_round: 1
 ---
 # T0014: Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests
 
@@ -59,4 +63,7 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdo
 - [2026-11-07] **[Doc]**
   Updated CHANGELOG.md, pyproject.toml, and docs/index.md with support-python lint markdown.
   - Touched undeclared docs/index.md and pyproject.toml required by Step 6.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
