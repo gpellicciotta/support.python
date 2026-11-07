@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1210.6, input: 343862, output: 29096, cache_read: 7412686}
+review_status: pending
+review_round: 1
 ---
 # T0008: Add a task rate limiter
 
@@ -53,4 +57,7 @@ Add a sliding-window rate limiter to support_python, extracted from the plan pro
   - Files touched: 7.
   - Lines touched: 239.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
