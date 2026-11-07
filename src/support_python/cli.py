@@ -49,7 +49,7 @@ PROG: str = "support-python"
 DESCRIPTION: str = "Python support CLI - reference implementation of the shared CLI version/help helper"
 
 #: Supported action subcommands for the demo CLI.
-ACTIONS: list[str] = ["greet", "backup", "version", "help"]
+ACTIONS: list[str] = ["greet", "backup", "lint", "version", "help"]
 
 #: Type alias for an action handler callable returning an integer exit code.
 ActionHandler = Callable[..., int]
@@ -523,6 +523,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         from .backup import main as backup_main
 
         return backup_main(raw_args[1:])
+    if raw_args and raw_args[0] == "lint":
+        from .markdown_lint import main as markdown_lint_main
+
+        rest = raw_args[1:]
+        if not rest or rest[0] in ("help", "-h", "--help", "version", "--version"):
+            return markdown_lint_main(rest)
+        if rest[0] != "markdown":
+            logger = CliLogger()
+            logger.error(f"Unknown lint target: '{rest[0]}'\nUsage: {PROG} lint markdown [paths...] [--fix] [--offline]")
+            logger.close()
+            return 2
+        md_args = rest[1:]
+        if not md_args or md_args[0] not in ("check", "fix", "help", "version", "-h", "--help", "--version"):
+            md_args = ["check", *md_args]
+        return markdown_lint_main(md_args)
 
     parser = _build_demo_parser()
     args = parser.parse_args(argv)

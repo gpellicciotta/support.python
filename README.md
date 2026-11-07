@@ -35,6 +35,7 @@ On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
 ```bash
 python -m pip install .
 support-python greet Alice
+support-python lint markdown [paths] [--fix] [--offline]
 support-python --version
 support-python --help
 ```
@@ -494,6 +495,12 @@ issues = check_table_alignment(table)
 - `format_markdown_table(headers, rows, alignments=None)` formats aligned GFM tables using visible cell widths.
 - `format_markdown_table_block(table_lines)` reformats raw table lines in place while preserving leading blockquote prefixes.
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
+
+## Markdown linter
+`support_python.markdown_lint` provides `MarkdownLinter`, `LintIssue`, and `discover_markdown_files`, exposed on the CLI as `support-python lint markdown`:
+```bash
+support-python lint markdown [paths...] [--fix] [--offline] [--rules MD001,MD017] [--exclude GLOB]
+```
 
 ## Duration and time formatting helpers
 The package exports duration and timestamp helpers from [durations.py](src/support_python/durations.py), also available through `support_python.durations`.
