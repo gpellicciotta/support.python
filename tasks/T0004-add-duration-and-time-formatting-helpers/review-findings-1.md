@@ -3,7 +3,7 @@ task: T0004
 round: 1
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-07T14:27:11Z
+reviewed_at: 2026-11-07T14:29:50Z
 reviewed_commit: "0b022dc"
 base_commit: "3d2ba87"
 branch: task/T0004-add-duration-and-time-formatting-helpers
