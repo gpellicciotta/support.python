@@ -1,13 +1,14 @@
 ### Declared Files
-- src/support_python/devops.py (or a new streaming module)
+- src/support_python/devops.py
 - tests/test_streaming.py
 - src/support_python/__init__.py
+- pyproject.toml
 - CHANGELOG.md
 - README.md
 - CLAUDE.md
 - docs/index.md
 
-Size estimate: 7 files, 300 lines
+Size estimate: 8 files, 300 lines
 
 **[Estimation]** Based on the line counts of the source functions in the sibling project.
 
