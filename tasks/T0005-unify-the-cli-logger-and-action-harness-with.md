@@ -1,11 +1,12 @@
 ---
 id: T0005
-owner: ~
+owner: "@gemini"
+session: antigravity-20261107-334af6
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0005-unify-the-cli-logger-and-action-harness-with
+worktree: .plan/work/T0005-unify-the-cli-logger-and-action-harness-with
+status: active
+started_at: "2026-11-07T14:43:02Z"
 ended_at: —
 review: agent
 preview: none
@@ -17,14 +18,43 @@ protocol: standard
 Unify the CLI logger and action harness: bring the generic features of dev-guidelines' ToolLogger and ToolHarness, and plan's TeeLogger, into CliLogger and cli.py. Features: registered actions with handlers, fallback action, exit-code table, startup and exit banners, log-level resolution, build-metadata version suffix. Out of scope: plan's agent stream formatting (JsonStreamLogger, StreamOutputFormatter). Switching consumers over is a follow-up.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Diff CliLogger, build_action_parser, ToolLogger, ToolHarness, and TeeLogger; list each behavior to keep, merge, or drop.
-- [ ] **[Implement]** Author the unit and integration tests listed in the technical specification.
-- [ ] **[Verify]**    Run the new tests and confirm they fail before implementation.
-- [ ] **[Implement]** Implement the merged logger and harness in logging.py and cli.py, keeping the existing public API compatible.
-- [ ] **[Verify]**    Run pytest, ruff check, and ruff format --check until all pass.
-- [ ] **[Doc]**       Update CHANGELOG.md, README.md, CLAUDE.md architecture list, and docs/index.md.
+- [x] **[Read]**      Diff CliLogger, build_action_parser, ToolLogger, ToolHarness, and TeeLogger; list each behavior to keep, merge, or drop.
+- [x] **[Implement]** Author the unit and integration tests listed in the technical specification.
+- [x] **[Verify]**    Run the new tests and confirm they fail before implementation.
+- [x] **[Implement]** Implement the merged logger and harness in logging.py and cli.py, keeping the existing public API compatible.
+- [x] **[Verify]**    Run pytest, ruff check, and ruff format --check until all pass.
+- [x] **[Doc]**       Update CHANGELOG.md, README.md, CLAUDE.md architecture list, and docs/index.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-10-31] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-07] **[Read]**
+  Diffed CliLogger, build_action_parser, ToolLogger, ToolHarness, and TeeLogger across logging and CLI modules.
+  - Keep existing CliLogger and build_action_parser API compatible.
+  - Merge ToolHarness, Action, ToolLogger, TeeLogger, resolve_log_level, and build-metadata version helpers.
+  - Drop plan-specific JsonStreamLogger and StreamOutputFormatter.
+
+- [2026-11-07] **[Implement]**
+  Authored unit and subprocess integration tests in test_logging.py and test_cli.py.
+
+- [2026-11-07] **[Verify]**
+  Ran pytest on test_cli.py and test_logging.py; confirmed 8 new tests fail before implementation.
+
+- [2026-11-07] **[Implement]**
+  Implemented unified CliLogger, ToolLogger, TeeLogger, ToolHarness, Action, and build-metadata version helpers.
+  - Size note: 9 files and 997 lines; single CLI subsystem cannot split cleanly.
+
+- [2026-11-07] **[Verify]**
+  Verified pytest, ruff check, and ruff format --check pass cleanly.
+
+- [2026-11-07] **[Doc]**
+  Updated CHANGELOG.md, README.md, CLAUDE.md, and docs/index.md.
+
+- [2026-11-07] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 9.
+  - Lines touched: 997.
+  - Reopenings: 0.
+
