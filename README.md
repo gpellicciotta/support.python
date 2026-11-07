@@ -438,3 +438,21 @@ safe_kill([pid])  # Skips the current process and its ancestors with a warning.
 - `terminate_process(pid, force=False)` signals one positive PID directly; callers must enforce ancestor protection first.
 - `terminate_process_tree(pid)` terminates a process and its child tree, returning `False` on invalid PIDs or failures.
 - `safe_kill(pids, logger=None, force=False)` skips the current process and ancestors with a warning and returns `bool`.
+
+## Atomic text file helpers
+The package exports atomic file helpers from [files.py](src/support_python/files.py), also available through `support_python.files`.
+All helpers use only the Python standard library.
+
+```python
+from pathlib import Path
+from support_python import atomic_replace, atomic_write_text, read_text_retrying
+
+path = Path("state.txt")
+atomic_write_text(path, "consistent text\n")
+content = read_text_retrying(path, errors="strict")
+```
+
+- `atomic_write_text(path, content, newline=None)` writes UTF-8 text via a temporary sibling file so readers never see partial content.
+- `atomic_write_text` preserves existing POSIX permission bits, omits the target filename from the temporary name, and removes failed temporaries.
+- `atomic_replace(src, dst, max_retries=15, base_delay=0.01)` replaces `dst` with `src`, retrying transient `PermissionError` and Windows error `5` or `32`.
+- `read_text_retrying(path, max_retries=10, base_delay=0.005, errors="replace")` reads UTF-8 text while retrying transient `PermissionError` locks during concurrent renames.

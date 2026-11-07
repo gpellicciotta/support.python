@@ -90,6 +90,11 @@ from .errors import (
     is_not_found_message,
     map_error,
 )
+from .files import (
+    atomic_replace,
+    atomic_write_text,
+    read_text_retrying,
+)
 from .httpd import (
     EmbeddedStaticServer as HttpServer,
     StaticServerManager as HttpServerManager,
@@ -229,6 +234,10 @@ __all__ = [
     "get_standard_password_hash",
     # Env
     "read_env_file",
+    # Files
+    "atomic_replace",
+    "atomic_write_text",
+    "read_text_retrying",
     # Errors
     "ApiError",
     "AuthenticationError",

@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.8-pre
+## v1.0.10-pre
 
+- BackEnd: Added atomic UTF-8 text write, replacement, and retry-hardened read helpers in [files.py](src/support_python/files.py).
 - BackEnd: Added OS process hierarchy, start time, liveness, termination, and ancestor-protected `safe_kill` helpers.
 - BackEnd: Added Git execution and repository queries with explicit failure results and porcelain parsing.
 - BackEnd: Added locking with a `Lock` base class, re-entrant `FileLock`, `NullLock`, and a `create_lock` backend factory.
