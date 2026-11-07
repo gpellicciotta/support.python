@@ -14,11 +14,13 @@ protocol: standard
 size_status: approved
 size_estimate: 11 files, 1358 lines
 usage:
-  worker: {turns: 2, duration_s: 3600.8, input: 10484, output: 2534}
+  worker: {turns: 4, duration_s: 3921.2, input: 1507280, output: 215952, cache_read: 23047400}
 work_duration: 1811.0
 size_approved: 11 files, 1358 lines
 size_approved_by: "@gpellicciotta"
 size_approved_at: "2026-11-07T17:43:31Z"
+review_status: pending
+review_round: 1
 ---
 # T0018: Implement the processes CLI and standalone script with safe kill and filtered list commands
 
@@ -64,4 +66,7 @@ Expose both a standalone script and a console entry point in pyproject.toml, rep
 
 - [2026-11-07] **[Doc]**
   Updated CHANGELOG.md, README.md, docs/index.md, and companion validation-proof.md.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
