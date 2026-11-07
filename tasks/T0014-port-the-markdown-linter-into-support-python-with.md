@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 2044.8, input: 976078, output: 48250, cache_read: 23124486}
-review_status: pending
+  review: {turns: 2, duration_s: 320.8, input: 44, output: 9328, cache_read: 872072, cache_write: 62128}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1214.9
 ---
 # T0014: Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests
 
@@ -66,4 +69,22 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdo
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The port is close to the original and mostly meets the goals, but it has one behavioral regression that the.
+  - Findings: [review-findings-1.md](T0014-port-the-markdown-linter-into-support-python-with/review-findings-1.md).
+
+- [2026-11-07] **[Decided]**
+  Resolved REPO_ROOT via find_project_root(Path.cwd()), root-relative MD014 links against current_project_root, and sibling GitHub URLs against the workspace root.
+  - Bumped active version to v1.0.19-pre in CHANGELOG.md and pyproject.toml.
+
+- [2026-11-07] **[Implement]**
+  Restored original dev-guidelines test fixtures, added root-relative MD014 test, and documented support-python lint markdown in README.md.
+  - Touched undeclared README.md required by Round 1 review.
+
+- [2026-11-07] **[Verify]**
+  Verified 654 passed tests, clean ruff checks, and matching dev-guidelines lint output (differing only in version banner and elapsed time).
+  - Files touched: 5.
+  - Lines touched: 100.
+  - Reopenings: 0.
 
