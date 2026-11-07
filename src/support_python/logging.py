@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -71,6 +71,8 @@ class LogLevel:
             ValueError: If the string cannot be parsed as a valid level.
         """
         cleaned = level_str.strip().upper()
+        if cleaned == "WARN":
+            return LogLevel.WARNING
         for value, name in LogLevel._NAMES:
             if name == cleaned:
                 return value
@@ -78,6 +80,25 @@ class LogLevel:
             return int(cleaned)
         except ValueError as exc:
             raise ValueError(f"Value '{level_str}' cannot be parsed as a valid level") from exc
+
+
+#: Mapping of standard level names to padded 11-character severity tags.
+SEVERITY_INDICATORS: dict[str, str] = {
+    "ERROR": "**[ERROR]**",
+    "WARN": "**[WARN]** ",
+    "WARNING": "**[WARN]** ",
+    "INFO": "**[INFO]** ",
+    "DEBUG": "**[DEBUG]**",
+}
+
+#: Mapping of standard level names to numeric threshold values.
+LOG_LEVELS: dict[str, int] = {
+    "DEBUG": LogLevel.DEBUG,
+    "INFO": LogLevel.INFO,
+    "WARN": LogLevel.WARNING,
+    "WARNING": LogLevel.WARNING,
+    "ERROR": LogLevel.ERROR,
+}
 
 
 def format_severity_indicator(level: Optional[str]) -> str:
@@ -93,15 +114,31 @@ def format_severity_indicator(level: Optional[str]) -> str:
     if not level:
         return ""
     clean = level.strip().upper()
-    if clean in ("WARN", "WARNING"):
-        return "**[WARN]** "
-    if clean == "INFO":
-        return "**[INFO]** "
-    if clean == "ERROR":
-        return "**[ERROR]**"
-    if clean == "DEBUG":
-        return "**[DEBUG]**"
-    return f"**[{clean:<5}]**"
+    if clean in SEVERITY_INDICATORS:
+        return SEVERITY_INDICATORS[clean]
+    tag = f"**[{clean:<5}]**"
+    return f"{tag:<11}"
+
+
+def format_origin(origin: Optional[str]) -> str:
+    """Format optional origin tag as ``<origin>`` per logging guidelines."""
+    if not origin or not origin.strip():
+        return ""
+    orig_clean = origin.strip()
+    if not ((orig_clean.startswith("<") and orig_clean.endswith(">")) or (orig_clean.startswith("[") and orig_clean.endswith("]"))):
+        orig_clean = f"<{orig_clean}>"
+    return orig_clean
+
+
+def format_utc_timestamp(ts: Optional[datetime] = None) -> str:
+    """Format UTC timestamp as ``[YYYY-MM-DD HH:MM:SS]`` per logging guidelines."""
+    if ts is None:
+        ts = datetime.now(timezone.utc)
+    elif ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    else:
+        ts = ts.astimezone(timezone.utc)
+    return f"[{ts.strftime('%Y-%m-%d %H:%M:%S')}]"
 
 
 def format_log_message(
@@ -110,6 +147,8 @@ def format_log_message(
     origin: Optional[str] = None,
     timestamp: Optional[datetime] = None,
     for_file: bool = True,
+    *,
+    retain_debug_on_console: bool = False,
 ) -> str:
     """Format a single or multi-line log message adhering to project logging guidelines.
 
@@ -126,6 +165,7 @@ def format_log_message(
         origin: Optional component or logger origin identifier (enclosed in angle brackets).
         timestamp: Optional datetime timestamp. Defaults to current local time.
         for_file: Whether to format for log file (includes timestamp and full severity tags).
+        retain_debug_on_console: If True, retain ``**[DEBUG]**`` on console streams when ``for_file=False``.
 
     Returns:
         Formatted log line ending with a newline, or empty string if message is empty.
@@ -144,7 +184,7 @@ def format_log_message(
             parts.append(format_severity_indicator(lvl_clean))
         else:
             # On stdout/stderr, only emit ERROR and WARN indicators; strip other severity indicators
-            if lvl_clean in ("WARN", "WARNING", "ERROR"):
+            if lvl_clean in ("WARN", "WARNING", "ERROR") or (retain_debug_on_console and lvl_clean == "DEBUG"):
                 parts.append(format_severity_indicator(lvl_clean))
 
     if origin:
@@ -171,6 +211,61 @@ def format_log_message(
     return "\n".join(formatted_lines) + "\n"
 
 
+def resolve_log_level(explicit_level: Optional[str], debug: bool = False, default: str = "INFO") -> str:
+    """Resolve effective log level threshold, where explicit ``--log-level`` overrides ``--debug``."""
+    if explicit_level is not None and explicit_level.strip():
+        return explicit_level.strip().upper()
+    return "DEBUG" if debug else default.strip().upper()
+
+
+def normalize_log_level(level_str: Optional[str]) -> Optional[str]:
+    """Validate and normalize a log level string to its canonical :class:`LogLevel` name."""
+    if level_str is None:
+        return None
+    try:
+        return LogLevel.to_string(LogLevel.parse(level_str))
+    except ValueError:
+        return None
+
+
+def format_invocation_start(
+    tool_name: str,
+    version: str,
+    action: str,
+    details: Optional[Union[str, dict[str, Any]]] = None,
+) -> str:
+    """Format standard invocation log header containing tool name, version, and requested action."""
+    header = f"Starting {tool_name} v{version} (action: {action})"
+    if not details:
+        return header
+    if isinstance(details, dict):
+        items = [f"{k}: {v}" for k, v in details.items() if v is not None and v != "" and v != []]
+        return f"Starting {tool_name} v{version} (action: {action}, {', '.join(items)})" if items else header
+    return f"Starting {tool_name} v{version} (action: {action}, {details})"
+
+
+def configure_safe_console_encoding() -> None:
+    """Configure stdout and stderr stream encoding to UTF-8 and replace unencodable characters if supported."""
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            try:
+                stream.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
+
+
+def safe_stdout_write(text: str) -> None:
+    """Write text to ``sys.stdout``, replacing characters that cannot be encoded by the console encoding."""
+    try:
+        sys.stdout.write(text)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "ascii"
+        try:
+            sys.stdout.write(text.encode(enc, errors="replace").decode(enc))
+        except Exception:
+            sys.stdout.write(text.encode("ascii", errors="replace").decode("ascii"))
+
+
 class CliLogger:
     """Logger handling file output, stdout/stderr, verbose progress, and debug filtering.
 
@@ -188,6 +283,9 @@ class CliLogger:
         verbose: bool = False,
         debug: bool = False,
         origin: Optional[str] = None,
+        *,
+        log_file: Optional[Union[Path, str]] = None,
+        log_level: Optional[Union[int, float, str]] = None,
     ) -> None:
         """Initialize the CLI logger.
 
@@ -197,11 +295,32 @@ class CliLogger:
             debug: If True, debug messages are written to the log file.
             origin: Optional default origin tag for messages.
         """
-        self.log_path = Path(log_path) if log_path else None
+        chosen_path = log_path if log_path is not None else log_file
+        self.log_path = Path(chosen_path) if chosen_path else None
+        self.log_file = self.log_path
         self.verbose = verbose
         self.debug_enabled = debug
         self.origin = origin
         self.start_time = time.monotonic()
+        self._explicit_level_set = log_level is not None
+
+        if isinstance(log_level, (int, float)):
+            self.min_severity: Union[int, float] = log_level
+            self.effective_level = LogLevel.to_string(log_level)
+        else:
+            self.effective_level = resolve_log_level(
+                explicit_level=str(log_level) if log_level is not None else None,
+                debug=debug,
+                default="INFO",
+            )
+            try:
+                self.min_severity = LogLevel.parse(self.effective_level)
+            except ValueError:
+                self.min_severity = LogLevel.INFO
+
+        self.threshold_val = self.min_severity
+        self.debug_enabled = self.min_severity <= LogLevel.DEBUG
+        self.debug_flag = debug
         if self.log_path:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -215,12 +334,13 @@ class CliLogger:
 
     def log(
         self,
-        message: str,
+        message: str = "",
         level: Optional[str] = None,
         origin: Optional[str] = None,
         timestamp: Optional[datetime] = None,
         to_stdout: bool = True,
         to_stderr: bool = False,
+        to_file: bool = True,
     ) -> None:
         """Emit a log message to the log file and to stdout/stderr based on configuration.
 
@@ -234,26 +354,52 @@ class CliLogger:
         """
         ts = timestamp or datetime.now()
         effective_origin = origin if origin is not None else self.origin
-
-        # Debug level filtering: only written to file when debug_enabled is True; never to stdout/stderr
-        if level and level.strip().upper() == "DEBUG":
-            if self.debug_enabled:
-                file_text = format_log_message(message, level="DEBUG", origin=effective_origin, timestamp=ts, for_file=True)
-                self._write_file(file_text)
+        if not message and not level and not effective_origin:
             return
 
+        lvl_clean = level.strip().upper() if level else ""
+        if lvl_clean:
+            if lvl_clean == "DEBUG" and not self._explicit_level_set:
+                if not self.debug_enabled:
+                    return
+            else:
+                try:
+                    msg_severity: Union[int, float] = LogLevel.parse(lvl_clean)
+                except ValueError:
+                    msg_severity = LogLevel.INFO
+                if msg_severity < self.min_severity:
+                    return
+
         # Write to log file if configured
-        file_text = format_log_message(message, level=level, origin=effective_origin, timestamp=ts, for_file=True)
-        self._write_file(file_text)
+        if to_file:
+            file_text = format_log_message(message, level=level, origin=effective_origin, timestamp=ts, for_file=True)
+            self._write_file(file_text)
 
         # Output to stdout/stderr
-        stdout_text = format_log_message(message, level=level, origin=effective_origin, timestamp=ts, for_file=False)
+        stdout_text = format_log_message(
+            message,
+            level=level,
+            origin=effective_origin,
+            timestamp=ts,
+            for_file=False,
+            retain_debug_on_console=(lvl_clean == "DEBUG"),
+        )
         if to_stderr:
             sys.stderr.write(stdout_text)
             sys.stderr.flush()
         elif to_stdout:
-            sys.stdout.write(stdout_text)
+            safe_stdout_write(stdout_text)
             sys.stdout.flush()
+
+    def emit(self, message: str) -> None:
+        """Emit machine-parseable command output directly to stdout and append a timestamped entry to the log file."""
+        self.log(message, level=None, origin=None, to_stdout=True, to_file=True)
+
+    def write(self, text: str) -> None:
+        """Write raw text string through standard logging."""
+        cleaned = text.rstrip("\r\n")
+        if cleaned.strip():
+            self.log(cleaned, level="INFO")
 
     def info(self, message: str, origin: Optional[str] = None, to_stdout: bool = True) -> None:
         """Log an informational message.
@@ -303,6 +449,20 @@ class CliLogger:
             origin: Optional origin override.
         """
         self.log(message, level="DEBUG", origin=origin, to_stdout=False)
+
+    def debug_msg(self, message: str, origin: Optional[str] = None) -> None:
+        """Log a diagnostic debug message to both console and log file when threshold permits."""
+        self.log(message, level="DEBUG", origin=origin, to_stdout=True)
+
+    def log_invocation(
+        self,
+        tool_name: str,
+        version: str,
+        action: str,
+        details: Optional[Union[str, dict[str, Any]]] = None,
+    ) -> None:
+        """Log standard tool invocation header to the log file."""
+        self.log(format_invocation_start(tool_name, version, action, details), level="INFO", to_stdout=False, to_file=True)
 
     def log_start(
         self,
@@ -355,10 +515,58 @@ class CliLogger:
         end_msg = f"Completed execution in {duration_str}{summary_text}"
         self.log(end_msg, level="INFO", origin=origin, to_stdout=self.verbose)
 
+    def close(self) -> None:
+        """Compatibility hook for callers that close logger instances."""
+
+
+#: Alias for compatibility with ``dev-guidelines`` tool scripts.
+ToolLogger = CliLogger
+
+#: Alias for compatibility with ``plan`` CLI logging utilities.
+TeeLogger = CliLogger
+
+
+def log_message(
+    msg: str,
+    level: str = "INFO",
+    log_file: Optional[Union[Path, str]] = None,
+    log_level: Optional[str] = None,
+    debug: bool = False,
+    verbose: bool = False,
+    origin: Optional[str] = None,
+) -> None:
+    """Convenience helper to log a single message matching CLI and logging conventions."""
+    logger = CliLogger(log_file=log_file, log_level=log_level, debug=debug, verbose=verbose, origin=origin)
+    is_err = level.strip().upper() in ("WARN", "WARNING", "ERROR")
+    logger.log(msg, level=level, origin=origin, to_stdout=not is_err, to_stderr=is_err)
+
+
+def init_cli_logger(
+    log_file: Optional[Union[Path, str]],
+    log_level: Optional[str] = None,
+    debug: bool = False,
+) -> Optional[CliLogger]:
+    """Initialize a :class:`CliLogger` instance for CLI tool logging if ``log_file`` is specified."""
+    configure_safe_console_encoding()
+    return CliLogger(log_path=Path(log_file), debug=debug, log_level=log_level) if log_file is not None else None
+
 
 __all__ = [
     "CliLogger",
+    "LOG_LEVELS",
     "LogLevel",
+    "SEVERITY_INDICATORS",
+    "TeeLogger",
+    "ToolLogger",
+    "configure_safe_console_encoding",
+    "format_invocation_start",
     "format_log_message",
+    "format_origin",
     "format_severity_indicator",
+    "format_utc_timestamp",
+    "init_cli_logger",
+    "log_message",
+    "normalize_log_level",
+    "resolve_log_level",
+    "safe_stdout_write",
 ]

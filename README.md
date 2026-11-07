@@ -49,20 +49,24 @@ print(format_support_message("Alice"))
 
 ## Shared CLI helpers, tabular output, and session storage
 
-`support_python.cli` provides `build_action_parser`/`print_version`/`print_help`, `support_python.tables` provides
-tabular output formatting (`format_table`/`render_output`), and `support_python.tokens` provides persistent
-session token storage (`FileTokenStore`, `TokenStore`):
+`support_python.cli` provides `ToolHarness`/`Action` (registered actions with handlers, fallback action, exit-code table, startup/exit banners, and `get_full_version`/`resolve_build_metadata` build-metadata version suffixes) alongside `build_action_parser`/`print_version`/`print_help`. `support_python.tables` provides tabular output formatting (`format_table`/`render_output`), and `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`):
 
 ```python
 from dataclasses import dataclass
 from support_python import (
     FileTokenStore,
+    ToolHarness,
     build_action_parser,
     format_table,
     print_help,
     print_version,
     render_output,
 )
+
+
+# Action-oriented CLI harness with standard banners, help, version, and logging
+harness = ToolHarness(name="my-tool", description="My tool description", version="1.0.0")
+harness.add_action("sync", "synchronize local state", handler=lambda args, logger: 0)
 
 
 # Tabular output and JSON formatting
@@ -140,18 +144,21 @@ password_hash = get_standard_password_hash("my-password")
 
 ## CLI logging
 
-`support_python.CliLogger` provides guideline-compliant logging (`general-guidelines.md`'s
-Logging section) for command-line tools, API-similar to the logging package in
-support.java (`LogLevel` naming, `log`/`info`/`warning`/`debug` methods):
+`support_python.CliLogger` (also exported as `ToolLogger` and `TeeLogger`, paired with `resolve_log_level`,
+`normalize_log_level`, `format_invocation_start`, and `init_cli_logger`) provides unified guideline-compliant
+logging for command-line tools:
 
 ```python
-from support_python import CliLogger
+from support_python import CliLogger, resolve_log_level
 
-logger = CliLogger(log_path="run.log", verbose=True, origin="my-tool")
+level = resolve_log_level(explicit_level=None, debug=False, default="INFO")
+logger = CliLogger(log_path="run.log", log_level=level, verbose=True, origin="my-tool")
 logger.log_start("my-tool", "1.0.0", sys.argv, {"key": "value"})
 logger.info("Doing work")
 logger.warning("Something looked off")
+logger.emit("raw-stdout-line")
 logger.log_end("done")
+logger.close()
 ```
 
 ## REST client HTTP transport

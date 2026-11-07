@@ -37,11 +37,8 @@ Dependencies are declared once, in `pyproject.toml` — there is no separate `re
 
 Modules under `src/support_python/` (public symbols are re-exported from the package root):
 
-- `logging.py`: `LogLevel`, `format_severity_indicator`/`format_log_message`, and `CliLogger` —
-  guideline-compliant CLI logging, API-similar to the logging package in support.java.
-- `cli.py`: `build_action_parser`/`print_version`/`print_help` — shared argparse helper for action-oriented
-  CLIs. `main` (the `support-python` entry point, `greet`/`version`/`help` actions) is a reference
-  implementation for downstream consumers.
+- [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger` (`ToolLogger`/`TeeLogger` aliases), `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
+- [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers. `main` (`support-python` entry point) is a reference implementation.
 - `net.py`: stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - `git.py`: Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.

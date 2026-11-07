@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.14-pre
+## v1.0.15-pre
 
+- CLI: Unified `CliLogger`, `ToolLogger`, `TeeLogger`, `ToolHarness`, and build-metadata version helpers in [logging.py](src/support_python/logging.py) and [cli.py](src/support_python/cli.py).
 - BackEnd: Added sliding-window `TaskRateLimiter` in [ratelimit.py](src/support_python/ratelimit.py) to cap task dispatches across configurable time windows.
 - BackEnd: Added duration parsing, human-readable duration formatting, and relative epoch formatting helpers in [durations.py](src/support_python/durations.py).
 - DevEx: Expanded `CloudSqlProxyManager` to locate `cloud-sql-proxy` outside `PATH` and fail cleanly when Docker is missing.

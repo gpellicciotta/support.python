@@ -9,6 +9,8 @@ Overview of all documentation for the `support-python` project.
 - [Requirements](requirements.md): High-level goals, functional scope, and technical requirements.
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release
   process.
+- [CLI harness and helpers](../README.md#shared-cli-helpers-tabular-output-and-session-storage): Action-oriented `ToolHarness`, `Action`, `build_action_parser`, version/help banners, and build-metadata version formatting.
+- [CLI logging](../README.md#cli-logging): Unified `CliLogger` (`ToolLogger`/`TeeLogger`), `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
 - [Process helpers](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, start-time lookup, liveness checks, termination, and safe kill.
