@@ -56,6 +56,7 @@ from .dates import (
     to_wire_date,
 )
 from .devops import (
+    EXIT_COMMAND_NOT_FOUND,
     CloudSqlProxyManager,
     LocalDockerManager,
     LocalMailManager,
@@ -63,7 +64,10 @@ from .devops import (
     LocalServerManager,
     LocalVerifier,
     resolve_cloud_sql_proxy_bin,
+    resolve_executable,
     run_step,
+    run_step_command,
+    stream_subprocess,
 )
 from .durations import (
     format_duration,
@@ -391,13 +395,17 @@ __all__ = [
     "run_tour",
     # DevOps
     "CloudSqlProxyManager",
+    "EXIT_COMMAND_NOT_FOUND",
     "LocalDockerManager",
     "LocalMailManager",
     "LocalMySqlManager",
     "LocalServerManager",
     "LocalVerifier",
     "resolve_cloud_sql_proxy_bin",
+    "resolve_executable",
     "run_step",
+    "run_step_command",
+    "stream_subprocess",
     # Version
     "get_package_version",
     "get_project_version",

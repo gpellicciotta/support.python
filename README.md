@@ -208,19 +208,25 @@ except ApiError as e:
 ```
 
 ## DevOps script helpers and environment managers
-
-`support_python.devops` provides `run_step`, `resolve_cloud_sql_proxy_bin`, `CloudSqlProxyManager`, `LocalDockerManager`,
+`support_python.devops` provides `stream_subprocess`, `run_step_command`, `resolve_executable`, `EXIT_COMMAND_NOT_FOUND`, `run_step`, `resolve_cloud_sql_proxy_bin`, `CloudSqlProxyManager`, `LocalDockerManager`,
 `LocalMySqlManager`, `LocalServerManager`, `LocalMailManager`, and `LocalVerifier` for local developer
-orchestration and deployment scripts. `CloudSqlProxyManager` searches `PATH`, `repo_root`, and user or Cloud SDK `bin` directories, failing cleanly when Docker is missing:
+orchestration and deployment scripts. `stream_subprocess` merges child `stdout`/`stderr` line by line into a `CliLogger` with `stdin=DEVNULL`, logs the command and PID, runs an optional `on_line` callback, and terminates (then kills after 5s) the child on `KeyboardInterrupt`. `CloudSqlProxyManager` searches `PATH`, `repo_root`, and user or Cloud SDK `bin` directories, failing cleanly when Docker is missing:
 
 ```python
 from support_python import (
+    CliLogger,
     CloudSqlProxyManager,
     LocalDockerManager,
     LocalMySqlManager,
     LocalServerManager,
     run_step,
+    run_step_command,
+    stream_subprocess,
 )
+
+# Stream a subprocess line by line to a CliLogger with an optional raw-line callback
+logger = CliLogger(log_path="build.log", origin="runner")
+exit_code = stream_subprocess(["python", "-m", "pytest", "-q"], logger=logger, origin="pytest")
 
 # Manage Docker Engine & Desktop
 docker_mgr = LocalDockerManager()

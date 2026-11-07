@@ -49,9 +49,9 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
 - [durations.py](src/support_python/durations.py): duration and timestamp parsing (`parse_duration_to_seconds`, `parse_iso8601`, `parse_date_or_datetime`) and human-readable/epoch formatting (`format_duration`, `format_short_duration`, `format_epoch`, `format_past_epoch`).
 - [ratelimit.py](src/support_python/ratelimit.py): sliding-window task dispatch rate limiter (`TaskRateLimiter`) with injectable `now` timestamps and a 1-second minimum wait duration when blocked.
 - `errors.py`: REST-client exception hierarchy and status-code mapping helpers.
-- `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers (including non-`PATH` proxy discovery) for ops scripts.
+- [devops.py](src/support_python/devops.py): `stream_subprocess`, `run_step_command`, `resolve_executable`, `EXIT_COMMAND_NOT_FOUND`, and `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers (including non-`PATH` proxy discovery) for ops scripts.
   Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script
-  (see `docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md`).
+  (see [ADR-0001-devops-scripts-toolkit-scope.md](docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md)).
 - `capture.py`, `httpd.py`: headless-Chrome view capture and the embedded static HTTP server.
 - `sql.py`: streaming SQL snapshot anonymizer. `crypto.py`: password hashing and property decryption.
 - `dates.py`, `models.py`, `tables.py`, `tokens.py`, `env.py`, `terminal.py`, `version.py`: wire dates and
