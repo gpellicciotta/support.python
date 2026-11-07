@@ -28,6 +28,10 @@ COPYRIGHT: str = f"Copyright (c) {APP_AUTHOR}"
 
 #: Default project version string resolved from package metadata or pyproject.toml.
 PROJECT_VERSION: str = get_project_version()
+if PROJECT_VERSION == "0.0.0+unknown":
+    PROJECT_VERSION = get_project_version(Path(__file__).resolve().parent)
+if PROJECT_VERSION == "0.0.0+unknown":
+    PROJECT_VERSION = get_package_version("support-python")
 
 #: Standard CLI exit codes mapped to short human-readable descriptions.
 STANDARD_EXIT_CODES: Sequence[Tuple[int, str]] = [
@@ -49,7 +53,7 @@ PROG: str = "support-python"
 DESCRIPTION: str = "Python support CLI - reference implementation of the shared CLI version/help helper"
 
 #: Supported action subcommands for the demo CLI.
-ACTIONS: list[str] = ["greet", "backup", "lint", "version", "help"]
+ACTIONS: list[str] = ["greet", "backup", "lint", "agent-files", "version", "help"]
 
 #: Type alias for an action handler callable returning an integer exit code.
 ActionHandler = Callable[..., int]
@@ -538,6 +542,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if not md_args or md_args[0] not in ("check", "fix", "help", "version", "-h", "--help", "--version"):
             md_args = ["check", *md_args]
         return markdown_lint_main(md_args)
+    if raw_args and raw_args[0] == "agent-files":
+        from .agent_files import main as agent_files_main
+
+        return agent_files_main(raw_args[1:])
 
     parser = _build_demo_parser()
     args = parser.parse_args(argv)

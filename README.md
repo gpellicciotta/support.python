@@ -36,6 +36,7 @@ On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
 python -m pip install .
 support-python greet Alice
 support-python lint markdown [paths] [--fix] [--offline]
+support-python agent-files list|sync|check|review
 support-python --version
 support-python --help
 ```
@@ -500,6 +501,15 @@ issues = check_table_alignment(table)
 `support_python.markdown_lint` provides `MarkdownLinter`, `LintIssue`, and `discover_markdown_files`, exposed on the CLI as `support-python lint markdown`:
 ```bash
 support-python lint markdown [paths...] [--fix] [--offline] [--rules MD001,MD017] [--exclude GLOB]
+```
+
+## Agent files sync
+`support_python.agent_files` synchronizes repository guideline digests and skills into configured AI coding tools, exposed on the CLI as `support-python agent-files`:
+```bash
+support-python agent-files list
+support-python agent-files sync [TOOL...] [--dry-run] [--no-prune]
+support-python agent-files check [TOOL...]
+support-python agent-files review [TOOL...] [--timeout SECONDS]
 ```
 
 ## Duration and time formatting helpers
