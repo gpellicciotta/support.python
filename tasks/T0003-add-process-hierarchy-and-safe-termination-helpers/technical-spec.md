@@ -6,6 +6,7 @@
 - README.md
 - CLAUDE.md
 - docs/index.md
+- pyproject.toml
 
 Size estimate: 7 files, 450 lines
 
@@ -26,3 +27,6 @@ Completion check: python -m pytest tests/test_processes.py && ruff check . && ru
 - **[Decided]** No psutil dependency; the library stays stdlib-only. Use psutil only if the reconciled code already needs it, and then as a lazy optional import.
 - **[Decided]** safe_kill keeps its ancestor-protection guard; terminate_process stays unguarded and documents that callers must protect ancestors.
 - **[Decided]** Pointing scripts/kill-processes.py (and the sibling copies) at the library is a follow-up task, not part of this one.
+- **[Decided]** Added pyproject.toml to synchronize the changelog version, bringing the declared count to eight files.
+
+Size note: Comprehensive docstrings and unit and integration tests for all seven process helpers exceed 400 lines within one subsystem.

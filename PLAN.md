@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [x] T0002 Add git runner and read-only repository helpers.
-- [ ] T0003 Add process hierarchy and safe termination helpers.
+- [x] T0003 Add process hierarchy and safe termination helpers.
 - [x] T0006 Add the locking base class, file lock, null lock, and backend factory.
 - [ ] T0001 Add atomic text write helpers with Windows-safe retries.
 - [ ] T0007 Add ANSI-aware Markdown table helpers.
