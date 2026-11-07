@@ -8,6 +8,7 @@
 - docs/index.md
 
 Size estimate: 7 files, 450 lines
+Size note: Single cohesive module extraction and unit test suite that must merge together.
 
 **[Estimation]** Based on the line counts of the source functions in the sibling project.
 
