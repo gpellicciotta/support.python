@@ -22,27 +22,27 @@ ERROR tests/test_markdown_profiles.py
 1 error in 0.30s
 ```
 
-### Green-Phase Markdown & Profile Test Suite
-Ran the new profile/rule tests, the ported T0014 Markdown linter tests, and the table-formatting tests.
+### Round 1 Rework: Package Layout (`markdown/tables.py`) & Unified Default Profile Resolution
+Moved `src/support_python/markdown.py` into `src/support_python/markdown/tables.py`, removed the `importlib` loader hack in `src/support_python/markdown/__init__.py`, unified CLI profile resolution so no-config and config-without-`profile`-key both use `DEFAULT_PROFILE` (`default`), updated `README.md`, `CLAUDE.md`, `docs/index.md`, `docs/markdown-lint.md`, and `CHANGELOG.md`, and added unit and CLI tests in `tests/test_markdown_profiles.py`.
 
-- Command: `python -m pytest tests/test_markdown_profiles.py tests/test_markdown_lint.py tests/test_markdown.py -q`
-- Exit code: `0`
-
-```text
-........................................................................ [ 56%]
-........................................................                 [100%]
-128 passed, 2 subtests passed in 1.07s
-```
-
-### Full Repository Test Suite & Ruff Checks
-Ran Ruff linting, Ruff formatting verification, and the full repository pytest suite.
-
-- Command: `python -m ruff check src tests; python -m ruff format --check src tests; python -m pytest tests -q`
+- Command: `$env:PYTHONPATH = "src"; python -m ruff check src tests; python -m ruff format --check src tests; python -m pytest tests/test_markdown_profiles.py tests/test_markdown_lint.py tests/test_markdown.py -q`
 - Exit code: `0`
 
 ```text
 All checks passed!
 68 files already formatted
+........................................................................ [ 56%]
+........................................................                 [100%]
+128 passed, 2 subtests passed in 5.60s
+```
+
+### Full Repository Test Suite & Ruff Checks
+Ran Ruff linting, Ruff formatting verification, and the full repository pytest suite.
+
+- Command: `python -m pytest tests -q`
+- Exit code: `0`
+
+```text
 ............................................................ [  7%]
 .............................................................. [ 16%]
 ........................................................................................................ [ 29%]
@@ -64,7 +64,7 @@ Diffed `python -m support_python lint markdown check --profile dev-guidelines --
 - Exit code: `0`
 
 ```text
-Starting lint-markdown v1.3.2-pre+98420d2 with configuration:
+Starting lint-markdown v1.3.2-pre+9b93ace with configuration:
 - Command: check
 - Log file: none
 - Log level: INFO
@@ -83,13 +83,21 @@ tasks_rc= (1, 1) tasks_count= (136, 136) tasks_equal= True
 ```
 
 ### Documentation Lint Verification
-Verified the new documentation and changelog against the Markdown linter.
+Verified the documentation and changelog against the Markdown linter.
 
-- Command: `$env:PYTHONPATH = "src"; python -m support_python lint markdown check --profile dev-guidelines --offline docs/markdown-lint.md`
+- Command: `$env:PYTHONPATH = "src"; python -m support_python lint markdown check --offline CHANGELOG.md docs/markdown-lint.md; python -m support_python lint markdown check --profile dev-guidelines --offline docs/markdown-lint.md`
 - Exit code: `0`
 
 ```text
-Starting lint-markdown v1.3.2-pre+98420d2 with configuration:
+Starting lint-markdown v1.3.2-pre+9b93ace with configuration:
+- Command: check
+- Log file: none
+- Log level: INFO
+- Verbose: false
+- Working directory: C:\Dev-Projects\support.python\.plan\work\T0016-refactor-the-ported-markdown-linter-into-registered-rule
+All 2 markdown files passed linting.
+Finished lint-markdown check in 0.3s with status: succeeded
+Starting lint-markdown v1.3.2-pre+9b93ace with configuration:
 - Command: check
 - Log file: none
 - Log level: INFO

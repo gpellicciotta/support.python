@@ -3,7 +3,7 @@ task: T0016
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-07T18:50:51Z
+reviewed_at: 2026-11-07T18:53:38Z
 reviewed_commit: "9b93ace"
 base_commit: "98420d2"
 branch: task/T0016-refactor-the-ported-markdown-linter-into-registered-rule

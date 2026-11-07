@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 3461.8, input: 766030, output: 180464, cache_read: 19289258}
-review_status: pending
+  review: {turns: 2, duration_s: 325.4, input: 52, output: 11240, cache_read: 1191298, cache_write: 87740}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1914.1
 ---
 # T0016: Refactor the ported Markdown linter into registered rule classes with loadable profiles
 
@@ -68,4 +71,17 @@ Size note: Above the typical line because rule classes replace one 1,600-line mo
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The rule split, registry, and JSON profile loading work.
+  - Findings: [review-findings-1.md](T0016-refactor-the-ported-markdown-linter-into-registered-rule/review-findings-1.md).
+
+- [2026-11-07] **[Implement]**
+  Addressed Round 1 review findings: moved markdown.py to markdown/tables.py, unified default CLI profile resolution, and updated README.md, CLAUDE.md, docs/index.md, and docs/markdown-lint.md.
+
+- [2026-11-07] **[Verify]**
+  Re-verified ruff check, ruff format --check, full pytest suite (752 passed, 3 skipped), and dev-guidelines parity.
+  - Files touched: 13.
+  - Lines touched: 1338 insertions, 508 deletions (net +830).
+  - Reopenings: 0.
 

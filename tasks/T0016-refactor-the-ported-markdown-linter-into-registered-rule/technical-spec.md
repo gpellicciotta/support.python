@@ -1,5 +1,7 @@
 ### Declared Files
+- src/support_python/markdown.py
 - src/support_python/markdown/__init__.py
+- src/support_python/markdown/tables.py
 - src/support_python/markdown/registry.py
 - src/support_python/markdown/rules.py
 - src/support_python/markdown/profiles.py
@@ -8,6 +10,9 @@
 - tests/test_markdown_lint.py
 - tests/test_markdown_profiles.py
 - docs/markdown-lint.md
+- docs/index.md
+- README.md
+- CLAUDE.md
 - CHANGELOG.md
 
 ### Tests
