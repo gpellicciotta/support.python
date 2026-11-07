@@ -6,6 +6,7 @@
 - README.md
 - CLAUDE.md
 - docs/index.md
+- pyproject.toml
 
 Size estimate: 7 files, 350 lines
 
@@ -27,3 +28,4 @@ Completion check: python -m pytest tests/test_files.py && ruff check . && ruff f
 ### Decisions
 - **[Decided]** Merge replace_with_text into atomic_write_text; the write-journal comment in plan is plan-specific.
 - **[Decided]** New module is files.py, exported from the package root like the other modules.
+- **[Decided]** Added pyproject.toml to synchronize the changelog version, bringing the declared count to eight files.
