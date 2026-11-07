@@ -3,6 +3,9 @@
 - src/support_python/agent_files_config.py
 - tests/test_agent_files.py
 - docs/agent-files.md
+- docs/index.md
+- README.md
+- CLAUDE.md
 - CHANGELOG.md
 - pyproject.toml
 
@@ -14,4 +17,4 @@
 
 Completion check: `python -m pytest tests -q`
 Size estimate: 5 files, 300 lines.
-Size note: 6 files and 731 lines because agent_files_config.py, CLI flags, multi-project marker/manifest tests, and docs/agent-files.md must land together for a verifiable parameterization.
+Size note: 9 files and 759 lines because agent_files_config.py, CLI flags, multi-project marker/manifest tests, and synchronized documentation (docs/agent-files.md, docs/index.md, README.md, CLAUDE.md) must land together for a verifiable parameterization.

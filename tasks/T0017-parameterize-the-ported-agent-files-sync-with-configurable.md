@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 3070.2, input: 666484, output: 184732, cache_read: 19552094}
-review_status: pending
+  review: {turns: 2, duration_s: 345.8, input: 56, output: 15934, cache_read: 1546918, cache_write: 111002}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1730.2
 ---
 # T0017: Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry
 
@@ -64,11 +67,26 @@ Size estimate: 5 files, 300 lines.
   - Size note: 6 files and 731 lines keep config, CLI, tests, and docs atomic.
 
 - [2026-11-07] **[Verify]**
-  Verified full pytest suite (task-138), ruff checks, package build (task-144), and empty dev-guidelines dry-run diff.
+  Verified full pytest suite (task-138), ruff checks, package build (task-144), and dev-guidelines dry-run diff identical to baseline.
   - Files touched: 6.
   - Lines touched: 731.
   - Reopenings: 0.
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The code meets the functional goals; the rejection is for documentation drift only.
+  - Findings: [review-findings-1.md](T0017-parameterize-the-ported-agent-files-sync-with-configurable/review-findings-1.md).
+
+- [2026-11-07] **[Doc]**
+  Updated README.md, docs/agent-files.md, docs/index.md, CLAUDE.md, and the --digest help label for review round 1.
+  - Touched undeclared README.md, docs/index.md, and CLAUDE.md to resolve documentation drift.
+  - Size note: 9 files and 759 lines keep config, CLI, tests, and docs atomic.
+
+- [2026-11-07] **[Verify]**
+  Verified agent-files tests, ruff, package build (task-52), and dev-guidelines dry-run diff identical to baseline.
+  - Files touched: 9.
+  - Lines touched: 759.
+  - Reopenings: 0.
 
