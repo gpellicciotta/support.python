@@ -6,11 +6,19 @@ needs: []
 branch: task/T0018-implement-the-processes-cli-and-standalone-script-with
 worktree: .plan/work/T0018-implement-the-processes-cli-and-standalone-script-with
 status: active
-started_at: "2026-11-07T15:52:13Z"
+started_at: "2026-11-07T19:11:09Z"
 ended_at: —
 review: agent
 preview: none
 protocol: standard
+size_status: approved
+size_estimate: 11 files, 1358 lines
+usage:
+  worker: {turns: 2, duration_s: 3600.8, input: 10484, output: 2534}
+work_duration: 1811.0
+size_approved: 11 files, 1358 lines
+size_approved_by: "@gpellicciotta"
+size_approved_at: "2026-11-07T17:43:31Z"
 ---
 # T0018: Implement the processes CLI and standalone script with safe kill and filtered list commands
 
@@ -25,8 +33,8 @@ Expose both a standalone script and a console entry point in pyproject.toml, rep
 - [x] **[Verify]**    Run the new tests and confirm they fail before implementation.
 - [x] **[Implement]** Implement process filtering logic and CLI handlers in processes.py, cli_processes.py, and scripts/processes.py.
 - [x] **[Implement]** Register console script entry point in pyproject.toml and remove obsolete kill-processes.py.
-- [ ] **[Verify]**    Run pytest, ruff check, and ruff format --check until all pass.
-- [ ] **[Doc]**       Update CHANGELOG.md, README.md, and docs/index.md.
+- [x] **[Verify]**    Run pytest, ruff check, and ruff format --check until all pass.
+- [x] **[Doc]**       Update CHANGELOG.md, README.md, and docs/index.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -41,4 +49,19 @@ Expose both a standalone script and a console entry point in pyproject.toml, rep
 
 - [2026-11-07] **[Implement]**
   Implemented process filtering, cli_processes.py, scripts/processes.py, and pyproject.toml entry point, removing obsolete kill-processes.py.
+
+- [2026-11-07] **[Size]**
+  Size approval requested by the work loop: 11 files, 1358 lines exceeds 3x the approved 8 files, 400 lines.
+
+- [2026-11-07] **[Size]**
+  Size approved by @gpellicciotta for 11 files, 1358 lines.
+
+- [2026-11-07] **[Verify]**
+  Verified pytest, ruff check, ruff format --check, and standalone processes CLI execution.
+  - Files touched: 11.
+  - Lines touched: +738 / -620.
+  - Reopenings: 0.
+
+- [2026-11-07] **[Doc]**
+  Updated CHANGELOG.md, README.md, docs/index.md, and companion validation-proof.md.
 

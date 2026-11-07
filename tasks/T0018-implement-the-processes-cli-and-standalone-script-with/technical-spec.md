@@ -2,13 +2,17 @@
 - src/support_python/processes.py
 - src/support_python/cli_processes.py
 - scripts/processes.py
+- scripts/kill-processes.py
 - tests/test_processes.py
 - tests/test_processes_cli.py
+- tests/test_kill_processes.py
 - pyproject.toml
 - CHANGELOG.md
+- README.md
 - docs/index.md
 
-Size estimate: 8 files, 400 lines
+Size estimate: 11 files, 1358 lines
+Size note: Includes removal of obsolete scripts/kill-processes.py and tests/test_kill_processes.py alongside new cross-platform process inspection and CLI modules.
 
 **[Estimation]** Based on existing processes module and kill-processes CLI implementation.
 
