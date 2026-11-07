@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 3604.2, input: 4994, output: 470}
+  worker: {turns: 4, duration_s: 3785.0, input: 931098, output: 100204, cache_read: 20936010}
 work_duration: 1816.4
+review_status: pending
+review_round: 1
 ---
 # T0012: Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing
 
@@ -41,4 +43,7 @@ Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly whe
   - Files touched: 5.
   - Lines touched: 286.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
