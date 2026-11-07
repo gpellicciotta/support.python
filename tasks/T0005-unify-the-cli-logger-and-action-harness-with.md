@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2442.4, input: 548346, output: 178342, cache_read: 12809928}
+review_status: pending
+review_round: 1
 ---
 # T0005: Unify the CLI logger and action harness with dev-guidelines and plan
 
@@ -57,4 +61,7 @@ Unify the CLI logger and action harness: bring the generic features of dev-guide
   - Files touched: 9.
   - Lines touched: 997.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
