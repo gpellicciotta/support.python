@@ -99,6 +99,7 @@ from .locking import (
     Lock,
     LockTimeoutError,
     NullLock,
+    RedisLock,
     create_lock,
 )
 from .logging import (
@@ -251,6 +252,7 @@ __all__ = [
     "Lock",
     "LockTimeoutError",
     "NullLock",
+    "RedisLock",
     "create_lock",
     # Httpd
     "EmbeddedStaticServer",

@@ -173,7 +173,7 @@ def test_file_lock_serializes_subprocesses(tmp_path: Path) -> None:
         assert leave == "exit " + enter.split(" ", 1)[1]
 
 
-@pytest.mark.parametrize("backend", ["redis://h:6379/0", "rediss://h", "mysql://h/db", "mysql+pymysql://h", "jdbc:mysql://h"])
+@pytest.mark.parametrize("backend", ["mysql://h/db", "mysql+pymysql://h", "jdbc:mysql://h"])
 def test_create_lock_distributed_not_available_yet(backend: str) -> None:
     with pytest.raises(NotImplementedError):
         create_lock(backend, key="k")

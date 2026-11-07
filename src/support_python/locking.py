@@ -20,16 +20,19 @@ import time
 import traceback
 from types import TracebackType
 from typing import Any, Optional, Union
+import uuid
 
 __all__ = [
     "FileLock",
     "Lock",
     "LockTimeoutError",
     "NullLock",
+    "RedisLock",
     "create_lock",
 ]
 
 DEFAULT_LOCK_TIMEOUT = 10.0
+DEFAULT_LOCK_TTL = 30.0
 DEFAULT_POLL_INTERVAL = 0.05
 DEFAULT_MAX_JITTER = 0.05
 
@@ -108,6 +111,15 @@ def _reentrancy_counts() -> dict:
         counts = {}
         _LOCAL_LOCK_COUNTS.counts = counts
     return counts
+
+
+def _reentrancy_tokens() -> dict:
+    """Return the per-thread lock token map for distributed locks, creating it on first use."""
+    tokens = getattr(_LOCAL_LOCK_COUNTS, "tokens", None)
+    if tokens is None:
+        tokens = {}
+        _LOCAL_LOCK_COUNTS.tokens = tokens
+    return tokens
 
 
 class FileLock(Lock):
@@ -275,6 +287,154 @@ class NullLock(Lock):
         self._locked = False
 
 
+class RedisLock(Lock):
+    """Distributed Redis-backed lock using atomic SET NX PX and Lua script token release.
+
+    Lock Resource:
+        Key name in Redis, such as ``app:tasks``.
+        Value in Redis: Unique UUIDv4 token generated per acquisition attempt.
+
+    Redis Wire Commands Dispatched:
+        1. Acquire:
+           ``SET <key> <uuid_token> NX PX <ttl_ms>``
+           - ``NX``: atomically sets the key only if it does not already exist.
+           - ``PX <ttl_ms>``: attaches an automatic expiration lease (default 30,000ms = 30s).
+           - Retries with random jitter every ``poll_interval`` until acquired or ``timeout`` expires.
+
+        2. Release:
+           Evaluates an atomic Lua script:
+           .. code-block:: lua
+
+               if redis.call("get", KEYS[1]) == ARGV[1] then
+                   return redis.call("del", KEYS[1])
+               else
+                   return 0
+               end
+
+    Crash & Deadlock Semantics:
+        If a client process crashes or dies, Redis automatically expires the key when the TTL lease runs out.
+    """
+
+    _LUA_RELEASE_SCRIPT = """
+    if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+    else
+        return 0
+    end
+    """
+
+    def __init__(
+        self,
+        key: str,
+        redis_url: str = "redis://localhost:6379/0",
+        timeout: float = DEFAULT_LOCK_TIMEOUT,
+        ttl: float = DEFAULT_LOCK_TTL,
+        poll_interval: float = DEFAULT_POLL_INTERVAL,
+        max_jitter: float = DEFAULT_MAX_JITTER,
+    ) -> None:
+        self.key = key
+        self.redis_url = redis_url
+        self.timeout = timeout
+        self.ttl = ttl
+        self.poll_interval = poll_interval
+        self.max_jitter = max_jitter
+        self._token: Optional[str] = None
+        self._depth = 0
+        self._client: Any = None
+
+    @property
+    def is_locked(self) -> bool:
+        """Check whether the Redis lock is currently held by this instance."""
+        return self._depth > 0
+
+    def _get_client(self) -> Any:
+        if self._client is None:
+            try:
+                import redis
+            except ImportError as err:
+                raise ImportError(
+                    "Redis locking backend requires the 'redis' extra. Install it via 'pip install support-python[redis]'."
+                ) from err
+            self._client = redis.from_url(self.redis_url)
+        return self._client
+
+    def acquire(self, timeout: Optional[float] = None) -> bool:
+        """Acquire the distributed Redis lock within the optional timeout.
+
+        Args:
+            timeout: Maximum time in seconds to wait for the lock.
+
+        Returns:
+            True if the lock was successfully acquired.
+
+        Raises:
+            LockTimeoutError: If the lock cannot be acquired before timeout.
+        """
+        effective_timeout = self.timeout if timeout is None else timeout
+
+        counts = _reentrancy_counts()
+        reentrancy_key = f"redis:{self.redis_url}:{self.key}"
+        current_depth = counts.get(reentrancy_key, 0)
+        if current_depth > 0:
+            counts[reentrancy_key] = current_depth + 1
+            self._depth += 1
+            return True
+
+        client = self._get_client()
+        token = str(uuid.uuid4())
+        ttl_ms = max(1, int(self.ttl * 1000))
+        start_time = time.monotonic()
+
+        while True:
+            try:
+                acquired = client.set(self.key, token, nx=True, px=ttl_ms)
+                if acquired:
+                    self._token = token
+                    self._depth = 1
+                    counts[reentrancy_key] = 1
+                    _reentrancy_tokens()[reentrancy_key] = token
+                    return True
+            except Exception as exc:
+                elapsed = time.monotonic() - start_time
+                if elapsed >= effective_timeout:
+                    raise LockTimeoutError(
+                        f"Failed to acquire Redis lock on '{self.key}' within {effective_timeout:.1f}s: {exc}"
+                    ) from exc
+
+            elapsed = time.monotonic() - start_time
+            if elapsed >= effective_timeout:
+                raise LockTimeoutError(
+                    f"Timed out waiting for Redis lock on '{self.key}' after {effective_timeout:.1f}s. "
+                    "Another process or node is actively holding the lock."
+                )
+
+            sleep_duration = self.poll_interval + random.uniform(0.0, self.max_jitter)
+            time.sleep(sleep_duration)
+
+    def release(self) -> None:
+        """Release the acquired Redis lock."""
+        counts = _reentrancy_counts()
+        reentrancy_key = f"redis:{self.redis_url}:{self.key}"
+        if counts and reentrancy_key in counts:
+            counts[reentrancy_key] -= 1
+            self._depth -= 1
+            if counts[reentrancy_key] > 0:
+                return
+            del counts[reentrancy_key]
+
+        tokens = _reentrancy_tokens()
+        token = tokens.pop(reentrancy_key, None) or self._token
+        client = self._client or (self._get_client() if token else None)
+        if token and client:
+            try:
+                client.eval(self._LUA_RELEASE_SCRIPT, 1, self.key, token)
+            except Exception:
+                pass
+            finally:
+                self._token = None
+                self._depth = 0
+
+
 def create_lock(
     backend: Optional[str] = None,
     key: Optional[str] = None,
@@ -282,6 +442,7 @@ def create_lock(
     timeout: float = DEFAULT_LOCK_TIMEOUT,
     poll_interval: float = DEFAULT_POLL_INTERVAL,
     max_jitter: float = DEFAULT_MAX_JITTER,
+    ttl: float = DEFAULT_LOCK_TTL,
 ) -> Lock:
     """Create the appropriate :class:`Lock` for a backend string.
 
@@ -293,6 +454,7 @@ def create_lock(
         timeout: Maximum seconds to wait when acquiring.
         poll_interval: Seconds between acquisition retries.
         max_jitter: Maximum random seconds added to each retry delay.
+        ttl: Expiration lease duration in seconds for distributed backends with automatic leases.
 
     Raises:
         ValueError: If the scheme is unsupported or a required argument is missing.
@@ -306,7 +468,16 @@ def create_lock(
             raise ValueError("The file lock backend requires a lock file path.")
         return FileLock(path, timeout=timeout, poll_interval=poll_interval, max_jitter=max_jitter)
     if lower.startswith(("redis://", "rediss://")):
-        raise NotImplementedError("The Redis lock backend is not available yet.")
+        if key is None:
+            raise ValueError("Distributed Redis locking backend requires a key.")
+        return RedisLock(
+            key=key,
+            redis_url=value,
+            timeout=timeout,
+            ttl=ttl,
+            poll_interval=poll_interval,
+            max_jitter=max_jitter,
+        )
     if lower.startswith(("mysql://", "mysql+pymysql://", "jdbc:mysql://")):
         raise NotImplementedError("The MySQL lock backend is not available yet.")
     raise ValueError(f"Unsupported locking backend scheme: {value}")

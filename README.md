@@ -401,7 +401,9 @@ except LockTimeoutError as error:
 
 - `FileLock` uses `msvcrt` on Windows and `fcntl` elsewhere; the OS frees it when a process dies.
 - `NullLock` always succeeds; use it for tests or disabled locking.
-- `create_lock(backend, key, path, timeout, poll_interval, max_jitter)` maps `null`/`none` to `NullLock`.
+- `RedisLock` provides distributed locking backed by Redis using `SET NX PX` and an atomic Lua release script. It requires the `redis` optional extra (`pip install support-python[redis]`).
+- `create_lock(backend, key, path, timeout, poll_interval, max_jitter, ttl)` maps `null`/`none` to `NullLock`.
   `file`, `local`, or an empty value select `FileLock` and require `path`.
+  `redis://` and `rediss://` select `RedisLock` and require `key`.
   Unsupported schemes raise `ValueError`.
-- Timeouts are floats in seconds.
+- Timeouts and TTLs are floats in seconds.
