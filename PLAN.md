@@ -9,7 +9,7 @@ An overview of all tasks and their planning.
 - [x] T0006 Add the locking base class, file lock, null lock, and backend factory.
 - [ ] T0001 Add atomic text write helpers with Windows-safe retries.
 - [ ] T0007 Add ANSI-aware Markdown table helpers.
-- [ ] T0010 Add a Redis-backed distributed lock as an optional extra.
+- [x] T0010 Add a Redis-backed distributed lock as an optional extra.
 - [ ] T0011 Add a MySQL advisory lock as an optional extra.
 - [ ] T0013 [needs: T0005] Consolidate the harness and logging into support_python and move backup-git-repos into the package.
 - [ ] T0012 Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing.
