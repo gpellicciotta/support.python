@@ -481,3 +481,36 @@ issues = check_table_alignment(table)
 - `format_markdown_table(headers, rows, alignments=None)` formats aligned GFM tables using visible cell widths.
 - `format_markdown_table_block(table_lines)` reformats raw table lines in place while preserving leading blockquote prefixes.
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
+
+## Duration and time formatting helpers
+The package exports duration and timestamp helpers from [durations.py](src/support_python/durations.py), also available through `support_python.durations`.
+All helpers use only the Python standard library and preserve `support_python.dates.format_datetime`.
+
+```python
+from support_python import (
+    format_duration,
+    format_epoch,
+    format_past_epoch,
+    format_short_duration,
+    parse_date_or_datetime,
+    parse_duration_to_seconds,
+    parse_iso8601,
+)
+
+seconds = parse_duration_to_seconds("1h 02m 05s")  # 3725.0
+label = format_duration(seconds)  # "1h 02m 05s"
+short = format_short_duration(seconds)  # "1h 2m"
+ts = parse_iso8601("2026-09-11T10:00:00Z")
+dt = parse_date_or_datetime("2026-09-11 10:00:00")
+future = format_epoch(ts + seconds, now_ts=ts)
+past = format_past_epoch(ts, now_ts=ts + seconds)
+```
+
+- `parse_iso8601(text)` parses an ISO 8601 timestamp (including trailing `Z`) into a POSIX float timestamp, or `None` on invalid input.
+- `parse_date_or_datetime(text)` parses `YYYY-MM-DD`, `YYYY-MM-DD[T ]HH:MM[:SS]`, or a `YYYY-MM-DD` prefix into a naive `datetime`, or `None`.
+- `parse_duration_to_seconds(dur_str, default_unit="s")` parses single or compound units (`d`, `h`, `m`, `s`, `ms`) and bare numbers into seconds, returning `None` for invalid or negative input.
+- `format_duration(seconds)` formats durations as `<sec.f>s`, `<m>m <ss>s`, `<h>h <mm>m <ss>s`, or `<d>d <hh>h` (clamping negatives to `0.0s`).
+- `format_short_duration(seconds)` formats durations as `<secs>s` under 2 minutes, `<m>m` under 1 hour, `<h>h <m>m` under 1 day, or `<d>d <h>h`.
+- `format_epoch(ts, now_ts=None)` formats a target timestamp as `YYYY-MM-DD HH:MM:SS (in <duration>)`.
+- `format_past_epoch(ts, now_ts=None)` formats a past timestamp as `YYYY-MM-DD HH:MM (<short_duration> ago)`.
+

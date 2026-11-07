@@ -57,6 +57,15 @@ from .devops import (
     resolve_cloud_sql_proxy_bin,
     run_step,
 )
+from .durations import (
+    format_duration,
+    format_epoch,
+    format_past_epoch,
+    format_short_duration,
+    parse_date_or_datetime,
+    parse_duration_to_seconds,
+    parse_iso8601,
+)
 from .git import (
     DEFAULT_GIT_ENV,
     DEFAULT_GIT_TIMEOUT,
@@ -200,6 +209,14 @@ __all__ = [
     "from_wire_date",
     "parse_datetime",
     "to_wire_date",
+    # Durations
+    "format_duration",
+    "format_epoch",
+    "format_past_epoch",
+    "format_short_duration",
+    "parse_date_or_datetime",
+    "parse_duration_to_seconds",
+    "parse_iso8601",
     # CLI
     "APP_AUTHOR",
     "STANDARD_EXIT_CODES",
