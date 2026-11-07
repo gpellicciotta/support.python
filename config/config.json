@@ -1,6 +1,8 @@
 {
   "plan_version": "3.0.268-pre",
   "work_agents": [
-    "codex"
-  ]
+    "agy",
+    "claude"
+  ],
+  "work_max_usage": "week=30%"
 }
