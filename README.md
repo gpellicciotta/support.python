@@ -504,12 +504,13 @@ support-python lint markdown [paths...] [--fix] [--offline] [--rules MD001,MD017
 ```
 
 ## Agent files sync
-`support_python.agent_files` synchronizes repository guideline digests and skills into configured AI coding tools, exposed on the CLI as `support-python agent-files`:
+[agent_files.py](src/support_python/agent_files.py) and [agent_files_config.py](src/support_python/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `support-python agent-files`.
+Settings load from `agent-files.json` in the repository root (or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/agent-files.md) for the full JSON schema and tool registry documentation:
 ```bash
-support-python agent-files list
-support-python agent-files sync [TOOL...] [--dry-run] [--no-prune]
-support-python agent-files check [TOOL...]
-support-python agent-files review [TOOL...] [--timeout SECONDS]
+support-python agent-files list [--config PATH]
+support-python agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]
+support-python agent-files check [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
+support-python agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
 ```
 
 ## Duration and time formatting helpers

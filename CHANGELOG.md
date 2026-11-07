@@ -12,8 +12,13 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.22-pre
+## v1.3.2-pre
 
+---
+
+## v1.3.0 [2026-11-07]
+
+- CLI: Parameterized agent-files sync with JSON configs, CLI flags, and `ToolRegistry` in [agent_files_config.py](src/support_python/agent_files_config.py) and [agent-files.md](docs/agent-files.md).
 - CLI: Ported global agent-files sync in [agent_files.py](src/support_python/agent_files.py) and exposed `support-python agent-files` in [cli.py](src/support_python/cli.py).
 - CLI: Ported `MarkdownLinter` in [markdown_lint.py](src/support_python/markdown_lint.py) and exposed `support-python lint markdown` in [cli.py](src/support_python/cli.py).
 - CLI: Consolidated `ToolHarness` and `CliLogger` in [cli.py](src/support_python/cli.py) and [logging.py](src/support_python/logging.py), and added `support-python backup` in [backup.py](src/support_python/backup.py).

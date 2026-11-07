@@ -39,6 +39,7 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
 
 - [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger` (`ToolLogger`/`TeeLogger` aliases), `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
 - [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers. `main` (`support-python` entry point) is a reference implementation.
+- [agent_files.py](src/support_python/agent_files.py), [agent_files_config.py](src/support_python/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `support-python agent-files` (see [agent-files.md](docs/agent-files.md)).
 - `net.py`: stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - `git.py`: Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.

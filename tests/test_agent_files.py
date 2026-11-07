@@ -11,6 +11,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import stat
 import subprocess
 import sys
@@ -1323,6 +1324,227 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                 with contextlib.redirect_stdout(review_out):
                     self.assertEqual(cli_main(["agent-files", "review"]), 0)
                 self.assertIn("skip: 'nonexistent-fake-cmd-xyz' not found", review_out.getvalue())
+
+
+class AgentFilesConfigTests(unittest.TestCase):
+    def test_load_config_defaults_when_no_file_present(self) -> None:
+        from support_python import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            cfg = cfg_mod.load_agent_files_config(repo_root=root)
+            self.assertEqual((cfg.repo_root, cfg.digest_path), (root, root / "guidelines" / "agent-digest.md"))
+            self.assertEqual((cfg.skills_dir, cfg.marker), (root / "skills", "dev-guidelines"))
+            self.assertEqual((cfg.marker_begin, cfg.marker_end), (sync_mod.MARKER_BEGIN, sync_mod.MARKER_END))
+            self.assertEqual((cfg.manifest_source, cfg.manifest_name), ("dev-guidelines", ".dev-guidelines-skills.json"))
+            self.assertEqual(cfg.legacy_skill_names, ("plan-task-usage", "ui-verification"))
+            reg = cfg_mod.ToolRegistry(cfg.tools)
+            for name in ("claude", "claude-code", "antigravity", "codex", "codex-cli"):
+                self.assertIsNotNone(reg.get(name), name)
+
+    def test_load_config_overrides_from_json_and_cli_flags(self) -> None:
+        from support_python import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            cfg_file = root / "agent-files.json"
+            cfg_file.write_text(
+                json.dumps(
+                    {
+                        "repo_root": ".",
+                        "digest_path": "custom/digest.md",
+                        "skills_dir": "custom/skills",
+                        "marker": "custom-rules",
+                        "manifest_source": "custom-rules",
+                        "legacy_skill_names": ["old-skill-a"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            cfg = cfg_mod.load_agent_files_config(cfg_file)
+            self.assertEqual((cfg.repo_root, cfg.digest_path), (root, root / "custom" / "digest.md"))
+            self.assertEqual((cfg.skills_dir, cfg.marker), (root / "custom" / "skills", "custom-rules"))
+            self.assertEqual((cfg.marker_begin, cfg.marker_end), ("<!-- BEGIN custom-rules -->", "<!-- END custom-rules -->"))
+            self.assertEqual((cfg.manifest_source, cfg.manifest_name), ("custom-rules", ".custom-rules-skills.json"))
+            self.assertEqual(cfg.legacy_skill_names, ("old-skill-a",))
+
+            flag_digest, flag_target = root / "flag" / "digest.md", root / "flag" / "CLAUDE.md"
+            flag_digest.parent.mkdir(parents=True)
+            flag_digest.write_text("Flag override digest.", encoding="utf-8")
+            cfg_file.write_text(
+                json.dumps(
+                    {
+                        "tools": [
+                            {"name": "claude-code", "command": "claude", "target_file": str(flag_target), "aliases": ["claude"]}
+                        ],
+                        "replace_tools": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            help_code, help_out, _ = _run_main(["help"])
+            self.assertEqual(help_code, 0)
+            self.assertIn("  --digest PATH          guidelines digest file path override", help_out)
+            code, out, err = _run_main(
+                [
+                    "sync",
+                    "claude",
+                    "--config",
+                    str(cfg_file),
+                    "--digest-path",
+                    str(flag_digest),
+                    "--marker",
+                    "flag-marker",
+                    "--manifest-source",
+                    "flag-source",
+                    "--legacy-skill",
+                    "legacy-one",
+                ]
+            )
+            self.assertEqual(code, 0, out + err)
+            written = flag_target.read_text(encoding="utf-8")
+            for expected in ("<!-- BEGIN flag-marker -->", "Flag override digest.", "<!-- END flag-marker -->"):
+                self.assertIn(expected, written)
+
+    def test_load_config_missing_file_raises_file_not_found(self) -> None:
+        from support_python import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with self.assertRaises(FileNotFoundError):
+                cfg_mod.load_agent_files_config(Path(tmp_dir) / "does-not-exist.json")
+
+    def test_load_config_invalid_schema_raises_value_error(self) -> None:
+        from support_python import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            for idx, payload in enumerate(
+                ("{not valid json", '{"not_a_valid_field": 1}', '{"legacy_skill_names": "x"}', '{"tools": [{"name": "x"}]}')
+            ):
+                p = root / f"bad-{idx}.json"
+                p.write_text(payload, encoding="utf-8")
+                with self.assertRaises(ValueError):
+                    cfg_mod.load_agent_files_config(p)
+
+
+class SecondProjectMarkerAndManifestTests(unittest.TestCase):
+    def test_second_fixture_project_syncs_without_touching_dev_guidelines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            target_md, target_skills = root / "targets" / "CLAUDE.md", root / "targets" / "skills"
+            tool_entry = {
+                "name": "test-tool",
+                "command": "test-cmd",
+                "target_file": str(target_md),
+                "skills_dir": str(target_skills),
+                "native_skill_discovery": True,
+            }
+
+            dg_root = root / "dev-guidelines"
+            (dg_root / "guidelines").mkdir(parents=True)
+            (dg_root / "guidelines" / "agent-digest.md").write_text("Dev guidelines digest content.", encoding="utf-8")
+            (dg_root / "skills" / "dg-skill").mkdir(parents=True)
+            (dg_root / "skills" / "dg-skill" / "SKILL.md").write_text("---\nname: dg-skill\n---\nDG\n", encoding="utf-8")
+            dg_cfg = dg_root / "agent-files.json"
+            dg_cfg.write_text(json.dumps({"tools": [tool_entry], "replace_tools": True}), encoding="utf-8")
+
+            code, out, err = _run_main(["update", "--config", str(dg_cfg)])
+            self.assertEqual(code, 0, out + err)
+
+            p2_root = root / "second-project"
+            p2_digest = p2_root / "docs" / "team-digest.md"
+            p2_digest.parent.mkdir(parents=True)
+            p2_digest.write_text("Team specific digest v1.", encoding="utf-8")
+            p2_skill_old = p2_root / "team-skills" / "team-skill-old" / "SKILL.md"
+            p2_skill_old.parent.mkdir(parents=True)
+            p2_skill_old.write_text("---\nname: team-skill-old\n---\nOld\n", encoding="utf-8")
+            p2_cfg = p2_root / "agent-files.json"
+            p2_cfg.write_text(
+                json.dumps(
+                    {
+                        "digest_path": "docs/team-digest.md",
+                        "skills_dir": "team-skills",
+                        "marker": "team-guidelines",
+                        "manifest_source": "team-guidelines",
+                        "tools": [tool_entry],
+                        "replace_tools": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            code, out, err = _run_main(["update", "--config", str(p2_cfg)])
+            self.assertEqual(code, 0, out + err)
+            combined = target_md.read_text(encoding="utf-8")
+            for text in (
+                sync_mod.MARKER_BEGIN,
+                "Dev guidelines digest content.",
+                "<!-- BEGIN team-guidelines -->",
+                "Team specific digest v1.",
+            ):
+                self.assertIn(text, combined)
+            self.assertTrue((target_skills / ".dev-guidelines-skills.json").is_file())
+            self.assertTrue((target_skills / ".team-guidelines-skills.json").is_file())
+
+            p2_digest.write_text("Team specific digest v2.", encoding="utf-8")
+            shutil.rmtree(p2_skill_old.parent)
+            p2_skill_new = p2_root / "team-skills" / "team-skill-new" / "SKILL.md"
+            p2_skill_new.parent.mkdir(parents=True)
+            p2_skill_new.write_text("---\nname: team-skill-new\n---\nNew\n", encoding="utf-8")
+
+            code, out, err = _run_main(["update", "--config", str(p2_cfg)])
+            self.assertEqual(code, 0, out + err)
+            updated = target_md.read_text(encoding="utf-8")
+            self.assertIn("Dev guidelines digest content.", updated)
+            self.assertIn("Team specific digest v2.", updated)
+            self.assertNotIn("Team specific digest v1.", updated)
+            self.assertTrue((target_skills / "dg-skill" / "SKILL.md").is_file())
+            self.assertFalse((target_skills / "team-skill-old").exists())
+            self.assertTrue((target_skills / "team-skill-new" / "SKILL.md").is_file())
+            self.assertEqual(_run_main(["update", "--dry-run", "--config", str(dg_cfg)])[0], 0)
+
+
+class ToolRegistryAndAddedToolTests(unittest.TestCase):
+    def test_added_registry_entry_is_listed_and_synced_like_builtin_tools(self) -> None:
+        from support_python.cli import main as cli_main
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            (root / "guidelines").mkdir(parents=True)
+            (root / "guidelines" / "agent-digest.md").write_text("Registry test digest.", encoding="utf-8")
+            (root / "skills" / "reg-skill").mkdir(parents=True)
+            (root / "skills" / "reg-skill" / "SKILL.md").write_text("---\nname: reg-skill\n---\nBody\n", encoding="utf-8")
+            custom_target, custom_skills = root / "custom_home" / "CURSOR.md", root / "custom_home" / "skills"
+            cfg_file = root / "agent-files.json"
+            cfg_file.write_text(
+                json.dumps(
+                    {
+                        "tools": [
+                            {
+                                "name": "cursor-agent",
+                                "command": "nonexistent-cursor-bin",
+                                "target_file": str(custom_target),
+                                "skills_dir": str(custom_skills),
+                                "native_skill_discovery": True,
+                            }
+                        ]
+                    }
+                ),
+                encoding="utf-8",
+            )
+            list_out = io.StringIO()
+            with contextlib.redirect_stdout(list_out):
+                self.assertEqual(cli_main(["agent-files", "list", "--config", str(cfg_file)]), 0)
+            self.assertIn("cursor-agent", list_out.getvalue())
+            self.assertIn("claude-code", list_out.getvalue())
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(cli_main(["agent-files", "sync", "cursor-agent", "--config", str(cfg_file)]), 0)
+            self.assertIn("Registry test digest.", custom_target.read_text(encoding="utf-8"))
+            self.assertTrue((custom_skills / "reg-skill" / "SKILL.md").is_file())
+            with contextlib.redirect_stdout(io.StringIO()) as dry_out:
+                self.assertEqual(cli_main(["agent-files", "sync", "cursor-agent", "--dry-run", "--config", str(cfg_file)]), 0)
+            self.assertIn("already up to date", dry_out.getvalue())
 
 
 if __name__ == "__main__":

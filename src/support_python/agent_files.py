@@ -148,6 +148,7 @@ class Tool:
     legacy_skills_dirs: tuple[Path, ...] = ()
     # Names assumed to be owned in skills_dir when it has no manifest yet.
     bootstrap_skill_names: tuple[str, ...] = LEGACY_SKILL_NAMES
+    aliases: tuple[str, ...] = ()
 
 
 def claude_review_args(prompt: str, target_filename: str, timeout: int) -> list[str]:
@@ -176,6 +177,7 @@ TOOLS: list[Tool] = [
         claude_review_args,
         skills_dir=Path.home() / ".claude" / "skills",
         native_skill_discovery=True,
+        aliases=("claude",),
     ),
     Tool(
         "antigravity",
@@ -204,8 +206,10 @@ TOOLS: list[Tool] = [
         # ~/.agents/skills is shared with other installers and was never written by older versions
         # of this script, so nothing there is owned until a manifest says so.
         bootstrap_skill_names=(),
+        aliases=("codex",),
     ),
 ]
+_INITIAL_TOOLS: list[Tool] = list(TOOLS)
 
 # GitHub Copilot is not included yet: its personal/global instructions, where supported, live in
 # VS Code's own JSON settings rather than a plain-text file, and it has no confirmed local CLI to
@@ -356,9 +360,9 @@ def print_tools(logger: TeeLogger | None = None) -> None:
 
 def select_tools(tool_names: list[str]) -> list[Tool]:
     """Return the configured tools named in tool_names (already validated), or all tools when empty."""
-    if not tool_names:
-        return TOOLS
-    return [tool for tool in TOOLS if tool.name in tool_names]
+    from support_python.agent_files_config import ToolRegistry
+
+    return ToolRegistry(TOOLS).select(tool_names)
 
 
 def backup(target_file: Path) -> Path | None:
@@ -558,12 +562,13 @@ def load_skills_manifest(
     skills_dir: Path,
     logger: TeeLogger,
     origin: str,
-    fallback_names: tuple[str, ...] = LEGACY_SKILL_NAMES,
+    fallback_names: tuple[str, ...] | None = None,
     warn_if_missing: bool = True,
 ) -> list[str]:
     """Return the skill names this script previously installed in skills_dir.
 
     Falls back to fallback_names, with a WARN entry, when the manifest is missing or malformed."""
+    fallback_names = LEGACY_SKILL_NAMES if fallback_names is None else fallback_names
     manifest_path = skills_dir / SKILLS_MANIFEST_NAME
     assumption = "assuming the legacy skill list" if fallback_names else "assuming no previously installed skills"
     if not manifest_path.is_file():
@@ -876,10 +881,13 @@ def run_review(tool: Tool, verbose: bool, timeout: int, logger: TeeLogger) -> bo
 
 def tool_name_argument(value: str) -> str:
     """Validate a TOOL positional argument against the configured tools."""
-    known = [tool.name for tool in TOOLS]
-    if value not in known:
-        raise argparse.ArgumentTypeError(f"unknown tool name '{value}' (choose from: {', '.join(known)})")
-    return value
+    from support_python.agent_files_config import ToolRegistry
+
+    registry = ToolRegistry(TOOLS)
+    matched = registry.get(value)
+    if matched is None:
+        raise argparse.ArgumentTypeError(f"unknown tool name '{value}' (choose from: {', '.join(registry.names())})")
+    return matched.name
 
 
 def configure_tool_names(parser: argparse.ArgumentParser) -> None:
@@ -983,7 +991,16 @@ class SyncHarness(ToolHarness):
 
     def run(self, argv: Sequence[str] | None = None, extra_startup: dict | None = None) -> int:
         """Reject unknown actions with an indicator-formatted error and usage, then delegate to the harness."""
-        raw_args = list(sys.argv[1:] if argv is None else argv)
+        from support_python.agent_files_config import load_agent_files_config
+
+        global REPO_ROOT, DIGEST_PATH, SKILLS_DIR, MARKER_BEGIN, MARKER_END
+        global SKILLS_MANIFEST_NAME, SKILLS_MANIFEST_SOURCE, LEGACY_SKILL_NAMES, TOOLS
+        raw_args = [
+            "--digest"
+            if arg == "--digest-path"
+            else (f"--digest={arg.split('=', 1)[1]}" if arg.startswith("--digest-path=") else arg)
+            for arg in (sys.argv[1:] if argv is None else argv)
+        ]
         action_aliases = {"sync": "update", "check": "diff"}
         if raw_args and raw_args[0] in action_aliases:
             raw_args[0] = action_aliases[raw_args[0]]
@@ -994,7 +1011,77 @@ class SyncHarness(ToolHarness):
             usage = f"Usage: {self.name} {{help|version|{'|'.join(self._actions)}}} [TOOL ...] [options]"
             ToolLogger().error(f"Unknown subcommand: '{raw_args[0]}'\n{usage}")
             return 2
-        return super().run(raw_args, extra_startup=extra_startup)
+
+        is_meta = (
+            not raw_args
+            or raw_args[0] in ("help", "version", "-h", "--help", "--version")
+            or any(flag in raw_args for flag in ("-h", "--help", "--version"))
+        )
+        saved = (
+            REPO_ROOT,
+            DIGEST_PATH,
+            SKILLS_DIR,
+            MARKER_BEGIN,
+            MARKER_END,
+            SKILLS_MANIFEST_NAME,
+            SKILLS_MANIFEST_SOURCE,
+            LEGACY_SKILL_NAMES,
+            TOOLS,
+        )
+        try:
+            if not is_meta:
+                pre = argparse.ArgumentParser(add_help=False)
+                for flag in (
+                    "--config",
+                    "--repo-root",
+                    "--skills-dir",
+                    "--marker",
+                    "--marker-begin",
+                    "--marker-end",
+                    "--manifest-source",
+                ):
+                    pre.add_argument(flag, default=None)
+                pre.add_argument("--digest", dest="digest_path", default=None)
+                pre.add_argument("--legacy-skill", action="append", dest="legacy_skill_names", default=None)
+                ns, _ = pre.parse_known_args(raw_args[1:])
+                try:
+                    cfg = load_agent_files_config(
+                        ns.config,
+                        repo_root=ns.repo_root,
+                        digest_path=ns.digest_path,
+                        skills_dir=ns.skills_dir,
+                        marker=ns.marker,
+                        marker_begin=ns.marker_begin,
+                        marker_end=ns.marker_end,
+                        manifest_source=ns.manifest_source,
+                        legacy_skill_names=ns.legacy_skill_names,
+                        base_tools=TOOLS if TOOLS != _INITIAL_TOOLS else None,
+                    )
+                except (FileNotFoundError, ValueError) as exc:
+                    ToolLogger().error(str(exc))
+                    return 2
+                if REPO_ROOT == _INITIAL_REPO_ROOT:
+                    REPO_ROOT = cfg.repo_root
+                if DIGEST_PATH == _INITIAL_DIGEST_PATH:
+                    DIGEST_PATH = cfg.digest_path
+                if SKILLS_DIR == _INITIAL_SKILLS_DIR:
+                    SKILLS_DIR = cfg.skills_dir
+                MARKER_BEGIN, MARKER_END = cfg.marker_begin, cfg.marker_end
+                SKILLS_MANIFEST_NAME, SKILLS_MANIFEST_SOURCE = cfg.manifest_name, cfg.manifest_source
+                LEGACY_SKILL_NAMES, TOOLS = cfg.legacy_skill_names, list(cfg.tools)
+            return super().run(raw_args, extra_startup=extra_startup)
+        finally:
+            (
+                REPO_ROOT,
+                DIGEST_PATH,
+                SKILLS_DIR,
+                MARKER_BEGIN,
+                MARKER_END,
+                SKILLS_MANIFEST_NAME,
+                SKILLS_MANIFEST_SOURCE,
+                LEGACY_SKILL_NAMES,
+                TOOLS,
+            ) = saved
 
 
 def build_harness() -> SyncHarness:
@@ -1015,6 +1102,31 @@ def build_harness() -> SyncHarness:
             f"{TOOL_NAME} review codex-cli --timeout 1200 --log-file logs/review.log",
         ],
         detailed_help="Configured tools:\n" + "\n".join(f"  {tool.name:<23}{tool.target_file}" for tool in TOOLS),
+    )
+    for flag, meta, desc in (
+        ("--config", "PATH", "path to agent-files.json configuration file"),
+        ("--repo-root", "PATH", "repository root directory override"),
+        ("--digest", "PATH", "guidelines digest file path override"),
+        ("--skills-dir", "PATH", "source skills directory override"),
+        ("--marker", "NAME", "guarded block marker identifier override"),
+        ("--marker-begin", "TEXT", "guarded block begin marker line override"),
+        ("--marker-end", "TEXT", "guarded block end marker line override"),
+        ("--manifest-source", "NAME", "skills ownership manifest source name override"),
+    ):
+        harness.add_global_argument(
+            flag,
+            **({"dest": "digest_path"} if flag == "--digest" else {}),
+            default=None,
+            metavar=meta,
+            help=desc,
+        )
+    harness.add_global_argument(
+        "--legacy-skill",
+        action="append",
+        dest="legacy_skill_names",
+        default=None,
+        metavar="NAME",
+        help="replace legacy_skill_names with bootstrap skill name (repeatable)",
     )
     harness.add_global_argument(
         "--dry-run",

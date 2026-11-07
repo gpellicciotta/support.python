@@ -18,7 +18,7 @@ Overview of all documentation for the `support-python` project.
 - [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
 - [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
 - [Markdown linter](../README.md#markdown-linter): Automated Markdown style and link linter exposed via `support-python lint markdown`.
-- [Agent files sync](../README.md#agent-files-sync): Global agent instructions and skills synchronization exposed via `support-python agent-files`.
+- [Agent files sync](agent-files.md): Global agent instructions, skills synchronization, `agent-files.json` schema, and `ToolRegistry` exposed via `support-python agent-files` (see also [README](../README.md#agent-files-sync)).
 - [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
 - [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
 - [DevOps script helpers and subprocess streaming](../README.md#devops-script-helpers-and-environment-managers): Subprocess line-by-line output streaming (`stream_subprocess`, `run_step_command`, `resolve_executable`), `run_step`, and local service managers.
