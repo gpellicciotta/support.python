@@ -427,27 +427,43 @@ except LockTimeoutError as error:
 - Timeouts and TTLs are floats in seconds.
 
 ## Process hierarchy and safe termination
-The package exports process helpers from [processes.py](src/support_python/processes.py), also available through `support_python.processes`.
-All helpers use only the Python standard library.
+The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [cli_processes.py](src/support_python/cli_processes.py).
+All helpers use only the Python standard library and `ctypes`.
 
 ```python
 import os
-from support_python import (
+from support_python.processes import (
+    get_process_cwd,
+    get_process_descendants,
     get_process_hierarchy,
     get_process_start_time,
     is_process_alive,
+    list_processes,
     safe_kill,
     terminate_process_tree,
 )
 
 pid = os.getpid()
 ancestors = get_process_hierarchy(pid)
+descendants = get_process_descendants(pid)
+cwd = get_process_cwd(pid)
 started = get_process_start_time(pid)
 alive = is_process_alive(pid, expected_start=started, slack_seconds=2.0)
+matching = list_processes(cwd=cwd, descendants_of=pid)
 safe_kill([pid])  # Skips the current process and its ancestors with a warning.
 ```
 
+```bash
+processes list --cwd . --format json
+processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
+processes kill 1234 5678 --force
+python scripts/processes.py list --descendants-of 1234
+```
+
 - `get_process_hierarchy(start_pid)` returns `start_pid` and all ancestor PIDs, failing closed with `OSError` when inspection fails.
+- `get_process_descendants(start_pid)` returns `start_pid` and all child and descendant PIDs.
+- `get_process_cwd(pid)` and `find_pids_with_open_path(path)` inspect process working directories and open files across Windows, Linux, and macOS.
+- `list_processes(...)` and `filter_processes(...)` filter `ProcessInfo` records by `--cwd`, `--open-path`, `--started-before`, `--started-after`, `--ancestors-of`, and `--descendants-of`.
 - `windows_parent_map()` enumerates running Windows processes via `CreateToolhelp32Snapshot` without spawning a shell.
 - `get_process_start_time(pid)` returns a naive local `datetime`, or `None` if the process is absent.
 - `is_process_alive(pid, expected_start=None, slack_seconds=2.0)` checks liveness and guards against recycled PIDs.

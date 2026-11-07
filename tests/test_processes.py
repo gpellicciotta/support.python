@@ -288,3 +288,14 @@ def test_child_process_lifecycle_integration() -> None:
         if child.poll() is None:
             terminate_process_tree(child.pid)
             child.wait(timeout=5)
+
+
+def test_get_process_cwd_and_open_files_posix_lsof_fallback(tmp_path: Path) -> None:
+    assert processes.get_process_cwd(0) is None and processes.get_process_cwd(os.getpid()) == Path.cwd().resolve()
+    with (
+        mock.patch.object(processes.sys, "platform", "darwin"),
+        mock.patch.object(Path, "exists", return_value=False),
+        mock.patch.object(Path, "is_symlink", return_value=False),
+        mock.patch.object(processes.subprocess, "run", return_value=mock.Mock(returncode=0, stdout=f"p1234\nn{tmp_path}\n")),
+    ):
+        assert processes.get_process_cwd(1234) == tmp_path.resolve()

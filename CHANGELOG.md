@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.3.3-pre
+## v1.3.5-pre
+- CLI: Added the `processes` CLI and [processes.py](scripts/processes.py) script with `kill` and filtered `list` subcommands.
 - CLI: Split Markdown lint rules into [rules.py](src/support_python/markdown/rules.py), [registry.py](src/support_python/markdown/registry.py), [profiles.py](src/support_python/markdown/profiles.py), and [tables.py](src/support_python/markdown/tables.py).
 
 ---

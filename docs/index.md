@@ -14,7 +14,7 @@ Overview of all documentation for the `support-python` project.
 - [Git repository backup](../src/support_python/backup.py): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `support-python backup`.
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
-- [Process helpers](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, start-time lookup, liveness checks, termination, and safe kill.
+- [Process helpers and CLI](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI.
 - [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
 - [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
 - [Markdown linter](markdown-lint.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `support-python lint markdown` (see also [README](../README.md#markdown-linter)).

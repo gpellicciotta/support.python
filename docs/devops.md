@@ -45,7 +45,7 @@ Cross-platform Python scripts under `scripts/`; each supports `--help` and `--ve
 | :------------------------------- | :---------------------------------------------------------------------------------- |
 | `bootstrap-dev-environment.py`   | Create the venv, install, lint, test, and build                                     |
 | `devops.py`                      | Run `lint`, `test`, `build`, `check`, or `clean` in the venv                        |
-| `kill-processes.py`              | Terminate processes by PID while protecting the script and its ancestors            |
+| `processes.py`                   | Safely terminate processes by PID and list running processes with filters           |
 | `backup-git-repos.py`            | Back up Git repos to bare mirrors and encrypted 7-Zip archives; restore from either |
 | `reset-history.py`               | Restart a repo from one root commit and recreate its GitHub remote (destructive)    |
 | `migrate-namespace.py`           | Rename a namespace word across paths, text, version, and changelog, then release    |
