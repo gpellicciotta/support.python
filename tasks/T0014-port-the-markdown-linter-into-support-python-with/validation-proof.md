@@ -2,9 +2,9 @@
 
 ### Key Changes
 - Copied dev-guidelines `scripts/lint-markdown.py` into `src/support_python/markdown_lint.py` and fixed imports to use `support_python.cli.ToolHarness` and `support_python.logging.ToolLogger`.
-- Derived `REPO_ROOT` from `find_project_root(Path.cwd())`, resolved root-relative `/...` links in `MD014` against `current_project_root`, and resolved sibling repository GitHub links in `MD018` against `_resolve_workspace_root(current_project_root)`.
+- Derived `REPO_ROOT` from `find_project_root(Path.cwd())`, resolved root-relative `/...` links in `MD014` against `current_project_root`, and resolved sibling repository GitHub links in `MD018` against `_resolve_workspace_root(current_project_root)` (matching `repo_name == base_root.name` for the current repo and `workspace_root / repo_name` for siblings).
 - Moved UTF-8 stream reconfiguration inside `markdown_lint.main()`.
-- Copied dev-guidelines `scripts/tests/test_lint_markdown.py` into `tests/test_markdown_lint.py`, restored the original `scripts/generate-agent-digest.py` and `scripts/lint-markdown.py` fixtures, and added root-relative `MD014` and `support-python lint markdown` CLI subcommand tests.
+- Copied dev-guidelines `scripts/tests/test_lint_markdown.py` into `tests/test_markdown_lint.py`, made `test_local_dev_guidelines_github_url_resolves_locally`, `test_backticked_repo_file_flags_md019`, and `TestChangelogReleasedHeadings` self-contained via temporary workspace/project fixtures, changed `test_script_entry_point_checks_readme_offline` to lint `LICENSE.md`, and added root-relative `MD014` and `support-python lint markdown` CLI subcommand tests.
 - Registered the `lint` action (`support-python lint markdown [paths] [--fix] [--offline]`) in `src/support_python/cli.py`.
 - Documented `support-python lint markdown` in `README.md`, `docs/index.md`, and `CHANGELOG.md` (bumping to `v1.0.19-pre` in `CHANGELOG.md` and `pyproject.toml`).
 
@@ -25,7 +25,7 @@ Exit code: `0`
 ```text
 ........................................................................ [ 62%]
 ............................................                           [100%]
-116 passed, 2 subtests passed in 4.42s
+116 passed, 2 subtests passed in 4.26s
 ```
 
 Command: `python -m pytest tests -q`
@@ -41,7 +41,7 @@ Exit code: `0`
 ...................................................................... [ 79%]
 ........................................................................ [ 90%]
 .............................................................            [100%]
-654 passed, 3 skipped, 52 subtests passed in 151.41s (0:02:31)
+654 passed, 3 skipped, 52 subtests passed in 146.84s (0:02:26)
 ```
 
 Command: `python scripts/lint-markdown.py check --offline` (in `dev-guidelines`)

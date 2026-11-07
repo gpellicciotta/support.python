@@ -13,10 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 3162.4, input: 1606582, output: 83384, cache_read: 37409314}
-  review: {turns: 2, duration_s: 320.8, input: 44, output: 9328, cache_read: 872072, cache_write: 62128}
-review_status: pending
+  review: {turns: 4, duration_s: 552.2, input: 80, output: 19272, cache_read: 1665556, cache_write: 144232}
+review_status: rejected
 review_round: 2
-work_duration: 1214.9
+work_duration: 1920.4
+reviewed_by: "@claude"
 ---
 # T0014: Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests
 
@@ -89,4 +90,20 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdo
 
 - [2026-11-07] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 2 rejected by @claude: Round 1 rework is mostly resolved, but one restored test passes only on this machine.
+  - Findings: [review-findings-2.md](T0014-port-the-markdown-linter-into-support-python-with/review-findings-2.md).
+
+- [2026-11-07] **[Decided]**
+  Added _resolve_workspace_root (.plan/work-aware) and repo_name == base_root.name matching so MD018 resolves current and sibling repositories.
+
+- [2026-11-07] **[Implement]**
+  Isolated dev-guidelines fixture tests in temporary workspaces, switched README end-to-end check to LICENSE.md, and added CLI/MD014 tests.
+
+- [2026-11-07] **[Verify]**
+  Verified all 654 tests pass and ruff check/format are clean on the self-contained test suite.
+  - Files touched: 5.
+  - Lines touched: 121.
+  - Reopenings: 0.
 

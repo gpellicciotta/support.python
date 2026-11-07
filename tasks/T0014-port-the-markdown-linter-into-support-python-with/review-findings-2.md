@@ -3,7 +3,7 @@ task: T0014
 round: 2
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-07T17:03:47Z
+reviewed_at: 2026-11-07T17:05:47Z
 reviewed_commit: "9a69e81"
 base_commit: "37cd186"
 branch: task/T0014-port-the-markdown-linter-into-support-python-with
