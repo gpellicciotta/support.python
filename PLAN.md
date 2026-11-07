@@ -11,7 +11,7 @@ An overview of all tasks and their planning.
 - [ ] T0007 Add ANSI-aware Markdown table helpers.
 - [ ] T0010 [needs: T0006] Add a Redis-backed distributed lock as an optional extra.
 - [ ] T0011 [needs: T0006] Add a MySQL advisory lock as an optional extra.
-- [ ] T0013 Consolidate the harness and logging into support_python and move backup-git-repos into the package.
+- [ ] T0013 [needs: T0005] Consolidate the harness and logging into support_python and move backup-git-repos into the package.
 - [ ] T0012 Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing.
 - [ ] T0015 [needs: T0013] Port the agent-files sync into support_python unchanged with an agent-files CLI and ported tests.
 - [ ] T0017 [needs: T0015] Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry.
