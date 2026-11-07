@@ -10,7 +10,7 @@ An overview of all tasks and their planning.
 - [ ] T0001 Add atomic text write helpers with Windows-safe retries.
 - [ ] T0007 Add ANSI-aware Markdown table helpers.
 - [x] T0010 Add a Redis-backed distributed lock as an optional extra.
-- [ ] T0011 Add a MySQL advisory lock as an optional extra.
+- [x] T0011 Add a MySQL advisory lock as an optional extra.
 - [ ] T0013 [needs: T0005] Consolidate the harness and logging into support_python and move backup-git-repos into the package.
 - [ ] T0012 Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing.
 - [ ] T0015 [needs: T0013] Port the agent-files sync into support_python unchanged with an agent-files CLI and ported tests.
