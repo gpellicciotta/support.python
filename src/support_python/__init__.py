@@ -57,6 +57,21 @@ from .devops import (
     resolve_cloud_sql_proxy_bin,
     run_step,
 )
+from .git import (
+    DEFAULT_GIT_ENV,
+    DEFAULT_GIT_TIMEOUT,
+    run_git_command,
+    get_repo_root,
+    get_head_commit,
+    get_current_branch,
+    branch_exists,
+    parse_worktree_porcelain,
+    list_worktrees,
+    parse_status_porcelain,
+    get_working_tree_status,
+    is_git_clean,
+    has_remote,
+)
 from .env import read_env_file
 from .errors import (
     DEFAULT_NOT_FOUND_PATTERNS,
@@ -131,6 +146,20 @@ __version__ = get_package_version("support-python")
 
 __all__ = [
     "__version__",
+    # Git
+    "DEFAULT_GIT_ENV",
+    "DEFAULT_GIT_TIMEOUT",
+    "run_git_command",
+    "get_repo_root",
+    "get_head_commit",
+    "get_current_branch",
+    "branch_exists",
+    "parse_worktree_porcelain",
+    "list_worktrees",
+    "parse_status_porcelain",
+    "get_working_tree_status",
+    "is_git_clean",
+    "has_remote",
     # Dates
     "DATE_FORMAT",
     "format_datetime",

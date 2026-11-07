@@ -9,6 +9,7 @@ Overview of all documentation for the `support-python` project.
 - [Requirements](requirements.md): High-level goals, functional scope, and technical requirements.
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release
   process.
+- [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [README](../README.md): Project overview, build, install, and usage.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
 - [PLAN](../PLAN.md): Task index by milestone.

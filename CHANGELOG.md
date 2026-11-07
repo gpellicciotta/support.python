@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.1-pre
+## v1.0.3-pre
 
+- BackEnd: Added Git execution and repository queries with explicit failure results and porcelain parsing.
 - DevEx: Added `install-from-github-release.py`, a stdlib-only script that installs a released wheel from any GitHub repository.
 
 ---
