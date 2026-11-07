@@ -15,12 +15,14 @@ size_status: approved
 size_estimate: 11 files, 1358 lines
 usage:
   worker: {turns: 4, duration_s: 3921.2, input: 1507280, output: 215952, cache_read: 23047400}
-work_duration: 1811.0
+  review: {turns: 2, duration_s: 273.2, input: 40, output: 8480, cache_read: 810610, cache_write: 69198}
+work_duration: 12252.4
 size_approved: 11 files, 1358 lines
 size_approved_by: "@gpellicciotta"
 size_approved_at: "2026-11-07T17:43:31Z"
-review_status: pending
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0018: Implement the processes CLI and standalone script with safe kill and filtered list commands
 
@@ -69,4 +71,17 @@ Expose both a standalone script and a console entry point in pyproject.toml, rep
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The feature code is sound, but the branch is not in a mergeable state.
+  - Findings: [review-findings-1.md](T0018-implement-the-processes-cli-and-standalone-script-with/review-findings-1.md).
+
+- [2026-11-07] **[Implement]**
+  Resolved rebase conflicts in pyproject.toml and CHANGELOG.md (v1.3.4-pre), updated docs/devops.md, scoped --force to kill, and completed rebase onto main (5c21562).
+
+- [2026-11-07] **[Verify]**
+  Verified full suite (730 passed, 3 skipped, 64 subtests passed), ruff check, and ruff format --check using project venv.
+  - Files touched: 12.
+  - Lines touched: +739 / -621.
+  - Reopenings: 0.
 

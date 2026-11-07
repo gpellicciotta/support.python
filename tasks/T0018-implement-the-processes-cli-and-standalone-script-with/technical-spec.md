@@ -10,8 +10,9 @@
 - CHANGELOG.md
 - README.md
 - docs/index.md
+- docs/devops.md
 
-Size estimate: 11 files, 1358 lines
+Size estimate: 12 files, 1360 lines
 Size note: Includes removal of obsolete scripts/kill-processes.py and tests/test_kill_processes.py alongside new cross-platform process inspection and CLI modules.
 
 **[Estimation]** Based on existing processes module and kill-processes CLI implementation.

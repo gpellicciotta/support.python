@@ -21,40 +21,54 @@ ERROR tests/test_processes_cli.py
 ============================== 1 error in 0.14s ===============================
 ```
 
-### Automated Unit, Integration, and Lint Verification
+### Full Repository Test Suite and Ruff Verification
 
-Command: `python -m pytest tests/test_processes.py tests/test_processes_cli.py && ruff check . && ruff format --check .` (Exit code: `0`)
+Command: `.venv/Scripts/python.exe -m pytest -q && .venv/Scripts/ruff.exe check . && .venv/Scripts/ruff.exe format --check .` (Exit code: `0`)
 
 ```text
-============================= test session starts =============================
-platform win32 -- Python 3.12.8, pytest-9.2.0, pluggy-1.7.0
-configfile: pyproject.toml
-collected 32 items
-
-tests\test_processes.py ............................                     [ 87%]
-tests\test_processes_cli.py ....                                         [100%]
-
-============================= 32 passed in 10.85s =============================
+............................................................ [  8%]
+.............................................................. [ 16%]
+........................................................................................................ [ 30%]
+........................................................................ [ 40%]
+..............................s......................................... [ 50%]
+.........................................s......s....................... [ 60%]
+........................................................................ [ 70%]
+...................................................................... [ 79%]
+........................................................................ [ 89%]
+........................................................................ [ 99%]
+.....                                                                    [100%]
+730 passed, 3 skipped, 64 subtests passed in 263.19s (0:04:23)
 All checks passed!
-79 files already formatted
+92 files already formatted
 ```
 
 ### CLI Operational Verification
 
-Command: `python scripts/processes.py --version && python scripts/processes.py list --cwd .` (Exit code: `0`)
+Command: `.venv/Scripts/python.exe scripts/processes.py list --help && .venv/Scripts/python.exe scripts/processes.py --version` (Exit code: `0`)
 
 ```text
-processes v1.0.18-pre+1e7e048 - Copyright (c) Giovanni Pellicciotta
-Starting processes v1.0.18-pre+1e7e048 with configuration:
-- Command: list
-- Log file: none
-- Log level: INFO
-- Verbose: false
-pid    ppid   name            started                     cwd
------  -----  --------------  --------------------------  ---
-44368  75252  python.exe      2026-11-07 20:12:02.001614  .
-70960  73276  agy.exe         2026-11-07 20:11:16.316639  .
-72036  44368  python.exe      2026-11-07 20:12:02.099615  .
-75252  70960  powershell.exe  2026-11-07 20:11:48.756033  .
-Finished processes list in 1.9s with status: succeeded
+processes v1.3.4-pre+5c21562 - Copyright (c) Giovanni Pellicciotta
+
+Detailed Action Description: list
+  Lists running processes with optional filters for cwd, open paths, start timestamps, and hierarchy trees.
+
+Usage:
+  processes list [options]
+
+Options:
+  -h, --help             show help message and exit
+  --version              show version information and exit
+  -v, --verbose          enable verbose output logging
+  --debug                enable debug output logging
+  --log-file PATH        append operational logs to specified file
+  --log-level LEVEL      logging severity threshold (DEBUG, INFO, WARN, ERROR; default: INFO)
+  --cwd                  Filter processes by working directory.
+  --open-path            Filter processes holding an open path.
+  --started-before       Upper start-time bound.
+  --started-after        Lower start-time bound.
+  --ancestors-of         Filter ancestors of PID.
+  --descendants-of       Filter descendants of PID.
+  --format               Output rendering format (table or json).
+
+processes v1.3.4-pre+5c21562 - Copyright (c) Giovanni Pellicciotta
 ```
