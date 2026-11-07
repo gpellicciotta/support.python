@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 974.6, input: 306856, output: 35496, cache_read: 5773070}
+review_status: pending
+review_round: 1
 ---
 # T0004: Add duration and time formatting helpers
 
@@ -47,4 +51,7 @@ Add duration and time formatting helpers to support_python, extracted from the p
   - Files touched: 7.
   - Lines touched: 435.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
