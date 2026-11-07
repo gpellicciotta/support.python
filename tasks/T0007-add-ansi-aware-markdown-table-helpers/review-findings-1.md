@@ -3,7 +3,7 @@ task: T0007
 round: 1
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-07T13:27:52Z
+reviewed_at: 2026-11-07T13:30:10Z
 reviewed_commit: "a3b82eb"
 base_commit: "487c380"
 branch: task/T0007-add-ansi-aware-markdown-table-helpers
