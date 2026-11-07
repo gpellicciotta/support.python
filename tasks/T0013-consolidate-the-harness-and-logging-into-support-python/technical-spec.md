@@ -5,6 +5,7 @@
 - tests/test_cli.py
 - tests/test_logging.py
 - tests/test_backup_git_repos.py
+- docs/index.md
 - CHANGELOG.md
 
 ### Tests
