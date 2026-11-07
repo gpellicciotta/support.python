@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3604.2, input: 4994, output: 470}
+work_duration: 1816.4
 ---
 # T0012: Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing
 
