@@ -125,6 +125,15 @@ from .net import (
     build_query_string,
     is_port_in_use,
 )
+from .processes import (
+    get_process_hierarchy,
+    get_process_start_time,
+    is_process_alive,
+    safe_kill,
+    terminate_process,
+    terminate_process_tree,
+    windows_parent_map,
+)
 from .sql import (
     TableTransformer,
     anonymize_sql_stream,
@@ -204,6 +213,14 @@ __all__ = [
     "UrllibTransport",
     "build_query_string",
     "is_port_in_use",
+    # Processes
+    "get_process_hierarchy",
+    "get_process_start_time",
+    "is_process_alive",
+    "safe_kill",
+    "terminate_process",
+    "terminate_process_tree",
+    "windows_parent_map",
     # Crypto
     "DEFAULT_AES_KEY_HEX",
     "DEFAULT_TEST_PASSWORD",

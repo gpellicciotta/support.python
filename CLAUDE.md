@@ -46,6 +46,7 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - `git.py`: Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.
 - `locking.py`: `Lock` ABC, re-entrant `FileLock`, `NullLock`, `RedisLock`, `MySQLLock`, `LockTimeoutError`, and the `create_lock` backend factory.
+- `processes.py`: process hierarchy, start-time lookup, PID-reuse-safe liveness checks, termination, and ancestor-protected `safe_kill`.
 - `errors.py`: REST-client exception hierarchy and status-code mapping helpers.
 - `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers for local ops scripts.
   Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script

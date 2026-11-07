@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.6-pre
+## v1.0.8-pre
 
+- BackEnd: Added OS process hierarchy, start time, liveness, termination, and ancestor-protected `safe_kill` helpers.
 - BackEnd: Added Git execution and repository queries with explicit failure results and porcelain parsing.
 - BackEnd: Added locking with a `Lock` base class, re-entrant `FileLock`, `NullLock`, and a `create_lock` backend factory.
 - BackEnd: Added distributed `RedisLock` with atomic `SET NX PX` and Lua release script as an optional extra.

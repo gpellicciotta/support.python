@@ -409,3 +409,32 @@ except LockTimeoutError as error:
   `mysql://`, `mysql+pymysql://`, and `jdbc:mysql://` select `MySQLLock` and require `key`.
   Unsupported schemes raise `ValueError`.
 - Timeouts and TTLs are floats in seconds.
+
+## Process hierarchy and safe termination
+The package exports process helpers from [processes.py](src/support_python/processes.py), also available through `support_python.processes`.
+All helpers use only the Python standard library.
+
+```python
+import os
+from support_python import (
+    get_process_hierarchy,
+    get_process_start_time,
+    is_process_alive,
+    safe_kill,
+    terminate_process_tree,
+)
+
+pid = os.getpid()
+ancestors = get_process_hierarchy(pid)
+started = get_process_start_time(pid)
+alive = is_process_alive(pid, expected_start=started, slack_seconds=2.0)
+safe_kill([pid])  # Skips the current process and its ancestors with a warning.
+```
+
+- `get_process_hierarchy(start_pid)` returns `start_pid` and all ancestor PIDs, failing closed with `OSError` when inspection fails.
+- `windows_parent_map()` enumerates running Windows processes via `CreateToolhelp32Snapshot` without spawning a shell.
+- `get_process_start_time(pid)` returns a naive local `datetime`, or `None` if the process is absent.
+- `is_process_alive(pid, expected_start=None, slack_seconds=2.0)` checks liveness and guards against recycled PIDs.
+- `terminate_process(pid, force=False)` signals one positive PID directly; callers must enforce ancestor protection first.
+- `terminate_process_tree(pid)` terminates a process and its child tree, returning `False` on invalid PIDs or failures.
+- `safe_kill(pids, logger=None, force=False)` skips the current process and ancestors with a warning and returns `bool`.

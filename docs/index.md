@@ -11,6 +11,7 @@ Overview of all documentation for the `support-python` project.
   process.
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
+- [Process helpers](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, start-time lookup, liveness checks, termination, and safe kill.
 - [README](../README.md): Project overview, build, install, and usage.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
 - [PLAN](../PLAN.md): Task index by milestone.
