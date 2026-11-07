@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1398.0, input: 321726, output: 63042, cache_read: 6351818}
+  worker: {turns: 4, duration_s: 1521.6, input: 351296, output: 67132, cache_read: 7551192}
 work_duration: 709.8
+review_status: pending
+review_round: 1
 ---
 # T0001: Add atomic text write helpers with Windows-safe retries
 
@@ -54,4 +56,6 @@ Add atomic text write helpers to support_python, extracted from the plan project
   - Lines touched: 386.
   - Reopenings: 0.
 
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
