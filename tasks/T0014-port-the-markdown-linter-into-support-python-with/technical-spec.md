@@ -9,3 +9,5 @@
 - Integration: `support-python lint markdown --offline` run in dev-guidelines prints the same issue list and exit code as `python scripts/lint-markdown.py check --offline`.
 
 Completion check: `python -m pytest tests/test_markdown_lint.py -q`
+Size estimate: 6 files, 2810 lines
+Size note: Above the typical line because two files are mechanical copies of dev-guidelines lint-markdown.py (1,589 lines) and test_lint_markdown.py (1,198 lines); hand-written changes are 23 lines.

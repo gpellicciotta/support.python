@@ -1,11 +1,12 @@
 ---
 id: T0014
-owner: ~
-needs: ['T0013']
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@gemini"
+session: antigravity-20261107-e1de8e
+needs: []
+branch: task/T0014-port-the-markdown-linter-into-support-python-with
+worktree: .plan/work/T0014-port-the-markdown-linter-into-support-python-with
+status: active
+started_at: "2026-11-07T16:33:49Z"
 ended_at: —
 review: agent
 preview: none
@@ -25,12 +26,12 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/lint-markdown.py src/s
 Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdown.py tests/test_markdown_lint.py`
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read lint-markdown.py imports and its harness usage to plan the import fixes.
-- [ ] **[Implement]** Copy the linter and its tests, then fix imports so the tests collect and fail.
-- [ ] **[Verify]**    Confirm the ported tests fail only on the missing CLI registration.
-- [ ] **[Implement]** Register the lint markdown subcommand in support_python.cli.
-- [ ] **[Verify]**    Run the full suite and compare output against the original script on dev-guidelines.
-- [ ] **[Doc]**       Update CHANGELOG.md and docs with the lint markdown command.
+- [x] **[Read]**      Read lint-markdown.py imports and its harness usage to plan the import fixes.
+- [x] **[Implement]** Copy the linter and its tests, then fix imports so the tests collect and fail.
+- [x] **[Verify]**    Confirm the ported tests fail only on the missing CLI registration.
+- [x] **[Implement]** Register the lint markdown subcommand in support_python.cli.
+- [x] **[Verify]**    Run the full suite and compare output against the original script on dev-guidelines.
+- [x] **[Doc]**       Update CHANGELOG.md and docs with the lint markdown command.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -39,3 +40,23 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdo
 
 - [2026-11-06] **[Decide]**
   Scope drafted from the approved dev-guidelines migration plan; configs use JSON.
+
+- [2026-11-07] **[Read]**
+  Read lint-markdown.py and test_lint_markdown.py imports, REPO_ROOT usage, and ToolHarness integration.
+
+- [2026-11-07] **[Verify]**
+  Copied markdown_lint.py and test_markdown_lint.py, fixed imports, and confirmed tests fail only on missing CLI registration (114 passed, 1 failed).
+
+- [2026-11-07] **[Implement]**
+  Registered lint markdown subcommand in support_python.cli and moved stream reconfiguration into markdown_lint.main().
+
+- [2026-11-07] **[Verify]**
+  Verified full pytest suite (653 passed, 3 skipped), ruff checks, and identical output against dev-guidelines.
+  - Files touched: 4.
+  - Lines touched: 64.
+  - Reopenings: 0.
+
+- [2026-11-07] **[Doc]**
+  Updated CHANGELOG.md, pyproject.toml, and docs/index.md with support-python lint markdown.
+  - Touched undeclared docs/index.md and pyproject.toml required by Step 6.
+
