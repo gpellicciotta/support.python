@@ -12,8 +12,8 @@ An overview of all tasks and their planning.
 - [x] T0005 Unify the CLI logger and action harness with dev-guidelines and plan.
 - [x] T0013 Consolidate the harness and logging into support_python and move backup-git-repos into the package.
 - [x] T0014 Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests.
-- [ ] T0015 Port the agent-files sync into support_python unchanged with an agent-files CLI and ported tests.
-- [ ] T0017 [needs: T0015] Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry.
+- [x] T0015 Port the agent-files sync into support_python unchanged with an agent-files CLI and ported tests.
+- [ ] T0017 Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry.
 - [ ] T0016 Refactor the ported Markdown linter into registered rule classes with loadable profiles.
 - [x] T0009 Add subprocess output streaming with logging.
 - [!] T0018 [reason: needs human size approval (11 files, 1358 lines)] [owner: @gemini] Implement the processes CLI and standalone script with safe kill and filtered list commands.
