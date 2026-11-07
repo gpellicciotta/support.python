@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3070.2, input: 666484, output: 184732, cache_read: 19552094}
+review_status: pending
+review_round: 1
 ---
 # T0017: Parameterize the ported agent-files sync with configurable digest, skills, marker, and tool registry
 
@@ -64,4 +68,7 @@ Size estimate: 5 files, 300 lines.
   - Files touched: 6.
   - Lines touched: 731.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
