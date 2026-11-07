@@ -218,7 +218,9 @@ class ToolHarnessUnitTests(unittest.TestCase):
             ):
                 self.assertIn(expected, help_text)
 
-    def test_bare_invocation_prints_help_unless_fallback_action_set(self) -> None:
+    def test_bare_invocation_prints_help_and_fallback_action_dispatches_non_flags(self) -> None:
+        import contextlib
+
         harness = self._make_harness()
         out = io.StringIO()
         with redirect_stdout(out):
@@ -226,13 +228,15 @@ class ToolHarnessUnitTests(unittest.TestCase):
         self.assertIn("Usage:", out.getvalue())
 
         fb_harness = self._make_harness(fallback_action="run")
-        fb_out, fb_bare_out = io.StringIO(), io.StringIO()
-        with redirect_stdout(fb_out):
-            self.assertEqual(fb_harness.run(["--target", "staging"]), 0)
-        self.assertIn("Running on staging", fb_out.getvalue())
+        fb_bare_out = io.StringIO()
         with redirect_stdout(fb_bare_out):
             self.assertEqual(fb_harness.run([]), 0)
-        self.assertIn("Running on dev", fb_bare_out.getvalue())
+        self.assertIn("Usage:", fb_bare_out.getvalue())
+
+        fb_err = io.StringIO()
+        with redirect_stdout(io.StringIO()), contextlib.redirect_stderr(fb_err):
+            self.assertEqual(fb_harness.run(["--target", "staging"]), 2)
+        self.assertIn("**[ERROR]** Unknown subcommand: '--target'", fb_err.getvalue())
 
     def test_handlers_propagate_exit_codes_and_invalid_args_return_two(self) -> None:
         import contextlib
@@ -243,6 +247,14 @@ class ToolHarnessUnitTests(unittest.TestCase):
             self.assertEqual(harness.run(["run", "--fail"]), 1)
             self.assertEqual(harness.run(["unknown-cmd"]), 2)
             self.assertEqual(harness.run(["run", "--nonexistent-flag"]), 2)
+
+    def test_support_python_backup_subcommand_dispatches(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["backup", "help"])
+        self.assertEqual(exit_code, 0)
+        self.assertIn("backup-git-repos", out.getvalue())
+        self.assertIn("Actions:", out.getvalue())
 
 
 class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):

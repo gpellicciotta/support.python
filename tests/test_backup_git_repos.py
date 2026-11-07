@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-Unit and integration tests for scripts/backup-git-repos.py.
+Unit and integration tests for support_python.backup.
 """
 
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
 import json
 import os
@@ -20,14 +19,10 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
-sys.path.insert(0, str(SCRIPTS_DIR))
+from support_python import backup as backup_git_repos
 
-_MODULE_PATH = SCRIPTS_DIR / "backup-git-repos.py"
-_spec = importlib.util.spec_from_file_location("backup_git_repos", _MODULE_PATH)
-backup_git_repos = importlib.util.module_from_spec(_spec)
-sys.modules[_spec.name] = backup_git_repos
-_spec.loader.exec_module(backup_git_repos)
+SRC_DIR = Path(__file__).resolve().parent.parent / "src"
+_MODULE_PATH = SRC_DIR / "support_python" / "backup.py"
 
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "Test",
@@ -305,14 +300,31 @@ class TestHarnessCli(BackupTestCase):
         self.assertRegex(text, rf"\[\d{{4}}-\d{{2}}-\d{{2}} \d{{2}}:\d{{2}}:\d{{2}}\] alpha  {re.escape(str(self.root / 'alpha'))}")
 
     def test_script_entry_point_shows_help_and_version(self) -> None:
+        env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
         for args, expected in (([], "Usage:"), (["version"], "backup-git-repos v")):
             with self.subTest(args=args):
                 result = subprocess.run(
-                    [sys.executable, str(_MODULE_PATH), *args], capture_output=True, text=True, encoding="utf-8"
+                    [sys.executable, str(_MODULE_PATH), *args], env=env, capture_output=True, text=True, encoding="utf-8"
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn(expected, result.stdout)
                 self.assertEqual(result.stderr, "")
+
+    def test_support_python_backup_list_subcommand_integration(self) -> None:
+        make_repo(self.root / "alpha")
+        make_repo(self.root / "beta")
+        self.config.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
+        env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
+        result = subprocess.run(
+            [sys.executable, "-m", "support_python.cli", "backup", "list", "--config", str(self.config)],
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"alpha  {self.root / 'alpha'}", result.stdout)
+        self.assertIn(f"beta  {self.root / 'beta'}", result.stdout)
 
 
 class TestConfig(BackupTestCase):
@@ -479,7 +491,12 @@ class TestIntegration(BackupTestCase):
             "--password-env",
             PASSWORD_ENV,
         ]
-        result = subprocess.run(command, env={**os.environ, PASSWORD_ENV: "secret"}, capture_output=True, text=True)
+        result = subprocess.run(
+            command,
+            env={**os.environ, PASSWORD_ENV: "secret", "PYTHONPATH": str(SRC_DIR)},
+            capture_output=True,
+            text=True,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
 
         for repo in (alpha, beta):
@@ -1195,7 +1212,7 @@ class TestRestoreIntegration(BackupTestCase):
         config = ["--config", str(self.config)]
         # A main default branch makes git init create an unborn main, which the fetch must be allowed to update.
         default_main = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "init.defaultBranch", "GIT_CONFIG_VALUE_0": "main"}
-        env = {**os.environ, PASSWORD_ENV: "secret", **default_main}
+        env = {**os.environ, PASSWORD_ENV: "secret", "PYTHONPATH": str(SRC_DIR), **default_main}
         layers = ["--mirror-dir", str(self.mirrors), "--archive-dir", str(self.archives), "--password-env", PASSWORD_ENV]
         commands = (
             [*base, "backup", *config, "--root", str(self.root), *layers],

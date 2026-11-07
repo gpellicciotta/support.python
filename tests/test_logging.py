@@ -76,6 +76,11 @@ class FormatLogMessageTests(unittest.TestCase):
         self.assertEqual(lines[0], "**[ERROR]** First")
         self.assertEqual(lines[1], " " * len("**[ERROR]** ") + "Second")
 
+    def test_multiline_message_preserves_blank_lines(self) -> None:
+        result = format_log_message("First\n\nThird", level="ERROR", for_file=False)
+        lines = result.splitlines()
+        self.assertEqual(lines, ["**[ERROR]** First", "", " " * len("**[ERROR]** ") + "Third"])
+
     def test_empty_message_and_no_level_or_origin_returns_empty(self) -> None:
         self.assertEqual(format_log_message(""), "")
 

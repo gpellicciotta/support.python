@@ -26,6 +26,9 @@ APP_AUTHOR: str = "Giovanni Pellicciotta"
 #: Default full copyright notice string used in CLI banners.
 COPYRIGHT: str = f"Copyright (c) {APP_AUTHOR}"
 
+#: Default project version string resolved from package metadata or pyproject.toml.
+PROJECT_VERSION: str = get_project_version()
+
 #: Standard CLI exit codes mapped to short human-readable descriptions.
 STANDARD_EXIT_CODES: Sequence[Tuple[int, str]] = [
     (0, "Success"),
@@ -46,7 +49,7 @@ PROG: str = "support-python"
 DESCRIPTION: str = "Python support CLI - reference implementation of the shared CLI version/help helper"
 
 #: Supported action subcommands for the demo CLI.
-ACTIONS: list[str] = ["greet", "version", "help"]
+ACTIONS: list[str] = ["greet", "backup", "version", "help"]
 
 #: Type alias for an action handler callable returning an integer exit code.
 ActionHandler = Callable[..., int]
@@ -314,11 +317,8 @@ class ToolHarness:
         """Execute the requested command line, handling standard actions and logging."""
         raw_args = list(sys.argv[1:] if argv is None else argv)
         if not raw_args:
-            if self.fallback_action and self.fallback_action in self._actions:
-                raw_args = [self.fallback_action]
-            else:
-                print(self.format_help(verbose=False), end="")
-                return 0
+            print(self.format_help(verbose=False), end="")
+            return 0
 
         first, rest = raw_args[0], raw_args[1:]
         if first in ("version", "--version"):
@@ -337,7 +337,7 @@ class ToolHarness:
 
         action_name, action_args = first, rest
         if action_name not in self._actions:
-            if self.fallback_action and self.fallback_action in self._actions:
+            if self.fallback_action and self.fallback_action in self._actions and not first.startswith("-"):
                 action_name, action_args = self.fallback_action, raw_args
             else:
                 early_logger = self._extract_early_logger(raw_args)
@@ -518,6 +518,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     Returns:
         Exit code integer (0 for success).
     """
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    if raw_args and raw_args[0] == "backup":
+        from .backup import main as backup_main
+
+        return backup_main(raw_args[1:])
+
     parser = _build_demo_parser()
     args = parser.parse_args(argv)
 
@@ -545,6 +551,7 @@ __all__ = [
     "DEFAULT_EXIT_CODES",
     "DESCRIPTION",
     "PROG",
+    "PROJECT_VERSION",
     "ParserConfigurator",
     "STANDARD_EXIT_CODES",
     "ToolHarness",

@@ -199,14 +199,15 @@ def format_log_message(
     prefix_len = len(prefix)
 
     raw_lines = message.splitlines()
-    non_empty_lines = [line for line in raw_lines if line.strip() != ""]
-    if not non_empty_lines:
+    if not raw_lines and message == "":
+        return (prefix.rstrip() + "\n") if for_file else "\n"
+    if not raw_lines or not any(line.strip() for line in raw_lines):
         return ""
 
-    formatted_lines = [prefix + non_empty_lines[0]]
+    formatted_lines = [prefix + raw_lines[0]]
     indent = " " * prefix_len
-    for line in non_empty_lines[1:]:
-        formatted_lines.append(indent + line)
+    for line in raw_lines[1:]:
+        formatted_lines.append(indent + line if line else "")
 
     return "\n".join(formatted_lines) + "\n"
 

@@ -12,7 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.17-pre
+## v1.0.18-pre
+
+- CLI: Consolidated `ToolHarness` and `CliLogger` in [cli.py](src/support_python/cli.py) and [logging.py](src/support_python/logging.py), and added `support-python backup` in [backup.py](src/support_python/backup.py).
 - DevEx: Added `stream_subprocess`, `run_step_command`, `resolve_executable`, and `EXIT_COMMAND_NOT_FOUND` in [devops.py](src/support_python/devops.py) for logged subprocess streaming.
 - CLI: Unified `CliLogger`, `ToolLogger`, `TeeLogger`, `ToolHarness`, and build-metadata version helpers in [logging.py](src/support_python/logging.py) and [cli.py](src/support_python/cli.py).
 - BackEnd: Added sliding-window `TaskRateLimiter` in [ratelimit.py](src/support_python/ratelimit.py) to cap task dispatches across configurable time windows.
