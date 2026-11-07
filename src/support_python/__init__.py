@@ -114,6 +114,17 @@ from .logging import (
     format_log_message,
     format_severity_indicator,
 )
+from .markdown import (
+    TableAlignmentIssue,
+    check_table_alignment,
+    find_delimiter_pipes,
+    format_markdown_table,
+    format_markdown_table_block,
+    is_table_delimiter_row,
+    split_table_row,
+    strip_ansi,
+    visible_width,
+)
 from .models import (
     ApiInfo,
     ApiRoute,
@@ -201,6 +212,16 @@ __all__ = [
     "format_table",
     "json_serial",
     "render_output",
+    # Markdown
+    "TableAlignmentIssue",
+    "check_table_alignment",
+    "find_delimiter_pipes",
+    "format_markdown_table",
+    "format_markdown_table_block",
+    "is_table_delimiter_row",
+    "split_table_row",
+    "strip_ansi",
+    "visible_width",
     # Tokens
     "FileTokenStore",
     "TokenStore",

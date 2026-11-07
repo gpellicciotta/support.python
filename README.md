@@ -456,3 +456,27 @@ content = read_text_retrying(path, errors="strict")
 - `atomic_write_text` preserves existing POSIX permission bits, omits the target filename from the temporary name, and removes failed temporaries.
 - `atomic_replace(src, dst, max_retries=15, base_delay=0.01)` replaces `dst` with `src`, retrying transient `PermissionError` and Windows error `5` or `32`.
 - `read_text_retrying(path, max_retries=10, base_delay=0.005, errors="replace")` reads UTF-8 text while retrying transient `PermissionError` locks during concurrent renames.
+
+## Markdown table helpers
+The package exports Markdown table helpers from [markdown.py](src/support_python/markdown.py), also available through `support_python.markdown`.
+All helpers use only the Python standard library and preserve `support_python.tables.format_table`.
+
+```python
+from support_python import (
+    check_table_alignment,
+    format_markdown_table,
+    format_markdown_table_block,
+    strip_ansi,
+    visible_width,
+)
+
+table = format_markdown_table(["Name", "Score"], [["\x1b[32mAlice\x1b[0m", "100"]], alignments=["left", "right"])
+issues = check_table_alignment(table)
+```
+
+- `strip_ansi(text)` removes ANSI CSI escape sequences, and `visible_width(text)` returns the stripped character count.
+- `find_delimiter_pipes(line)` finds unescaped pipe indices outside backtick code spans, and `split_table_row(line)` returns trimmed cells.
+- `is_table_delimiter_row(line)` validates GitHub Flavored Markdown separator rows such as `:---`, `:---:`, and `---:`.
+- `format_markdown_table(headers, rows, alignments=None)` formats aligned GFM tables using visible cell widths.
+- `format_markdown_table_block(table_lines)` reformats raw table lines in place while preserving leading blockquote prefixes.
+- `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
