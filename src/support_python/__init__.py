@@ -159,6 +159,7 @@ from .processes import (
     terminate_process_tree,
     windows_parent_map,
 )
+from .ratelimit import TaskRateLimiter
 from .sql import (
     TableTransformer,
     anonymize_sql_stream,
@@ -264,6 +265,8 @@ __all__ = [
     "terminate_process",
     "terminate_process_tree",
     "windows_parent_map",
+    # Rate Limiting
+    "TaskRateLimiter",
     # Crypto
     "DEFAULT_AES_KEY_HEX",
     "DEFAULT_TEST_PASSWORD",

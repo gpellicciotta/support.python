@@ -50,6 +50,7 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
 - `files.py`: atomic UTF-8 text writes via sibling temporary files, Windows-safe `atomic_replace` retries, and `read_text_retrying`.
 - `markdown.py`: ANSI-aware Markdown table formatting (`format_markdown_table`, `format_markdown_table_block`), row parsing, and `check_table_alignment`.
 - [durations.py](src/support_python/durations.py): duration and timestamp parsing (`parse_duration_to_seconds`, `parse_iso8601`, `parse_date_or_datetime`) and human-readable/epoch formatting (`format_duration`, `format_short_duration`, `format_epoch`, `format_past_epoch`).
+- [ratelimit.py](src/support_python/ratelimit.py): sliding-window task dispatch rate limiter (`TaskRateLimiter`) with injectable `now` timestamps and a 1-second minimum wait duration when blocked.
 - `errors.py`: REST-client exception hierarchy and status-code mapping helpers.
 - `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers (including non-`PATH` proxy discovery) for ops scripts.
   Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script

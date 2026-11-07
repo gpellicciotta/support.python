@@ -514,3 +514,24 @@ past = format_past_epoch(ts, now_ts=ts + seconds)
 - `format_epoch(ts, now_ts=None)` formats a target timestamp as `YYYY-MM-DD HH:MM:SS (in <duration>)`.
 - `format_past_epoch(ts, now_ts=None)` formats a past timestamp as `YYYY-MM-DD HH:MM (<short_duration> ago)`.
 
+## Task rate limiter
+The package exports `TaskRateLimiter` from [ratelimit.py](src/support_python/ratelimit.py), also available through `support_python.ratelimit`.
+It uses only the Python standard library and pairs with [durations.py](src/support_python/durations.py) for wait-duration formatting.
+
+```python
+from support_python import TaskRateLimiter, format_duration
+
+limiter = TaskRateLimiter(max_tasks_per_hour=2, window_seconds=3600.0)
+if limiter.can_dispatch():
+    limiter.record_dispatch()
+else:
+    wait_seconds = limiter.get_wait_duration()
+    print(f"Rate limit reached; retry in {format_duration(wait_seconds)}")
+```
+
+- `TaskRateLimiter(max_tasks_per_hour=None, window_seconds=3600.0)` tracks dispatch timestamps in a sliding window.
+- `is_enabled` is `True` only when `max_tasks_per_hour` is set and greater than `0`.
+- `prune(now=None)` removes recorded timestamps at or before `now - window_seconds`.
+- `can_dispatch(now=None)` prunes expired timestamps and returns `True` when disabled or below capacity.
+- `get_wait_duration(now=None)` returns `0.0` when dispatch is allowed, or `max(1.0, oldest + window_seconds - now)` when blocked.
+- `record_dispatch(now=None)` appends a dispatch timestamp when enabled.
