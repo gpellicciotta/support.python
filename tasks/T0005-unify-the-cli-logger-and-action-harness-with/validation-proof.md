@@ -25,7 +25,7 @@ FAILED tests/test_logging.py::UnifiedTeeAndToolLoggerTests::test_logger_tees_to_
 ======================== 8 failed, 33 passed in 2.05s =========================
 ```
 
-### Green-Phase Verification (After Implementation)
+### Green-Phase Verification (After Implementation & Round 2 Rework)
 
 Command:
 `python -m pytest tests/test_cli.py tests/test_logging.py`
@@ -36,12 +36,12 @@ Exit code: `0`
 platform win32 -- Python 3.12.8, pytest-9.2.0, pluggy-1.7.0
 rootdir: {{project-root}}
 configfile: pyproject.toml
-collected 40 items
+collected 42 items
 
-tests\test_cli.py ..................                                     [ 45%]
-tests\test_logging.py ......................                             [100%]
+tests\test_cli.py ...................                                    [ 45%]
+tests\test_logging.py .......................                            [100%]
 
-============================= 40 passed in 3.21s ==============================
+============================= 42 passed in 3.74s ==============================
 ```
 
 Command:

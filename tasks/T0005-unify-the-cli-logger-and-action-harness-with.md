@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 2442.4, input: 548346, output: 178342, cache_read: 12809928}
-review_status: pending
+  review: {turns: 2, duration_s: 264.4, input: 32, output: 10100, cache_read: 681226, cache_write: 97998}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1369.8
 ---
 # T0005: Unify the CLI logger and action harness with dev-guidelines and plan
 
@@ -64,4 +67,19 @@ Unify the CLI logger and action harness: bring the generic features of dev-guide
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The work covers the stated features: `ToolHarness` and `Action`, a fallback action, an exit-code table, startup and completion banners, log-level.
+  - Findings: [review-findings-1.md](T0005-unify-the-cli-logger-and-action-harness-with/review-findings-1.md).
+
+- [2026-11-07] **[Implement]**
+  Resolved Round 1 review findings in cli.py, logging.py, test_cli.py, and test_logging.py.
+  - Resolved build metadata from tool checkout instead of process cwd.
+  - Restored backward-compatible defaults on CliLogger and format_log_message and removed unused _file attribute.
+
+- [2026-11-07] **[Verify]**
+  Verified 42 CLI and logging tests, ruff check, and ruff format pass.
+  - Files touched: 9.
+  - Lines touched: 998.
+  - Reopenings: 0.
 
