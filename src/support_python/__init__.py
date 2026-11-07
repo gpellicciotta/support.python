@@ -94,6 +94,13 @@ from .httpd import (
     EmbeddedStaticServer as HttpServer,
     StaticServerManager as HttpServerManager,
 )
+from .locking import (
+    FileLock,
+    Lock,
+    LockTimeoutError,
+    NullLock,
+    create_lock,
+)
 from .logging import (
     CliLogger,
     LogLevel,
@@ -239,6 +246,12 @@ __all__ = [
     "transform_auth_users",
     "transform_counters_users",
     "transform_counters_webhooks",
+    # Locking
+    "FileLock",
+    "Lock",
+    "LockTimeoutError",
+    "NullLock",
+    "create_lock",
     # Httpd
     "EmbeddedStaticServer",
     "HttpServer",

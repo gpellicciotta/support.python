@@ -383,3 +383,25 @@ The default timeout is 10 seconds; `allowed_returncodes`, `env`, and `input_data
 Defaults disable optional locks, lazy fetching, and terminal prompts; caller environment overrides take precedence.
 `no_optional_locks=False` omits the command flag; override `GIT_OPTIONAL_LOCKS` separately if optional locks are needed.
 The runner accepts arbitrary Git commands, including mutations; repository query helpers only inspect local state.
+
+## Locking
+The package exports locks from [locking.py](src/support_python/locking.py), also available through `support_python.locking`.
+The core has no Python dependencies.
+
+```python
+from support_python import LockTimeoutError, create_lock
+
+lock = create_lock("file", path=".app/.app.lock", timeout=5.0)
+try:
+    with lock:
+        ...  # Critical section; nested `with` blocks in one thread are re-entrant.
+except LockTimeoutError as error:
+    print(error)  # Includes holder diagnostics when the holder is in this process.
+```
+
+- `FileLock` uses `msvcrt` on Windows and `fcntl` elsewhere; the OS frees it when a process dies.
+- `NullLock` always succeeds; use it for tests or disabled locking.
+- `create_lock(backend, key, path, timeout, poll_interval, max_jitter)` maps `null`/`none` to `NullLock`.
+  `file`, `local`, or an empty value select `FileLock` and require `path`.
+  Unsupported schemes raise `ValueError`.
+- Timeouts are floats in seconds.

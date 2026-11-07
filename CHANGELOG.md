@@ -12,9 +12,10 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.3-pre
+## v1.0.4-pre
 
 - BackEnd: Added Git execution and repository queries with explicit failure results and porcelain parsing.
+- BackEnd: Added locking with a `Lock` base class, re-entrant `FileLock`, `NullLock`, and a `create_lock` backend factory.
 - DevEx: Added `install-from-github-release.py`, a stdlib-only script that installs a released wheel from any GitHub repository.
 
 ---
