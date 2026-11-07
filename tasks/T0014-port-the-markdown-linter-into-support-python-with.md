@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 2044.8, input: 976078, output: 48250, cache_read: 23124486}
+  worker: {turns: 4, duration_s: 3162.4, input: 1606582, output: 83384, cache_read: 37409314}
   review: {turns: 2, duration_s: 320.8, input: 44, output: 9328, cache_read: 872072, cache_write: 62128}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 work_duration: 1214.9
 ---
 # T0014: Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests
@@ -87,4 +86,7 @@ Mechanical command: `Copy-Item {{dev-guidelines}}/scripts/tests/test_lint_markdo
   - Files touched: 5.
   - Lines touched: 100.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 2 requested (mode: agent).
 
