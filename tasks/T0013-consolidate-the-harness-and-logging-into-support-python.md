@@ -15,12 +15,14 @@ size_status: approved
 size_estimate: 8 files, 1126 lines
 usage:
   worker: {turns: 4, duration_s: 1536.2, input: 941664, output: 40234, cache_read: 13730438}
-work_duration: 732.0
+  review: {turns: 2, duration_s: 258.6, input: 44, output: 9546, cache_read: 919286, cache_write: 72504}
+work_duration: 3488.6
 size_approved: 8 files, 1126 lines
 size_approved_by: "@gpellicciotta"
 size_approved_at: "2026-11-07T16:06:27Z"
-review_status: pending
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0013: Consolidate the harness and logging into support_python and move backup-git-repos into the package
 
@@ -80,4 +82,17 @@ Combined task: harness consolidation and the backup move share one import change
 
 - [2026-11-07] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-07] **[Review]**
+  Round 1 rejected by @claude: The code content is sound, but the branch holds no deliverable: the work is stuck in an unfinished rebase with.
+  - Findings: [review-findings-1.md](T0013-consolidate-the-harness-and-logging-into-support-python/review-findings-1.md).
+
+- [2026-11-07] **[Implement]**
+  Resolved Round 1 review findings by resolving CHANGELOG.md under v1.0.17-pre, moving stream reconfiguration into backup.main(), and completing the rebase.
+
+- [2026-11-07] **[Verify]**
+  Verified 538 passed tests and clean ruff checks on committed rebase tip f1da35d.
+  - Files touched: 8.
+  - Lines touched: 105.
+  - Reopenings: 0.
 
