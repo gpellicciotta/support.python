@@ -8,7 +8,7 @@ An overview of all tasks and their planning.
 - [x] T0007 Add ANSI-aware Markdown table helpers.
 - [x] T0012 Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing.
 - [x] T0004 Add duration and time formatting helpers.
-- [ ] T0008 Add a task rate limiter.
+- [x] T0008 Add a task rate limiter.
 - [ ] T0005 Unify the CLI logger and action harness with dev-guidelines and plan.
 - [ ] T0013 [needs: T0005] Consolidate the harness and logging into support_python and move backup-git-repos into the package.
 - [ ] T0014 [needs: T0013] Port the Markdown linter into support_python unchanged with a lint markdown CLI and ported tests.
