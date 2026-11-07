@@ -535,7 +535,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return markdown_lint_main(rest)
         if rest[0] != "markdown":
             logger = CliLogger()
-            logger.error(f"Unknown lint target: '{rest[0]}'\nUsage: {PROG} lint markdown [paths...] [--fix] [--offline]")
+            logger.error(
+                f"Unknown lint target: '{rest[0]}'\n"
+                f"Usage: {PROG} lint markdown [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH]"
+            )
             logger.close()
             return 2
         md_args = rest[1:]

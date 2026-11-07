@@ -474,7 +474,7 @@ content = read_text_retrying(path, errors="strict")
 - `read_text_retrying(path, max_retries=10, base_delay=0.005, errors="replace")` reads UTF-8 text while retrying transient `PermissionError` locks during concurrent renames.
 
 ## Markdown table helpers
-The package exports Markdown table helpers from [markdown.py](src/support_python/markdown.py), also available through `support_python.markdown`.
+The package exports Markdown table helpers from [tables.py](src/support_python/markdown/tables.py), also available through `support_python.markdown`.
 All helpers use only the Python standard library and preserve `support_python.tables.format_table`.
 
 ```python
@@ -498,9 +498,9 @@ issues = check_table_alignment(table)
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
 
 ## Markdown linter
-`support_python.markdown_lint` provides `MarkdownLinter`, `LintIssue`, and `discover_markdown_files`, exposed on the CLI as `support-python lint markdown`:
+[markdown_lint.py](src/support_python/markdown_lint.py) and `support_python.markdown` ([registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provide `MarkdownLinter`, `RuleRegistry`, `LintProfile`, and `load_profile`, exposed on the CLI as `support-python lint markdown` (see [markdown-lint.md](docs/markdown-lint.md)):
 ```bash
-support-python lint markdown [paths...] [--fix] [--offline] [--rules MD001,MD017] [--exclude GLOB]
+support-python lint markdown [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
 ```
 
 ## Agent files sync

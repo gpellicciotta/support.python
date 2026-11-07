@@ -18,10 +18,13 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, NoReturn, Optional, Set, Tuple
+from typing import List, NoReturn, Optional, Set, Tuple, Union
 
 from support_python.cli import ToolHarness  # noqa: E402
 from support_python.logging import ToolLogger  # noqa: E402
+from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LintProfile, get_profile, load_profile  # noqa: E402
+from support_python.markdown.registry import LintContext, Rule, RuleRegistry  # noqa: E402
+from support_python.markdown.rules import DEFAULT_REGISTRY  # noqa: E402
 
 TOOL_NAME = "lint-markdown"
 DESCRIPTION = """Automated markdown linter enforcing repository markdown styling guidelines.
@@ -400,14 +403,36 @@ class MarkdownLinter:
     RE_BARE_PATH = re.compile(r"(?<![a-zA-Z0-9_/-])(?:\.{1,2}/|[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.([a-zA-Z0-9]+)(?![a-zA-Z0-9_/-])")
     RE_BARE_NAME = re.compile(r"\b([a-zA-Z0-9_-]+\.([a-zA-Z0-9]+))\b")
 
+    _SCOPE_RULE_ORDER: dict[str, Tuple[str, ...]] = {
+        "document_pre": ("MD012",),
+        "raw_line": ("MD011", "MD010"),
+        "code_fence": ("MD007",),
+        "heading": ("MD002", "MD001", "MD003", "MD015"),
+        "prose": ("MD004", "MD016", "MD005", "MD006", "MD013", "MD009", "MD008", "MD014", "MD018", "MD019"),
+        "document_post": ("MD017",),
+    }
+
     def __init__(
         self,
         enabled_rules: Optional[Set[str]] = None,
         offline: bool = False,
         timeout: float = 10.0,
         project_root: Optional[Path] = None,
+        profile: Optional[Union[str, LintProfile]] = None,
+        registry: Optional[RuleRegistry] = None,
     ) -> None:
-        self.enabled_rules = enabled_rules if enabled_rules is not None else set(self.RULES.keys())
+        self.registry: RuleRegistry = registry if registry is not None else DEFAULT_REGISTRY
+        resolved_profile = get_profile(profile, self.registry) if isinstance(profile, str) else profile
+        self.profile: Optional[LintProfile] = resolved_profile
+        self.historical_task_exemptions: bool = (
+            resolved_profile.historical_task_exemptions if resolved_profile is not None else True
+        )
+        if enabled_rules is not None:
+            self.enabled_rules = {r.rule_id for r in self.registry.select(enabled_rules)}
+        elif resolved_profile is not None:
+            self.enabled_rules = {r.rule_id for r in self.registry.select(resolved_profile.enabled_rules)}
+        else:
+            self.enabled_rules = set(self.registry.rule_ids())
         if offline:
             self.enabled_rules.discard("MD018")
         self.offline = offline
@@ -553,23 +578,6 @@ class MarkdownLinter:
         current_project_root = project_root.resolve() if project_root is not None else self._resolve_project_root(file_path)
         actual_file_path = file_path if file_path.is_absolute() else (current_project_root / file_path).resolve()
 
-        # Check line endings (MD012)
-        if self.is_rule_enabled("MD012"):
-            has_crlf = b"\r\n" in raw_bytes
-            has_bare_lf = b"\n" in raw_bytes.replace(b"\r\n", b"")
-            if has_crlf and has_bare_lf:
-                issues.append(
-                    LintIssue(
-                        file_path=file_path,
-                        line_number=1,
-                        column_number=1,
-                        rule_id="MD012",
-                        rule_name=self.RULES["MD012"][0],
-                        message="File contains mixed line endings (both CRLF and LF); standardize on LF",
-                        fixable=True,
-                    )
-                )
-
         text = raw_bytes.decode("utf-8", errors="replace")
         lines = text.splitlines(keepends=False)
 
@@ -584,7 +592,7 @@ class MarkdownLinter:
         is_changelog = file_path.name.lower() == "changelog.md"
         in_released_changelog = False
 
-        is_taskfile = ".plan" in file_path.parts and "tasks" in file_path.parts
+        is_taskfile = self.historical_task_exemptions and ".plan" in file_path.parts and "tasks" in file_path.parts
         is_historical_task = False
         if is_taskfile:
             for header_line in lines[:30]:
@@ -601,18 +609,9 @@ class MarkdownLinter:
                 if m_tid and int(m_tid.group(1)) < 125:
                     is_historical_task = True
 
-        # Pattern matches
         re_code_fence = re.compile(r"^(\s*)(`{3,}|~{3,})(.*)$")
         re_heading = re.compile(r"^(#{1,6})\s+(.*)$")
-        re_numbered_heading = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*[\.\)]?|\d+\s*[-–—])\s+(.*)$")
-        re_bold_heading = re.compile(r"^\s*\*\*([^*]+)\*\*[:\s]*$")
         re_bullet = re.compile(r"^(\s*)([\*\+\-])\s+(.*)$")
-        re_raw_url = re.compile(r"https?://[^\s)\]>`\"']+")
-        re_file_uri = re.compile(r"file:///[^\s)\]>`\"']+")
-        re_task_id = re.compile(r"\b[AT]\d{4}\b")
-        re_markdown_link = re.compile(r"!?\[((?:[^\[\]]|\[[^\[\]]*\])*)\]\((.*?)\)")
-        re_ref_def = re.compile(r"^\s*\[([^\]]+)\]:\s*(\S+)")
-        re_list_item = re.compile(r"^(\s*)(?:[-*+]|\d+\.)\s+")
 
         local_heading_slugs: Set[str] = set()
         for raw_line in lines:
@@ -621,38 +620,43 @@ class MarkdownLinter:
             if m_h:
                 local_heading_slugs.add(self._slugify(m_h.group(2)))
 
-        for idx, line in enumerate(lines, start=1):
-            # Check trailing whitespace (MD011)
-            if self.is_rule_enabled("MD011") and (line.endswith(" ") or line.endswith("\t")):
-                issues.append(
-                    LintIssue(
-                        file_path=file_path,
-                        line_number=idx,
-                        column_number=len(line),
-                        rule_id="MD011",
-                        rule_name=self.RULES["MD011"][0],
-                        message="Line contains trailing whitespace",
-                        fixable=True,
-                    )
-                )
+        active_by_id = {rule.rule_id: rule for rule in self.registry if rule.rule_id in self.enabled_rules}
+        scoped_rules: dict[str, List[Rule]] = {scope: [] for scope in self._SCOPE_RULE_ORDER}
+        seen_ids: Set[str] = set()
+        for scope, ordered_ids in self._SCOPE_RULE_ORDER.items():
+            for rid in ordered_ids:
+                if rid in active_by_id:
+                    scoped_rules[scope].append(active_by_id[rid])
+                    seen_ids.add(rid)
+        for rule in active_by_id.values():
+            if rule.rule_id not in seen_ids:
+                scoped_rules.setdefault(rule.scope, []).append(rule)
 
-            # Check tabs (MD010)
-            if self.is_rule_enabled("MD010") and "\t" in line:
-                col = line.index("\t") + 1
-                issues.append(
-                    LintIssue(
-                        file_path=file_path,
-                        line_number=idx,
-                        column_number=col,
-                        rule_id="MD010",
-                        rule_name=self.RULES["MD010"][0],
-                        message="Line contains hard tab character; indent with spaces",
-                        fixable=True,
-                    )
-                )
+        ctx = LintContext(
+            file_path=file_path,
+            actual_file_path=actual_file_path,
+            project_root=current_project_root,
+            raw_bytes=raw_bytes,
+            lines=lines,
+            is_changelog=is_changelog,
+            in_released_changelog=in_released_changelog,
+            is_historical_task=is_historical_task,
+            local_heading_slugs=local_heading_slugs,
+            linter=self,
+        )
+
+        for rule in scoped_rules["document_pre"]:
+            issues.extend(rule.check(ctx))
+
+        for idx, line in enumerate(lines, start=1):
+            ctx.line_number = idx
+            ctx.line = line
+            for rule in scoped_rules["raw_line"]:
+                issues.extend(rule.check(ctx))
 
             # Strip blockquote prefix (e.g. "  > ", "> ", ">>> ") for semantic structure checking
             unquoted_line = re.sub(r"^\s*(?:>\s*)+", "", line)
+            ctx.unquoted_line = unquoted_line
 
             # Handle frontmatter at start of file
             if idx == 1 and unquoted_line.strip() == "---":
@@ -674,19 +678,10 @@ class MarkdownLinter:
                     in_code_block = True
                     code_fence_char = fence_char
                     code_fence_len = fence_count
-                    lang = rest.strip()
-                    # Check MD007
-                    if self.is_rule_enabled("MD007") and not lang:
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=len(indent) + 1,
-                                rule_id="MD007",
-                                rule_name=self.RULES["MD007"][0],
-                                message="Fenced code block lacks a language identifier",
-                            )
-                        )
+                    ctx.fence_indent = indent
+                    ctx.fence_lang = rest.strip()
+                    for rule in scoped_rules["code_fence"]:
+                        issues.extend(rule.check(ctx))
                     continue
                 else:
                     if fence_char == code_fence_char and fence_count >= code_fence_len:
@@ -715,443 +710,28 @@ class MarkdownLinter:
 
                 if is_changelog and level == 2:
                     m_date = re.search(r"\[(?:released:\s*)?(\d{4}-\d{2}-\d{2})\]", title, re.IGNORECASE)
-                    if m_date and m_date.group(1) < "2026-10-11":
-                        in_released_changelog = True
-                    else:
-                        in_released_changelog = False
+                    in_released_changelog = bool(m_date and m_date.group(1) < "2026-10-11")
+                    ctx.in_released_changelog = in_released_changelog
 
                 if level == 1:
                     h1_count += 1
-                    if self.is_rule_enabled("MD002") and h1_count > 1:
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=1,
-                                rule_id="MD002",
-                                rule_name=self.RULES["MD002"][0],
-                                message=f"Multiple H1 headings found (H1 #{h1_count})",
-                            )
-                        )
-
-                if self.is_rule_enabled("MD001"):
-                    if last_heading_level > 0 and level > last_heading_level + 1:
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=1,
-                                rule_id="MD001",
-                                rule_name=self.RULES["MD001"][0],
-                                message=f"Heading level skipped from H{last_heading_level} to H{level}",
-                            )
-                        )
+                ctx.heading_level = level
+                ctx.heading_title = title
+                ctx.prev_heading_level = last_heading_level
+                ctx.h1_count = h1_count
+                for rule in scoped_rules["heading"]:
+                    issues.extend(rule.check(ctx))
                 last_heading_level = level
-
-                if self.is_rule_enabled("MD003"):
-                    num_match = re_numbered_heading.match(unquoted_line)
-                    if num_match:
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=1,
-                                rule_id="MD003",
-                                rule_name=self.RULES["MD003"][0],
-                                message=f"Numbered heading prefix found: '{title.strip()}'",
-                            )
-                        )
-
-                if self.is_rule_enabled("MD015") and not is_historical_task and level >= 2:
-                    if idx < len(lines):
-                        next_line = lines[idx]
-                        next_unquoted = re.sub(r"^\s*(?:>\s*)+", "", next_line)
-                        if next_unquoted.strip() == "":
-                            k = idx
-                            while k < len(lines):
-                                k_unquoted = re.sub(r"^\s*(?:>\s*)+", "", lines[k])
-                                if k_unquoted.strip() == "":
-                                    k += 1
-                                else:
-                                    break
-                            if k < len(lines):
-                                target_unquoted = re.sub(r"^\s*(?:>\s*)+", "", lines[k])
-                                if not re_heading.match(target_unquoted) and not target_unquoted.strip().startswith(
-                                    ("---", "***", "___")
-                                ):
-                                    issues.append(
-                                        LintIssue(
-                                            file_path=file_path,
-                                            line_number=idx,
-                                            column_number=1,
-                                            rule_id="MD015",
-                                            rule_name=self.RULES["MD015"][0],
-                                            message=f"Heading '{title.strip()}' (H{level}) must not be followed by a blank line before content",
-                                            fixable=True,
-                                        )
-                                    )
                 continue
 
-            # Check bold text on its own line masquerading as heading (MD004)
-            # Only flag outside blockquotes (blockquotes often use > **Lead-in:** for notes/examples)
-            if self.is_rule_enabled("MD004") and not line.strip().startswith(">"):
-                if not unquoted_line.startswith("- ") and not unquoted_line.startswith("|"):
-                    bold_match = re_bold_heading.match(unquoted_line)
-                    if bold_match and len(bold_match.group(1).split()) < 8:
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=1,
-                                rule_id="MD004",
-                                rule_name=self.RULES["MD004"][0],
-                                message=f"Bold text on own line used as heading: '{unquoted_line.strip()}'",
-                            )
-                        )
-
-            # Check sentence introducing a list (MD016)
-            if self.is_rule_enabled("MD016"):
-                if (
-                    unquoted_line.rstrip().endswith(":")
-                    and not re_heading.match(unquoted_line)
-                    and not unquoted_line.strip().startswith("|")
-                    and not unquoted_line.strip().startswith("<!--")
-                ):
-                    if idx < len(lines):
-                        next_line = lines[idx]
-                        next_unquoted = re.sub(r"^\s*(?:>\s*)+", "", next_line)
-                        if next_unquoted.strip() == "":
-                            k = idx
-                            while k < len(lines):
-                                k_unquoted = re.sub(r"^\s*(?:>\s*)+", "", lines[k])
-                                if k_unquoted.strip() == "":
-                                    k += 1
-                                else:
-                                    break
-                            if k < len(lines):
-                                target_unquoted = re.sub(r"^\s*(?:>\s*)+", "", lines[k])
-                                if re_list_item.match(target_unquoted):
-                                    issues.append(
-                                        LintIssue(
-                                            file_path=file_path,
-                                            line_number=idx,
-                                            column_number=1,
-                                            rule_id="MD016",
-                                            rule_name=self.RULES["MD016"][0],
-                                            message="Sentence introducing a list must not be followed by a blank line",
-                                            fixable=True,
-                                        )
-                                    )
-
-            # Check List items (MD005, MD006)
-            bullet_match = re_bullet.match(unquoted_line)
-            if bullet_match:
-                indent_ws, bullet_char, item_body = bullet_match.groups()
-                col = len(line) - len(unquoted_line) + len(indent_ws) + 1
-
-                if self.is_rule_enabled("MD005") and bullet_char in ("*", "+"):
-                    issues.append(
-                        LintIssue(
-                            file_path=file_path,
-                            line_number=idx,
-                            column_number=col,
-                            rule_id="MD005",
-                            rule_name=self.RULES["MD005"][0],
-                            message=f"Non-dash bullet indicator '{bullet_char}' used; use '-' instead",
-                            fixable=True,
-                        )
-                    )
-
-                if self.is_rule_enabled("MD006"):
-                    body_stripped = item_body.strip()
-                    if body_stripped.startswith("**") and body_stripped.endswith("**"):
-                        inner = body_stripped[2:-2]
-                        if "**" not in inner and not inner.endswith(":"):
-                            issues.append(
-                                LintIssue(
-                                    file_path=file_path,
-                                    line_number=idx,
-                                    column_number=col,
-                                    rule_id="MD006",
-                                    rule_name=self.RULES["MD006"][0],
-                                    message="Entire bullet item is bolded; bold only terms/glossaries",
-                                )
-                            )
-
-                if is_changelog and self.is_rule_enabled("MD013"):
-                    task_match = re_task_id.search(item_body)
-                    if task_match:
-                        task_col = line.find(task_match.group(0)) + 1
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=task_col if task_col > 0 else col,
-                                rule_id="MD013",
-                                rule_name=self.RULES["MD013"][0],
-                                message=f"Task identifier '{task_match.group(0)}' found in changelog bullet; release notes must not contain task IDs",
-                            )
-                        )
-
-            # Check for raw URLs (MD008) and file:/// URIs (MD009)
-            # Strip inline code spans first so code examples aren't flagged
+            ctx.bullet_match = re_bullet.match(unquoted_line)
             sanitized = re.sub(r"`[^`]+`", "", unquoted_line)
-            # Strip HTML comments
-            sanitized = re.sub(r"<!--.*?-->", "", sanitized)
+            ctx.sanitized = re.sub(r"<!--.*?-->", "", sanitized)
+            for rule in scoped_rules["prose"]:
+                issues.extend(rule.check(ctx))
 
-            if self.is_rule_enabled("MD009"):
-                file_uri_match = re_file_uri.search(sanitized)
-                if file_uri_match:
-                    issues.append(
-                        LintIssue(
-                            file_path=file_path,
-                            line_number=idx,
-                            column_number=line.find(file_uri_match.group(0)) + 1,
-                            rule_id="MD009",
-                            rule_name=self.RULES["MD009"][0],
-                            message="Local file:/// URI used; use relative repository markdown links",
-                        )
-                    )
-
-            if self.is_rule_enabled("MD008"):
-                # Strip out markdown links [text](url)
-                sanitized_urls = re.sub(r"\[[^\]]*\]\([^\)]*\)", "", sanitized)
-                # Strip out markdown reference definitions [id]: url
-                sanitized_urls = re.sub(r"^\s*\[[^\]]+\]:\s*\S+", "", sanitized_urls)
-                # Strip out autolinks <http://...>
-                sanitized_urls = re.sub(r"<https?://[^>]+>", "", sanitized_urls)
-
-                raw_match = re_raw_url.search(sanitized_urls)
-                if raw_match:
-                    issues.append(
-                        LintIssue(
-                            file_path=file_path,
-                            line_number=idx,
-                            column_number=line.find(raw_match.group(0)) + 1,
-                            rule_id="MD008",
-                            rule_name=self.RULES["MD008"][0],
-                            message=f"Raw URL found in prose: '{raw_match.group(0)}'; enclose in markdown link",
-                        )
-                    )
-
-            # Check for invalid relative links (MD014)
-            if self.is_rule_enabled("MD014") and not is_historical_task and not in_released_changelog:
-                candidate_targets: List[Tuple[str, str, int]] = []
-                for link_match in re_markdown_link.finditer(sanitized):
-                    raw_target = link_match.group(2).strip()
-                    if raw_target.startswith("<"):
-                        angle_match = re.match(r"^<([^>]+)>", raw_target)
-                        target = angle_match.group(1).strip() if angle_match else raw_target
-                    else:
-                        target = raw_target.split()[0] if raw_target else ""
-                    if target:
-                        candidate_targets.append((target, raw_target, link_match.start()))
-
-                ref_match = re_ref_def.match(sanitized)
-                if ref_match:
-                    raw_target = ref_match.group(2).strip()
-                    target = raw_target.strip("<>")
-                    if target:
-                        candidate_targets.append((target, raw_target, ref_match.start(2)))
-
-                for target, raw_target, match_start in candidate_targets:
-                    if target.startswith(
-                        ("http://", "https://", "ftp://", "mailto:", "tel:", "data:", "javascript:", "irc:", "news:")
-                    ):
-                        continue
-                    if target.startswith("file://"):
-                        continue
-                    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", target):
-                        continue
-
-                    col = line.find(target) + 1
-                    if col <= 0:
-                        col = line.find(raw_target) + 1
-                    if col <= 0:
-                        col = match_start + 1
-
-                    if target.startswith("#"):
-                        anchor = urllib.parse.unquote(target[1:].split("?")[0]).lower()
-                        if (
-                            anchor
-                            and anchor not in ("top", "")
-                            and not re.match(r"^l\d+(?:-l?\d+)?$", anchor)
-                            and not re.match(r"^line-\d+$", anchor)
-                            and anchor not in local_heading_slugs
-                        ):
-                            issues.append(
-                                LintIssue(
-                                    file_path=file_path,
-                                    line_number=idx,
-                                    column_number=col,
-                                    rule_id="MD014",
-                                    rule_name=self.RULES["MD014"][0],
-                                    message=f"Intra-document anchor '{target}' does not match any heading in the document",
-                                )
-                            )
-                        continue
-
-                    path_part = target.split("#", 1)[0].split("?", 1)[0]
-                    anchor_part = target.split("#", 1)[1].split("?", 1)[0] if "#" in target else ""
-                    if not path_part:
-                        continue
-
-                    unquoted_path = urllib.parse.unquote(path_part)
-                    target_path = Path(unquoted_path)
-                    if target_path.is_absolute():
-                        continue
-
-                    if unquoted_path.startswith("/") or unquoted_path.startswith("\\"):
-                        resolved = (current_project_root / unquoted_path.lstrip("/\\")).resolve()
-                    else:
-                        resolved = (file_path.parent / target_path).resolve()
-
-                    if not resolved.exists():
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=col,
-                                rule_id="MD014",
-                                rule_name=self.RULES["MD014"][0],
-                                message=f"Relative link '{target}' does not resolve to an existing file on disk",
-                            )
-                        )
-                    elif anchor_part and resolved.suffix.lower() == ".md":
-                        target_slugs = self._get_file_headings(resolved)
-                        anchor_slug = urllib.parse.unquote(anchor_part).lower()
-                        if (
-                            anchor_slug
-                            and anchor_slug not in ("top", "")
-                            and not re.match(r"^l\d+(?:-l?\d+)?$", anchor_slug)
-                            and not re.match(r"^line-\d+$", anchor_slug)
-                            and anchor_slug not in target_slugs
-                        ):
-                            issues.append(
-                                LintIssue(
-                                    file_path=file_path,
-                                    line_number=idx,
-                                    column_number=col,
-                                    rule_id="MD014",
-                                    rule_name=self.RULES["MD014"][0],
-                                    message=f"Relative link '{target}' anchor '#{anchor_part}' does not match any heading in '{path_part}'",
-                                )
-                            )
-
-            # Check for invalid external links (MD018)
-            if self.is_rule_enabled("MD018") and not self.offline:
-                external_targets: List[Tuple[str, str, int]] = []
-                for link_match in re_markdown_link.finditer(sanitized):
-                    raw_target = link_match.group(2).strip()
-                    if raw_target.startswith("<"):
-                        angle_match = re.match(r"^<([^>]+)>", raw_target)
-                        target = angle_match.group(1).strip() if angle_match else raw_target
-                    else:
-                        target = raw_target.split()[0] if raw_target else ""
-                    if target.startswith(("http://", "https://")):
-                        external_targets.append((target, raw_target, link_match.start()))
-
-                ref_match = re_ref_def.match(sanitized)
-                if ref_match:
-                    raw_target = ref_match.group(2).strip()
-                    target = raw_target.strip("<>")
-                    if target.startswith(("http://", "https://")):
-                        external_targets.append((target, raw_target, ref_match.start(2)))
-
-                for target, raw_target, match_start in external_targets:
-                    err = self._validate_external_url(target, project_root=current_project_root)
-                    if err:
-                        col = line.find(target) + 1
-                        if col <= 0:
-                            col = line.find(raw_target) + 1
-                        if col <= 0:
-                            col = match_start + 1
-                        issues.append(
-                            LintIssue(
-                                file_path=file_path,
-                                line_number=idx,
-                                column_number=col,
-                                rule_id="MD018",
-                                rule_name=self.RULES["MD018"][0],
-                                message=f"External link '{target}' failed validation: {err}",
-                            )
-                        )
-
-            # Check for file references that should be markdown links (MD019)
-            if self.is_rule_enabled("MD019"):
-                if not is_historical_task and not in_released_changelog:
-                    lower_unquoted = unquoted_line.lower()
-                    if "avoid " not in lower_unquoted and "anti-pattern" not in lower_unquoted and "e.g. " not in lower_unquoted:
-                        no_links = re_markdown_link.sub("", unquoted_line)
-                        no_links = re_ref_def.sub("", no_links)
-                        no_links = re.sub(r"<[^>]+>", "", no_links)
-
-                        # Check bare paths in prose (outside backticks)
-                        no_code = re.sub(r"`[^`]+`", "", no_links)
-                        for match in self.RE_BARE_PATH.finditer(no_code):
-                            ext = match.group(1).lower()
-                            val = match.group(0)
-                            if (
-                                ext in self.FILE_EXTENSIONS
-                                and "{{" not in val
-                                and val.lower() not in self.TECH_NAMES
-                                and val.lower() not in self.GENERIC_FILES
-                            ):
-                                col = line.find(val) + 1
-                                issues.append(
-                                    LintIssue(
-                                        file_path=file_path,
-                                        line_number=idx,
-                                        column_number=col if col > 0 else 1,
-                                        rule_id="MD019",
-                                        rule_name=self.RULES["MD019"][0],
-                                        message=f"Bare file path '{val}' found in prose; format as markdown link [filename](path)",
-                                    )
-                                )
-
-                        # Check backticked file references in prose
-                        for match in re.finditer(r"`([^`]+)`", no_links):
-                            val = match.group(1).strip()
-                            if " " in val or "{{" in val or "}}" in val or "*" in val or "~" in val:
-                                continue
-                            if val.lower() in self.TECH_NAMES or val.lower() in self.GENERIC_FILES:
-                                continue
-                            if val.startswith("http://") or val.startswith("https://") or val.startswith("file:"):
-                                continue
-                            if re.match(r"^[a-zA-Z]:[/\\]", val) or val.startswith("/") or val.startswith("\\"):
-                                continue
-
-                            parts = val.replace("\\", "/").split("/")
-                            name = parts[-1]
-                            if "." in name:
-                                ext = name.rsplit(".", 1)[1].lower()
-                                if ext in self.FILE_EXTENSIONS:
-                                    repo_file = (current_project_root / val).resolve()
-                                    local_file = (actual_file_path.parent / val).resolve()
-                                    is_repo_match = repo_file.is_relative_to(current_project_root) and repo_file.exists()
-                                    is_local_match = local_file.is_relative_to(current_project_root) and local_file.exists()
-                                    if is_repo_match or is_local_match:
-                                        col = line.find(f"`{val}`") + 1
-                                        issues.append(
-                                            LintIssue(
-                                                file_path=file_path,
-                                                line_number=idx,
-                                                column_number=col if col > 0 else 1,
-                                                rule_id="MD019",
-                                                rule_name=self.RULES["MD019"][0],
-                                                message=f"Repository file reference '{val}' in prose must be formatted as markdown link [filename](path)",
-                                            )
-                                        )
-
-        # Check table alignment (MD017)
-        if self.is_rule_enabled("MD017"):
-            table_issues = check_table_alignment(
-                lines,
-                file_path=file_path,
-                rule_id="MD017",
-                rule_name=self.RULES["MD017"][0],
-            )
-            issues.extend(table_issues)
+        for rule in scoped_rules["document_post"]:
+            issues.extend(rule.check(ctx))
 
         return issues
 
@@ -1442,6 +1022,16 @@ def plural(count: int, noun: str) -> str:
     return f"{count} {noun}{'s' if count != 1 else ''}"
 
 
+def _discover_config_path(input_paths: List[Path], repo_root: Path) -> Optional[Path]:
+    """Locate a '.markdown-lint.json' file in the target path or project root if present."""
+    for base in (*input_paths, find_project_root(input_paths[0]), repo_root):
+        cand_dir = base.resolve().parent if base.resolve().is_file() else base.resolve()
+        candidate = cand_dir / DEFAULT_CONFIG_FILENAME
+        if candidate.is_file():
+            return candidate
+    return None
+
+
 def run_lint(args: argparse.Namespace, logger: ToolLogger, fix: bool) -> int:
     """Lint the markdown files under the requested paths, fixing safe issues first when asked."""
     repo_root = Path.cwd()
@@ -1451,9 +1041,26 @@ def run_lint(args: argparse.Namespace, logger: ToolLogger, fix: bool) -> int:
             return 2
     input_paths = list(args.paths) or [repo_root]
 
-    excludes = DEFAULT_EXCLUDES + (args.exclude or [])
+    cfg_arg = getattr(args, "config", None)
+    prof_arg = getattr(args, "profile", None)
+    if cfg_arg is not None and not Path(cfg_arg).resolve().exists():
+        logger.error(f"Configuration file does not exist: {cfg_arg}")
+        return 2
+    resolved_cfg = Path(cfg_arg).resolve() if cfg_arg is not None else _discover_config_path(input_paths, repo_root)
+    try:
+        profile = load_profile(resolved_cfg, profile=prof_arg)
+        linter = MarkdownLinter(
+            enabled_rules=parse_rule_codes(args.rules),
+            offline=args.offline,
+            timeout=args.timeout,
+            profile=profile,
+        )
+    except ValueError as exc:
+        logger.error(str(exc))
+        return 2
+
+    excludes = DEFAULT_EXCLUDES + (list(profile.excludes) if profile else []) + (args.exclude or [])
     files = discover_markdown_files(input_paths, repo_root, excludes)
-    linter = MarkdownLinter(enabled_rules=parse_rule_codes(args.rules), offline=args.offline, timeout=args.timeout)
     logger.debug_msg(
         f"Linting {plural(len(files), 'markdown file')} "
         f"(rules: {','.join(sorted(linter.enabled_rules))}; offline: {str(args.offline).lower()}; timeout: {args.timeout}s)"
@@ -1541,6 +1148,7 @@ def build_harness() -> ToolHarness:
         examples=[
             f"{TOOL_NAME} check",
             f"{TOOL_NAME} check --offline README.md docs",
+            f"{TOOL_NAME} check --profile dev-guidelines docs",
             f"{TOOL_NAME} check --rules MD001,MD017 guidelines",
             f"{TOOL_NAME} check --exclude 'archive/*' --log-file lint.log",
             f"{TOOL_NAME} fix docs",
@@ -1552,6 +1160,8 @@ def build_harness() -> ToolHarness:
         "--exclude", action="append", metavar="GLOB", help="exclude paths matching the glob pattern (repeatable)"
     )
     harness.add_global_argument("--rules", metavar="RULES", help="comma-separated rule codes to check (default: all)")
+    harness.add_global_argument("--profile", metavar="PROFILE", help="named lint profile (default or dev-guidelines)")
+    harness.add_global_argument("--config", type=Path, metavar="PATH", help="path to .markdown-lint.json config file")
     harness.add_global_argument("--offline", action="store_true", help="skip external link checks (rule MD018)")
     harness.add_global_argument(
         "--timeout", type=float, default=10.0, metavar="SECONDS", help="external link timeout in seconds (default: 10.0)"

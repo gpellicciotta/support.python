@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.3.2-pre
+## v1.3.3-pre
+- CLI: Split Markdown lint rules into [rules.py](src/support_python/markdown/rules.py), [registry.py](src/support_python/markdown/registry.py), [profiles.py](src/support_python/markdown/profiles.py), and [tables.py](src/support_python/markdown/tables.py).
 
 ---
 
@@ -27,7 +28,7 @@ A summarized overview of all changes, per version of this project.
 - BackEnd: Added sliding-window `TaskRateLimiter` in [ratelimit.py](src/support_python/ratelimit.py) to cap task dispatches across configurable time windows.
 - BackEnd: Added duration parsing, human-readable duration formatting, and relative epoch formatting helpers in [durations.py](src/support_python/durations.py).
 - DevEx: Expanded `CloudSqlProxyManager` to locate `cloud-sql-proxy` outside `PATH` and fail cleanly when Docker is missing.
-- BackEnd: Added ANSI-aware Markdown table formatting, row splitting, and alignment check helpers in [markdown.py](src/support_python/markdown.py).
+- BackEnd: Added ANSI-aware Markdown table formatting, row splitting, and alignment check helpers in [tables.py](src/support_python/markdown/tables.py).
 - BackEnd: Added atomic UTF-8 text write, replacement, and retry-hardened read helpers in [files.py](src/support_python/files.py).
 - BackEnd: Added OS process hierarchy, start time, liveness, termination, and ancestor-protected `safe_kill` helpers.
 - BackEnd: Added Git execution and repository queries with explicit failure results and porcelain parsing.
