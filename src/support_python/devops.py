@@ -64,26 +64,112 @@ def run_step(
     return True
 
 
-def resolve_cloud_sql_proxy_bin(repo_root: Optional[Union[Path, str]] = None) -> Optional[str]:
-    """Resolve the Cloud SQL Auth Proxy executable path from PATH or the repository root.
+_PROXY_PATH_NAMES: tuple[str, ...] = (
+    "cloud-sql-proxy",
+    "cloud-sql-proxy.exe",
+    "cloud-sql-proxy.x64.exe",
+)
+
+_PROXY_FILE_NAMES: tuple[str, ...] = (
+    "cloud-sql-proxy.x64.exe",
+    "cloud-sql-proxy.exe",
+    "cloud-sql-proxy",
+)
+
+
+def _candidate_cloud_sql_proxy_dirs() -> list[Path]:
+    """Return ordered fallback directories outside ``PATH`` that may contain ``cloud-sql-proxy``."""
+    raw_dirs: list[Path] = []
+    try:
+        home = Path.home()
+    except RuntimeError:
+        home = None
+
+    if home is not None:
+        raw_dirs.extend(
+            [
+                home / "bin",
+                home / ".local" / "bin",
+                home / "google-cloud-sdk" / "bin",
+                home / "AppData" / "Local" / "Google" / "Cloud SDK" / "google-cloud-sdk" / "bin",
+            ]
+        )
+
+    for gcloud_name in ("gcloud", "gcloud.cmd"):
+        gcloud_bin = shutil.which(gcloud_name)
+        if gcloud_bin:
+            gcloud_path = Path(gcloud_bin)
+            raw_dirs.append(gcloud_path.parent)
+            try:
+                raw_dirs.append(gcloud_path.resolve().parent)
+            except OSError:
+                pass
+
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        raw_dirs.append(Path(local_app_data) / "Google" / "Cloud SDK" / "google-cloud-sdk" / "bin")
+
+    app_data = os.environ.get("APPDATA")
+    if app_data:
+        raw_dirs.append(Path(app_data) / "gcloud" / "bin")
+
+    for env_key in ("ProgramFiles(x86)", "ProgramFiles"):
+        prog_files = os.environ.get(env_key)
+        if prog_files:
+            raw_dirs.append(Path(prog_files) / "Google" / "Cloud SDK" / "google-cloud-sdk" / "bin")
+
+    raw_dirs.extend(
+        [
+            Path("/opt/homebrew/bin"),
+            Path("/usr/local/bin"),
+            Path("/usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/bin"),
+            Path("/snap/bin"),
+        ]
+    )
+
+    seen: set[str] = set()
+    unique_dirs: list[Path] = []
+    for candidate_dir in raw_dirs:
+        key = str(candidate_dir)
+        if key not in seen:
+            seen.add(key)
+            unique_dirs.append(candidate_dir)
+    return unique_dirs
+
+
+def resolve_cloud_sql_proxy_bin(
+    repo_root: Optional[Union[Path, str]] = None,
+    search_dirs: Optional[Sequence[Union[Path, str]]] = None,
+) -> Optional[str]:
+    """Resolve the Cloud SQL Auth Proxy executable from ``PATH``, *repo_root*, or fallback directories.
 
     Args:
         repo_root: Optional repository root path to check for local proxy executables.
+        search_dirs: Optional explicit fallback directories to inspect when the binary is not on
+            ``PATH`` or in *repo_root*. Defaults to standard user and Google Cloud SDK ``bin``
+            directories.
 
     Returns:
-        String path to the executable if found, or None.
+        String path to the executable if found, or ``None``.
     """
-    for name in ("cloud-sql-proxy", "cloud-sql-proxy.exe", "cloud-sql-proxy.x64.exe"):
+    for name in _PROXY_PATH_NAMES:
         found = shutil.which(name)
         if found:
             return found
 
     if repo_root:
         root = Path(repo_root)
-        for name in ("cloud-sql-proxy.x64.exe", "cloud-sql-proxy.exe", "cloud-sql-proxy"):
+        for name in _PROXY_FILE_NAMES:
             local_exe = root / name
-            if local_exe.exists():
+            if local_exe.is_file():
                 return str(local_exe)
+
+    candidate_dirs = [Path(d) for d in search_dirs] if search_dirs is not None else _candidate_cloud_sql_proxy_dirs()
+    for directory in candidate_dirs:
+        for name in _PROXY_FILE_NAMES:
+            candidate = directory / name
+            if candidate.is_file():
+                return str(candidate)
 
     return None
 
@@ -118,10 +204,10 @@ class CloudSqlProxyManager:
         self.repo_root = Path(repo_root) if repo_root else None
 
     def resolve_proxy_bin(self) -> Optional[str]:
-        """Resolve the proxy executable binary on PATH or in the repository root.
+        """Resolve the proxy executable binary on ``PATH``, in *repo_root*, or in fallback directories.
 
         Returns:
-            String path to the executable, or None if not found.
+            String path to the executable, or ``None`` if not found.
         """
         return resolve_cloud_sql_proxy_bin(self.repo_root)
 
@@ -129,7 +215,7 @@ class CloudSqlProxyManager:
         """Start the Cloud SQL Auth Proxy via native binary if available, falling back to Docker.
 
         Returns:
-            Exit code from the proxy process (0 on success).
+            Exit code from the proxy process (0 on success, 1 on missing prerequisites or launch error).
         """
         if self.credentials_file and not self.credentials_file.exists():
             self.logger.error(f"Credentials file not found: {self.credentials_file}")
@@ -148,7 +234,15 @@ class CloudSqlProxyManager:
             if self.credentials_file:
                 cmd.extend(["--credentials-file", str(self.credentials_file)])
         else:
-            self.logger.info("Local cloud-sql-proxy binary not found on PATH; falling back to Docker image...")
+            if not shutil.which("docker"):
+                self.logger.error(
+                    "Local cloud-sql-proxy binary not found and Docker is not installed. "
+                    "Install cloud-sql-proxy or Docker to start the proxy."
+                )
+                return 1
+            self.logger.info(
+                "Local cloud-sql-proxy binary not found on PATH or in fallback locations; falling back to Docker image..."
+            )
             cmd = [
                 "docker",
                 "run",
@@ -172,7 +266,11 @@ class CloudSqlProxyManager:
                 cmd.extend(["--credentials-file", "/config/key.json"])
 
         self.logger.info(f"Starting Cloud SQL Auth Proxy on {self.address}:{self.port} -> {self.instance} ...")
-        result = subprocess.run(cmd, cwd=str(self.repo_root) if self.repo_root else None)
+        try:
+            result = subprocess.run(cmd, cwd=str(self.repo_root) if self.repo_root else None)
+        except OSError as exc:
+            self.logger.error(f"Failed to launch Cloud SQL Auth Proxy ({cmd[0]}): {exc}")
+            return 1
         return result.returncode
 
 

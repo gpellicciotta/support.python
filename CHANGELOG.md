@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.0.11-pre
+## v1.0.12-pre
 
+- DevEx: Expanded `CloudSqlProxyManager` to locate `cloud-sql-proxy` outside `PATH` and fail cleanly when Docker is missing.
 - BackEnd: Added ANSI-aware Markdown table formatting, row splitting, and alignment check helpers in [markdown.py](src/support_python/markdown.py).
 - BackEnd: Added atomic UTF-8 text write, replacement, and retry-hardened read helpers in [files.py](src/support_python/files.py).
 - BackEnd: Added OS process hierarchy, start time, liveness, termination, and ancestor-protected `safe_kill` helpers.

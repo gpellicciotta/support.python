@@ -202,9 +202,9 @@ except ApiError as e:
 
 ## DevOps script helpers and environment managers
 
-`support_python.devops` provides `run_step`, `CloudSqlProxyManager`, `LocalDockerManager`,
+`support_python.devops` provides `run_step`, `resolve_cloud_sql_proxy_bin`, `CloudSqlProxyManager`, `LocalDockerManager`,
 `LocalMySqlManager`, `LocalServerManager`, `LocalMailManager`, and `LocalVerifier` for local developer
-orchestration and deployment scripts:
+orchestration and deployment scripts. `CloudSqlProxyManager` searches `PATH`, `repo_root`, and user or Cloud SDK `bin` directories, failing cleanly when Docker is missing:
 
 ```python
 from support_python import (
@@ -225,7 +225,8 @@ if docker_mgr.get_status() != "running":
 mysql_mgr = LocalMySqlManager(container_name="app-local-mysql", port=3306, mysql_env_file="mysql.env")
 mysql_mgr.ensure_running()
 
-# The Cloud SQL instance (project:region:instance) is mandatory
+# The Cloud SQL instance (project:region:instance) is mandatory.
+# Discovers cloud-sql-proxy on PATH, repo_root, ~/bin, ~/.local/bin, or Cloud SDK bin before Docker fallback.
 proxy_mgr = CloudSqlProxyManager("my-project:my-region:my-instance")
 
 # Manage Local Application Server Process

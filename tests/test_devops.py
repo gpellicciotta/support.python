@@ -73,14 +73,103 @@ class ResolveCloudSqlProxyBinTests(unittest.TestCase):
             root = Path(tmp_dir)
             proxy_exe = root / "cloud-sql-proxy.x64.exe"
             proxy_exe.write_text("", encoding="utf-8")
-            with patch("shutil.which", return_value=None):
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=root / "empty-home"),
+            ):
                 found = resolve_cloud_sql_proxy_bin(repo_root=root)
+                self.assertEqual(found, str(proxy_exe))
+
+    def test_finds_proxy_in_user_bin_outside_path(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            fake_home = Path(tmp_dir) / "home"
+            user_bin = fake_home / "bin"
+            user_bin.mkdir(parents=True)
+            proxy_exe = user_bin / "cloud-sql-proxy.exe"
+            proxy_exe.write_text("", encoding="utf-8")
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=fake_home),
+            ):
+                found = resolve_cloud_sql_proxy_bin(repo_root=Path(tmp_dir) / "repo")
+                self.assertEqual(found, str(proxy_exe))
+
+    def test_finds_proxy_in_local_bin_outside_path(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            fake_home = Path(tmp_dir) / "home"
+            local_bin = fake_home / ".local" / "bin"
+            local_bin.mkdir(parents=True)
+            proxy_bin = local_bin / "cloud-sql-proxy"
+            proxy_bin.write_text("", encoding="utf-8")
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=fake_home),
+            ):
+                found = resolve_cloud_sql_proxy_bin()
+                self.assertEqual(found, str(proxy_bin))
+
+    def test_finds_proxy_next_to_gcloud_outside_path(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            sdk_bin = Path(tmp_dir) / "google-cloud-sdk" / "bin"
+            sdk_bin.mkdir(parents=True)
+            gcloud_cmd = sdk_bin / "gcloud.cmd"
+            gcloud_cmd.write_text("", encoding="utf-8")
+            proxy_exe = sdk_bin / "cloud-sql-proxy.exe"
+            proxy_exe.write_text("", encoding="utf-8")
+
+            def fake_which(name: str) -> str | None:
+                if name in ("gcloud", "gcloud.cmd"):
+                    return str(gcloud_cmd)
+                return None
+
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", side_effect=fake_which),
+                patch("pathlib.Path.home", return_value=Path(tmp_dir) / "empty-home"),
+            ):
+                found = resolve_cloud_sql_proxy_bin()
+                self.assertEqual(found, str(proxy_exe))
+
+    def test_ignores_legacy_v1_underscore_proxy_binary(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            sdk_bin = Path(tmp_dir) / "google-cloud-sdk" / "bin"
+            sdk_bin.mkdir(parents=True)
+            (sdk_bin / "cloud_sql_proxy").write_text("", encoding="utf-8")
+            (sdk_bin / "cloud_sql_proxy.exe").write_text("", encoding="utf-8")
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=Path(tmp_dir) / "empty-home"),
+            ):
+                found = resolve_cloud_sql_proxy_bin(repo_root=sdk_bin, search_dirs=[sdk_bin])
+                self.assertIsNone(found)
+
+    def test_finds_proxy_in_localappdata_cloud_sdk_outside_path(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            local_app_data = Path(tmp_dir) / "LocalAppData"
+            sdk_bin = local_app_data / "Google" / "Cloud SDK" / "google-cloud-sdk" / "bin"
+            sdk_bin.mkdir(parents=True)
+            proxy_exe = sdk_bin / "cloud-sql-proxy.exe"
+            proxy_exe.write_text("", encoding="utf-8")
+            with (
+                patch.dict("os.environ", {"LOCALAPPDATA": str(local_app_data)}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=Path(tmp_dir) / "empty-home"),
+            ):
+                found = resolve_cloud_sql_proxy_bin()
                 self.assertEqual(found, str(proxy_exe))
 
     def test_returns_none_when_not_found(self) -> None:
         with TemporaryDirectory() as tmp_dir:
-            with patch("shutil.which", return_value=None):
-                found = resolve_cloud_sql_proxy_bin(repo_root=Path(tmp_dir))
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=Path(tmp_dir) / "empty-home"),
+            ):
+                found = resolve_cloud_sql_proxy_bin(repo_root=Path(tmp_dir), search_dirs=[])
                 self.assertIsNone(found)
 
 
@@ -140,6 +229,7 @@ class CloudSqlProxyManagerTests(unittest.TestCase):
 
             with (
                 patch.object(mgr, "resolve_proxy_bin", return_value=None),
+                patch("shutil.which", return_value="/usr/bin/docker"),
                 patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run,
             ):
                 code = mgr.start()
@@ -147,6 +237,62 @@ class CloudSqlProxyManagerTests(unittest.TestCase):
                 cmd = mock_run.call_args[0][0]
                 self.assertEqual(cmd[0], "docker")
                 self.assertIn("gcr.io/cloud-sql-connectors/cloud-sql-proxy:latest", cmd)
+                info_messages = [call.args[0] for call in logger.info.call_args_list]
+                self.assertTrue(any("not found on PATH or in fallback locations" in msg for msg in info_messages))
+
+    def test_start_fails_cleanly_when_proxy_and_docker_missing(self) -> None:
+        logger = MagicMock()
+        mgr = CloudSqlProxyManager(INSTANCE, logger=logger, port=3607)
+        with (
+            patch.object(mgr, "resolve_proxy_bin", return_value=None),
+            patch("shutil.which", return_value=None),
+            patch("subprocess.run") as mock_run,
+        ):
+            code = mgr.start()
+            self.assertEqual(code, 1)
+            mock_run.assert_not_called()
+            logger.error.assert_called_once()
+            error_msg = logger.error.call_args[0][0]
+            self.assertIn("cloud-sql-proxy", error_msg)
+            self.assertIn("Docker", error_msg)
+
+    def test_start_fails_cleanly_when_subprocess_raises_oserror(self) -> None:
+        logger = MagicMock()
+        mgr = CloudSqlProxyManager(INSTANCE, logger=logger, port=3607)
+        with (
+            patch.object(mgr, "resolve_proxy_bin", return_value="/fake/cloud-sql-proxy"),
+            patch("subprocess.run", side_effect=FileNotFoundError("No such file or directory")),
+        ):
+            code = mgr.start()
+            self.assertEqual(code, 1)
+            logger.error.assert_called_once()
+
+    def test_start_finds_and_executes_proxy_outside_path_integration(self) -> None:
+        logger = MagicMock()
+        with TemporaryDirectory() as tmp_dir:
+            fake_home = Path(tmp_dir) / "home"
+            user_bin = fake_home / "bin"
+            user_bin.mkdir(parents=True)
+            proxy_exe = user_bin / "cloud-sql-proxy.exe"
+            proxy_exe.write_text("", encoding="utf-8")
+            repo_dir = Path(tmp_dir) / "repo"
+            repo_dir.mkdir(parents=True)
+
+            mgr = CloudSqlProxyManager(INSTANCE, logger=logger, address="127.0.0.1", port=3608, repo_root=repo_dir)
+            with (
+                patch.dict("os.environ", {}, clear=True),
+                patch("shutil.which", return_value=None),
+                patch("pathlib.Path.home", return_value=fake_home),
+                patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run,
+            ):
+                code = mgr.start()
+                self.assertEqual(code, 0)
+                mock_run.assert_called_once()
+                cmd = mock_run.call_args[0][0]
+                self.assertEqual(
+                    cmd,
+                    [str(proxy_exe), "--address", "127.0.0.1", "--port", "3608", INSTANCE],
+                )
 
 
 class LocalDockerManagerTests(unittest.TestCase):

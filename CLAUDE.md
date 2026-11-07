@@ -50,7 +50,7 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
 - `files.py`: atomic UTF-8 text writes via sibling temporary files, Windows-safe `atomic_replace` retries, and `read_text_retrying`.
 - `markdown.py`: ANSI-aware Markdown table formatting (`format_markdown_table`, `format_markdown_table_block`), row parsing, and `check_table_alignment`.
 - `errors.py`: REST-client exception hierarchy and status-code mapping helpers.
-- `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers for local ops scripts.
+- `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers (including non-`PATH` proxy discovery) for ops scripts.
   Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script
   (see `docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md`).
 - `capture.py`, `httpd.py`: headless-Chrome view capture and the embedded static HTTP server.

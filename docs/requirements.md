@@ -76,7 +76,7 @@ Functional and technical requirements for the `support-python` project.
 
 ### DevOps Managers
 - Provide reusable Docker engine and desktop lifecycle management (`LocalDockerManager`).
-- Provide Cloud SQL Auth Proxy binary discovery and process launching (`CloudSqlProxyManager`, `resolve_cloud_sql_proxy_bin`).
+- Discover `cloud-sql-proxy` across `PATH`, `repo_root`, and fallback directories, failing cleanly when Docker is missing (`CloudSqlProxyManager`, `resolve_cloud_sql_proxy_bin`).
 - Provide isolated local MySQL container lifecycle, schema initialization, and snapshot loading/anonymization (`LocalMySqlManager`).
 - Provide Java application server lifecycle, background execution, and health status polling (`LocalServerManager`).
 - Provide sample email template test dispatching (`LocalMailManager`) and live endpoint/deployment verification (`LocalVerifier`).
