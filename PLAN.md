@@ -4,7 +4,7 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
-- [ ] T0001 Add atomic text write helpers with Windows-safe retries.
+- [x] T0001 Add atomic text write helpers with Windows-safe retries.
 - [ ] T0007 Add ANSI-aware Markdown table helpers.
 - [ ] T0012 Make CloudSqlProxyManager find cloud-sql-proxy outside PATH and fail cleanly when Docker is also missing.
 - [ ] T0004 Add duration and time formatting helpers.
