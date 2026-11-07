@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1142.8, input: 365524, output: 36158, cache_read: 7412500}
+review_status: pending
+review_round: 1
 ---
 # T0009: Add subprocess output streaming with logging
 
@@ -59,4 +63,7 @@ Add subprocess output streaming to support_python, extracted from plan's `stream
   - Files touched: 8.
   - Lines touched: 464.
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
