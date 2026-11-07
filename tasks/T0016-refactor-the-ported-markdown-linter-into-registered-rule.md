@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3461.8, input: 766030, output: 180464, cache_read: 19289258}
+review_status: pending
+review_round: 1
 ---
 # T0016: Refactor the ported Markdown linter into registered rule classes with loadable profiles
 
@@ -61,4 +65,7 @@ Size note: Above the typical line because rule classes replace one 1,600-line mo
   - Files touched: 9.
   - Lines touched: 1309 insertions, 502 deletions (net +807).
   - Reopenings: 0.
+
+- [2026-11-07] **[Review]**
+  Round 1 requested (mode: agent).
 
