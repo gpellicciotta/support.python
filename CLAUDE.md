@@ -45,7 +45,7 @@ Modules under `src/support_python/` (public symbols are re-exported from the pac
 - `net.py`: stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - `git.py`: Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.
-- `locking.py`: `Lock` ABC, re-entrant `FileLock`, `NullLock`, `RedisLock`, `LockTimeoutError`, and the `create_lock` backend factory.
+- `locking.py`: `Lock` ABC, re-entrant `FileLock`, `NullLock`, `RedisLock`, `MySQLLock`, `LockTimeoutError`, and the `create_lock` backend factory.
 - `errors.py`: REST-client exception hierarchy and status-code mapping helpers.
 - `devops.py`: `run_step` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers for local ops scripts.
   Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script

@@ -10,7 +10,7 @@ Overview of all documentation for the `support-python` project.
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release
   process.
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
-- [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, and backend factory.
+- [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
 - [README](../README.md): Project overview, build, install, and usage.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
 - [PLAN](../PLAN.md): Task index by milestone.

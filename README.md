@@ -402,8 +402,10 @@ except LockTimeoutError as error:
 - `FileLock` uses `msvcrt` on Windows and `fcntl` elsewhere; the OS frees it when a process dies.
 - `NullLock` always succeeds; use it for tests or disabled locking.
 - `RedisLock` provides distributed locking backed by Redis using `SET NX PX` and an atomic Lua release script. It requires the `redis` optional extra (`pip install support-python[redis]`).
+- `MySQLLock` provides distributed server-wide advisory locking backed by MySQL using `GET_LOCK` and `RELEASE_LOCK`. It requires the `mysql` optional extra (`pip install support-python[mysql]`).
 - `create_lock(backend, key, path, timeout, poll_interval, max_jitter, ttl)` maps `null`/`none` to `NullLock`.
   `file`, `local`, or an empty value select `FileLock` and require `path`.
   `redis://` and `rediss://` select `RedisLock` and require `key`.
+  `mysql://`, `mysql+pymysql://`, and `jdbc:mysql://` select `MySQLLock` and require `key`.
   Unsupported schemes raise `ValueError`.
 - Timeouts and TTLs are floats in seconds.

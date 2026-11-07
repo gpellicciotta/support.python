@@ -20,12 +20,14 @@ import time
 import traceback
 from types import TracebackType
 from typing import Any, Optional, Union
+import urllib.parse
 import uuid
 
 __all__ = [
     "FileLock",
     "Lock",
     "LockTimeoutError",
+    "MySQLLock",
     "NullLock",
     "RedisLock",
     "create_lock",
@@ -120,6 +122,15 @@ def _reentrancy_tokens() -> dict:
         tokens = {}
         _LOCAL_LOCK_COUNTS.tokens = tokens
     return tokens
+
+
+def _reentrancy_connections() -> dict:
+    """Return the per-thread connection map for MySQL advisory locks, creating it on first use."""
+    connections = getattr(_LOCAL_LOCK_COUNTS, "connections", None)
+    if connections is None:
+        connections = {}
+        _LOCAL_LOCK_COUNTS.connections = connections
+    return connections
 
 
 class FileLock(Lock):
@@ -435,6 +446,200 @@ class RedisLock(Lock):
                 self._depth = 0
 
 
+class MySQLLock(Lock):
+    """Distributed MySQL advisory lock using GET_LOCK and RELEASE_LOCK.
+
+    Lock Resource:
+        Lock Name in MySQL, such as ``app:tasks``.
+        Scope: Server-wide across the entire MySQL instance.
+
+    MySQL Wire Commands Dispatched:
+        1. Acquire:
+           ``SELECT GET_LOCK('...', <timeout_sec>);``
+           - Calls MySQL's built-in user-level advisory locking engine.
+           - Blocks on the server side for up to ``timeout_sec`` seconds.
+           - Returns:
+             ``1``: Lock acquired successfully.
+             ``0``: Lock attempt timed out on the MySQL server.
+             ``NULL``: An unexpected error occurred inside MySQL (e.g. out of memory).
+
+        2. Release:
+           ``SELECT RELEASE_LOCK('...');``
+           - Releases the named advisory lock associated with the current connection.
+           - Returns ``1`` if successfully freed, ``0`` if not held by this session.
+           - The database connection and cursor are then closed.
+
+    Crash & Deadlock Semantics:
+        Advisory locks in MySQL are bound to the client's TCP database session.
+        If a client process terminates, crashes, or loses network connectivity,
+        the operating system closes the TCP socket, and the MySQL server
+        automatically drops all advisory locks held by that session immediately.
+        Zero deadlocks can remain after a client crash.
+
+    Database Permission Fallback:
+        Because MySQL advisory locks are server-wide and do not operate on table rows,
+        they do not require an active database. If connecting to a specified database
+        raises error 1044 (Access denied) or 1049 (Unknown database), MySQLLock
+        automatically reconnects with ``database=None`` so advisory locks function cleanly.
+    """
+
+    def __init__(
+        self,
+        key: str,
+        mysql_url: str = "mysql://localhost:3306",
+        timeout: float = DEFAULT_LOCK_TIMEOUT,
+        poll_interval: float = DEFAULT_POLL_INTERVAL,
+        max_jitter: float = DEFAULT_MAX_JITTER,
+    ) -> None:
+        self.key = key
+        self.mysql_url = mysql_url
+        self.timeout = timeout
+        self.poll_interval = poll_interval
+        self.max_jitter = max_jitter
+        self._depth = 0
+        self._conn: Any = None
+
+    @property
+    def is_locked(self) -> bool:
+        """Check whether the MySQL advisory lock is currently held by this instance."""
+        return self._depth > 0
+
+    def _parse_url(self) -> dict[str, Any]:
+        url = self.mysql_url
+        if url.startswith("jdbc:"):
+            url = url[len("jdbc:") :]
+        if url.startswith("mysql+pymysql://"):
+            url = "mysql://" + url[len("mysql+pymysql://") :]
+
+        parsed = urllib.parse.urlparse(url)
+        return {
+            "host": parsed.hostname or "127.0.0.1",
+            "port": parsed.port or 3306,
+            "user": urllib.parse.unquote(parsed.username) if parsed.username else "root",
+            "password": urllib.parse.unquote(parsed.password) if parsed.password else "",
+            "database": parsed.path.lstrip("/") or None,
+        }
+
+    def _connect(self) -> Any:
+        try:
+            import pymysql
+        except ImportError as err:
+            raise ImportError(
+                "MySQL locking backend requires the 'mysql' extra. Install it via 'pip install support-python[mysql]'."
+            ) from err
+
+        params = self._parse_url()
+        try:
+            return pymysql.connect(
+                host=params["host"],
+                port=params["port"],
+                user=params["user"],
+                password=params["password"],
+                database=params["database"],
+                connect_timeout=max(2, int(self.timeout)),
+                autocommit=True,
+            )
+        except pymysql.OperationalError as exc:
+            # If database access is denied or database does not exist, connect without database
+            # because MySQL advisory locks (GET_LOCK/RELEASE_LOCK) are server-wide.
+            if params["database"] and exc.args and exc.args[0] in (1044, 1049):
+                return pymysql.connect(
+                    host=params["host"],
+                    port=params["port"],
+                    user=params["user"],
+                    password=params["password"],
+                    database=None,
+                    connect_timeout=max(2, int(self.timeout)),
+                    autocommit=True,
+                )
+            raise
+
+    def acquire(self, timeout: Optional[float] = None) -> bool:
+        """Acquire the distributed MySQL advisory lock within the optional timeout.
+
+        Args:
+            timeout: Maximum time in seconds to wait for the lock.
+
+        Returns:
+            True if the lock was successfully acquired.
+
+        Raises:
+            LockTimeoutError: If the lock cannot be acquired before timeout.
+        """
+        effective_timeout = self.timeout if timeout is None else timeout
+
+        counts = _reentrancy_counts()
+        reentrancy_key = f"mysql:{self.mysql_url}:{self.key}"
+        current_depth = counts.get(reentrancy_key, 0)
+        if current_depth > 0:
+            counts[reentrancy_key] = current_depth + 1
+            self._depth += 1
+            return True
+
+        self._conn = self._connect()
+        try:
+            cur = self._conn.cursor()
+            timeout_sec = max(0, int(effective_timeout))
+            cur.execute("SELECT GET_LOCK(%s, %s)", (self.key, timeout_sec))
+            row = cur.fetchone()
+            cur.close()
+
+            res = row[0] if row else None
+            if res == 1:
+                self._depth = 1
+                counts[reentrancy_key] = 1
+                _reentrancy_connections()[reentrancy_key] = self._conn
+                return True
+            elif res == 0:
+                self._cleanup_conn()
+                raise LockTimeoutError(
+                    f"Timed out waiting for MySQL advisory lock on '{self.key}' after {effective_timeout:.1f}s. "
+                    "Another process or node is actively holding the lock."
+                )
+            else:
+                self._cleanup_conn()
+                raise LockTimeoutError(f"Failed to acquire MySQL advisory lock on '{self.key}' (GET_LOCK returned {res}).")
+        except Exception:
+            self._cleanup_conn()
+            raise
+
+    def release(self) -> None:
+        """Release the acquired MySQL advisory lock."""
+        counts = _reentrancy_counts()
+        reentrancy_key = f"mysql:{self.mysql_url}:{self.key}"
+        if counts and reentrancy_key in counts:
+            counts[reentrancy_key] -= 1
+            self._depth -= 1
+            if counts[reentrancy_key] > 0:
+                return
+            del counts[reentrancy_key]
+
+        connections = _reentrancy_connections()
+        conn = connections.pop(reentrancy_key, None) or self._conn
+        if conn:
+            try:
+                cur = conn.cursor()
+                cur.execute("SELECT RELEASE_LOCK(%s)", (self.key,))
+                cur.close()
+            except Exception:
+                pass
+            finally:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                self._conn = None
+                self._depth = 0
+
+    def _cleanup_conn(self) -> None:
+        if self._conn:
+            try:
+                self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
+
+
 def create_lock(
     backend: Optional[str] = None,
     key: Optional[str] = None,
@@ -479,5 +684,13 @@ def create_lock(
             max_jitter=max_jitter,
         )
     if lower.startswith(("mysql://", "mysql+pymysql://", "jdbc:mysql://")):
-        raise NotImplementedError("The MySQL lock backend is not available yet.")
+        if key is None:
+            raise ValueError("Distributed MySQL locking backend requires a key.")
+        return MySQLLock(
+            key=key,
+            mysql_url=value,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            max_jitter=max_jitter,
+        )
     raise ValueError(f"Unsupported locking backend scheme: {value}")
