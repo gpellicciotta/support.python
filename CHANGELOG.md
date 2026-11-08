@@ -12,7 +12,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.3.5-pre
+## v1.3.5 [2026-11-08]
 - CLI: Added standalone [lint-markdown.py](scripts/lint-markdown.py) and [agent-files.py](scripts/agent-files.py) wrapper scripts.
 - CLI: Added the `processes` CLI and [processes.py](scripts/processes.py) script with `kill` and filtered `list` subcommands.
 - CLI: Split Markdown lint rules into [rules.py](src/support_python/markdown/rules.py), [registry.py](src/support_python/markdown/registry.py), [profiles.py](src/support_python/markdown/profiles.py), and [tables.py](src/support_python/markdown/tables.py).
