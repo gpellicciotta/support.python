@@ -12,6 +12,10 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
+## v1.3.6-pre
+
+---
+
 ## v1.3.5 [2026-11-08]
 - CLI: Added standalone [lint-markdown.py](scripts/lint-markdown.py) and [agent-files.py](scripts/agent-files.py) wrapper scripts.
 - CLI: Added the `processes` CLI and [processes.py](scripts/processes.py) script with `kill` and filtered `list` subcommands.
