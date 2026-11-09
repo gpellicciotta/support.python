@@ -14,11 +14,13 @@ protocol: standard
 size_status: approved
 size_estimate: 25 files, 2826 lines
 usage:
-  worker: {turns: 2, duration_s: 2286.2, input: 606628, output: 85684, cache_read: 21233828}
+  worker: {turns: 4, duration_s: 2384.8, input: 1103034, output: 87402, cache_read: 22211434}
 work_duration: 1155.5
 size_approved: 25 files, 2826 lines
 size_approved_by: "@Giovanni Pellicciotta (delegated)"
 size_approved_at: "2026-11-09T19:39:18Z"
+review_status: pending
+review_round: 1
 ---
 # T0024: Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts
 
@@ -69,4 +71,7 @@ Document per-user and global installation of the tools in `README.md`.
   - Decided by the Claude Code orchestrator under the user's size delegation.
   - Counted diff is 15 files, 432 lines, excluding deleted files.
   - The loop total included 10 wholly deleted files, 2394 lines.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
