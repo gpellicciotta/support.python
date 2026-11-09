@@ -4,5 +4,6 @@
     "agy",
     "claude"
   ],
-  "work_max_usage": "week=30%"
+  "work_max_usage": "week=50%",
+  "work_size_overrun_factor": 8.0
 }
