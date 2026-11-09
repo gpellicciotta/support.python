@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 3183.0, input: 761564, output: 185354, cache_read: 16610146}
-review_status: pending
+  review: {turns: 2, duration_s: 474.2, input: 80, output: 25632, cache_read: 2725650, cache_write: 143260}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1848.1
 ---
 # T0026: Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module
 
@@ -59,8 +62,18 @@ Repoint the `lint-markdown` console script, imports, tests, and docs, changing n
   - Reopenings: 0.
 
 - [2026-11-09] **[Verify]**
-  Verified editable install, full pytest suite (698 passed, task-116), ruff checks, and pre/post-split lint-markdown output (recount: 16 files, 1226 lines).
+  Verified full pytest suite (698 passed, task-116), targeted pytest suite (134 passed, task-137), and ruff checks (recount: 16 files, 1226 lines).
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: The code change is correct and meets the goals.
+  - Findings: [review-findings-1.md](T0026-split-the-markdown-linter-into-a-support-python/review-findings-1.md).
+
+- [2026-11-09] **[Decide]**
+  Replaced import-time REPO_ROOT in MarkdownLinter._validate_external_url with lazy project_root fallback to avoid cwd filesystem walks when importing support_python.
+
+- [2026-11-09] **[Verify]**
+  Captured verbatim pip editable install (task-211) and pre/post-split lint-markdown check outputs (both exit 1 with identical 10 issues across 10 files).
 
