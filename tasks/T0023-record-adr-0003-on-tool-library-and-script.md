@@ -5,18 +5,20 @@ session: antigravity-20261109-f012c8
 needs: []
 branch: task/T0023-record-adr-0003-on-tool-library-and-script
 worktree: .plan/work/T0023-record-adr-0003-on-tool-library-and-script
-status: active
+status: completed
 started_at: "2026-11-09T18:59:04Z"
-ended_at: —
+ended_at: "2026-11-09T19:18:33Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 6, duration_s: 1506.4, input: 390478, output: 62030, cache_read: 8904012}
-  review: {turns: 2, duration_s: 384.0, input: 64, output: 18684, cache_read: 1743992, cache_write: 112662}
-work_duration: 754.3
-review_status: pending
+  review: {turns: 4, duration_s: 678.4, input: 108, output: 31050, cache_read: 2792158, cache_write: 210070}
+work_duration: 1168.8
+review_status: approved
 review_round: 2
+reviewed_by: "@claude"
+completion-commit: 886c22452bea16557524eca1b0560a709c1801ad
 ---
 # T0023: Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre
 
@@ -33,7 +35,7 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
 - [x] **[Implement]** Mark ADR-0001 partially superseded, and update requirements, the docs index, and CLAUDE.md.
 - [x] **[Implement]** Rename the v1.3.6-pre heading to v2.0.0-pre and set the matching pyproject.toml version.
 - [x] **[Verify]**    Run the offline Markdown linter on changed documents and the full test suite.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -79,4 +81,11 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
 
 - [2026-11-09] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 2 approved by @claude: Approved.
+  - Findings: [review-findings-2.md](T0023-record-adr-0003-on-tool-library-and-script/review-findings-2.md).
+
+- [2026-11-09] **[Complete]**
+  Task completed successfully.
 
