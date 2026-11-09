@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 946.4, input: 354726, output: 33080, cache_read: 7277008}
-review_status: pending
+  review: {turns: 2, duration_s: 411.8, input: 60, output: 15444, cache_read: 1422484, cache_write: 88612}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 696.0
 ---
 # T0034: Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged
 
@@ -65,4 +68,11 @@ Change no behavior; update only mock patch targets in tests.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: The split itself is correct and behavior-preserving.
+  - Findings: [review-findings-1.md](T0034-convert-support-python-devops-into-a-package-with/review-findings-1.md).
+
+- [2026-11-09] **[Doc]**
+  Marked CHANGELOG.md entry **[breaking]** with moved mock patch target examples and recorded sibling backlog tasks counters.server T0266 and todos.server T0210.
 
