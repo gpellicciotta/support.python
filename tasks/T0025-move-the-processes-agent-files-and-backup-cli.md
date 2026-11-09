@@ -1,11 +1,12 @@
 ---
 id: T0025
-owner: ~
-needs: [T0024]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@gemini"
+session: antigravity-20261109-0a75f2
+needs: []
+branch: task/T0025-move-the-processes-agent-files-and-backup-cli
+worktree: .plan/work/T0025-move-the-processes-agent-files-and-backup-cli
+status: active
+started_at: "2026-11-09T20:14:04Z"
 ended_at: —
 review: agent
 preview: none
@@ -20,12 +21,12 @@ Repoint console scripts, package re-exports, imports, mock patch targets, and li
 Change no behavior: existing tests must pass with only import and path fix-ups.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the four modules' imports, the package root re-exports, and the tests' mock patch targets.
-- [ ] **[Implement]** Run the git mv commands listed in the technical spec.
-- [ ] **[Verify]**    Run the suite and record the resulting import failures as red-phase proof.
-- [ ] **[Implement]** Fix imports, patch targets, console script targets, re-exports, and links.
-- [ ] **[Verify]**    Reinstall editable, run the full suite, and run the integration commands from the technical spec.
-- [ ] **[Doc]**       Update README.md, docs/index.md, CLAUDE.md, and CHANGELOG.md for the new module paths.
+- [x] **[Read]**      Read the four modules' imports, the package root re-exports, and the tests' mock patch targets.
+- [x] **[Implement]** Run the git mv commands listed in the technical spec.
+- [x] **[Verify]**    Run the suite and record the resulting import failures as red-phase proof.
+- [x] **[Implement]** Fix imports, patch targets, console script targets, re-exports, and links.
+- [x] **[Verify]**    Reinstall editable, run the full suite, and run the integration commands from the technical spec.
+- [x] **[Doc]**       Update README.md, docs/index.md, CLAUDE.md, and CHANGELOG.md for the new module paths.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -34,3 +35,22 @@ Change no behavior: existing tests must pass with only import and path fix-ups.
 
 - [2026-11-09] **[Decide]**
   Scope agreed with the user on 2026-11-09 as part of the v2.0.0 standalone-tools and reusable-devops restructuring. Tool modules keep their own logic; only shared logic belongs in library modules.
+
+- [2026-11-09] **[Read]**
+  Inspected imports, lazy config imports, package re-exports, and test module paths across processes, agent-files, and backup modules.
+
+- [2026-11-09] **[Implement]**
+  Moved processes, agent-files, and backup CLI modules and tests into support_python.tools and tests/tools, and updated console script targets, imports, and re-exports. Also updated undeclared tests/test_console_scripts.py from T0024 (recount: 18 files, 129 lines).
+
+- [2026-11-09] **[Doc]**
+  Updated README.md, docs/index.md, docs/tools/agent-files.md, CLAUDE.md, and CHANGELOG.md (v2.0.4-pre) for the new support_python.tools module paths.
+
+- [2026-11-09] **[Verify]**
+  Captured red-phase import errors after git mv and verified full pytest suite (695 passed, task-159) and CLI entry points after editable reinstall.
+
+- [2026-11-09] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 18.
+  - Lines touched: 129.
+  - Reopenings: 0.
+
