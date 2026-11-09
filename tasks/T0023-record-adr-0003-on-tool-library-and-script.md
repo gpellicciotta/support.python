@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 960.0, input: 269546, output: 38616, cache_read: 4595386}
+  worker: {turns: 4, duration_s: 1034.8, input: 288204, output: 40242, cache_read: 5162610}
 work_duration: 492.0
+review_status: pending
+review_round: 1
 ---
 # T0023: Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre
 
@@ -57,4 +59,7 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
 - [2026-11-09] **[Verify]**
   Completion validation found 1 errors; pending fix turn 1 of 2.
   - TF020.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
