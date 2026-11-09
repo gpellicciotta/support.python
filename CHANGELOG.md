@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v1.3.6-pre
+## v2.0.1-pre
+- Docs: Recorded [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) on standalone CLI tools, uniform CLI conventions, and reusable `support_python.devops`.
 
 ---
 

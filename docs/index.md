@@ -5,7 +5,6 @@ Overview of all documentation for the `support-python` project.
 ---
 
 ## Core Documentation
-
 - [Requirements](requirements.md): High-level goals, functional scope, and technical requirements.
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release
   process.
@@ -24,22 +23,22 @@ Overview of all documentation for the `support-python` project.
 - [DevOps script helpers and subprocess streaming](../README.md#devops-script-helpers-and-environment-managers): Subprocess line-by-line output streaming (`stream_subprocess`, `run_step_command`, `resolve_executable`), `run_step`, and local service managers.
 - [README](../README.md): Project overview, build, install, and usage.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
-- [PLAN](../PLAN.md): Task index by milestone.
+- `PLAN.md`: Task index by milestone (local plan store).
 - [LICENSE](../LICENSE.md): License terms (MIT).
 
 ---
 
 ## Architectural Decision Records
-
 - [ADR-0001: Scope for a Shared DevOps-Scripts Toolkit](adrs/ADR-0001-devops-scripts-toolkit-scope.md): Why
-  deploy and bootstrap scripts stay project-local while a pinned-dependency pattern shares narrow helpers.
+  bootstrap scripts and project-specific deploy steps stay project-local with a pinned `scripts/requirements.txt` dependency (partially superseded by [ADR-0003-standalone-tools-and-reusable-devops.md](adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
 - [ADR-0002: Modular Guidelines and Mechanical Skill Derivation](adrs/ADR-0002-modular-agent-skills-architecture.md): Why
   guidelines carry skill front-matter and `agent-digest` derives a size-capped digest and on-demand skills from them.
+- [ADR-0003: Standalone Tools and Reusable DevOps](adrs/ADR-0003-standalone-tools-and-reusable-devops.md): Why
+  `support-python` ships five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, `git-repository-backup`) with uniform CLI conventions and a library-based `support_python.devops` package.
 
 ---
 
 ## Guidelines
-
 This project follows the cross-project
 [dev-guidelines](https://github.com/gpellicciotta/dev-guidelines), in particular its
 [general guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/general-guidelines.md),

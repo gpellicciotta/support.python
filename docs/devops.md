@@ -6,9 +6,9 @@ Practical guidance on building, testing, developing, and releasing `support-pyth
 
 ## Prerequisites and Environment
 
-- **Python**: 3.9 or later (see `pyproject.toml`'s `requires-python`).
+- **Python**: 3.9 or later (see [pyproject.toml](../pyproject.toml)'s `requires-python`).
 - **Git**: Git 2.30+ supporting worktrees (`git worktree`).
-- **PowerShell / Bash**: not required — `scripts/bootstrap-dev-environment.py` is cross-platform.
+- **PowerShell / Bash**: not required — [bootstrap-dev-environment.py](../scripts/bootstrap-dev-environment.py) is cross-platform.
 
 ---
 
@@ -107,7 +107,7 @@ Tag pushes are an outbound action and need explicit approval.
 
 ## Continuous Integration
 
-The GitHub Actions workflow in `.github/workflows/python-package.yml` triggers on push and pull requests,
+The GitHub Actions workflow in [python-package.yml](../.github/workflows/python-package.yml) triggers on push and pull requests,
 executing: dependency install (with the `dev` extra), `ruff check`/`ruff format --check`, `pytest`, and
-`python -m build`. `.github/workflows/publish.yml` triggers on GitHub Release, building and attaching
+`python -m build`. [publish.yml](../.github/workflows/publish.yml) triggers on GitHub Release, building and attaching
 wheel and sdist assets to the release.
