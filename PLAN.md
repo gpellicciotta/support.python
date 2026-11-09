@@ -11,9 +11,9 @@ An overview of all tasks and their planning.
 - [x] T0023 Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre.
 - [x] T0024 Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts.
 - [x] T0025 Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes.
-- [ ] T0026 Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module.
+- [x] T0026 Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module.
 - [ ] T0027 Rename backup-git-repos to git-repository-backup, read its legacy config with a warning, and add JSON list output.
-- [ ] T0028 [needs: T0026, T0027] Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
+- [ ] T0028 [needs: T0027] Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
 - [ ] T0029 [needs: T0028] Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
 - [ ] T0030 [needs: T0028] Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
 - [ ] T0031 [needs: T0028] Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.

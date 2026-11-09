@@ -3,7 +3,7 @@ task: T0026
 round: 2
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-09T21:23:04Z
+reviewed_at: 2026-11-09T21:25:35Z
 reviewed_commit: "e100006"
 base_commit: "8450b1e"
 branch: task/T0026-split-the-markdown-linter-into-a-support-python
