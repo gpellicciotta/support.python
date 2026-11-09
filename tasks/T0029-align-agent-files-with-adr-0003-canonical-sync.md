@@ -12,9 +12,9 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 4, duration_s: 2471.6, input: 596568, output: 122704, cache_read: 18388540}
+  worker: {turns: 6, duration_s: 6074.8, input: 602830, output: 123942, cache_read: 18388540}
   review: {turns: 2, duration_s: 357.8, input: 20, output: 5608, cache_read: 692278, cache_write: 7148}
-work_duration: 1458.0
+work_duration: 3288.4
 review_status: rejected
 review_round: 1
 reviewed_by: "@claude"
@@ -76,4 +76,7 @@ Fix the stale help examples.
   - Files touched: 7.
   - Lines touched: 565.
   - Reopenings: 0.
+
+- [2026-11-10] **[Implement]**
+  Addressed round 1 review findings: unified check logic, emitted unavailable status on invalid targets, aligned pyproject.toml version, removed legacy verb branches, routed legacy warnings to --log-file, and dropped duplicate JSON keys (TF020 fixed via [Doc] log).
 
