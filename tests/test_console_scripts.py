@@ -12,13 +12,14 @@ import sysconfig
 import pytest
 
 import support_python
-from support_python import agent_files, backup, cli, cli_processes, markdown_lint
+from support_python import cli, markdown_lint
+from support_python.tools import agent_files, git_repository_backup, processes
 
 EXPECTED_SCRIPTS = {
-    "processes": "support_python.cli_processes:main",
-    "agent-files": "support_python.agent_files:main",
+    "processes": "support_python.tools.processes:main",
+    "agent-files": "support_python.tools.agent_files:main",
     "lint-markdown": "support_python.markdown_lint:main",
-    "git-repository-backup": "support_python.backup:main",
+    "git-repository-backup": "support_python.tools.git_repository_backup:main",
 }
 
 
@@ -76,10 +77,10 @@ def test_agent_files_banner_and_usage_name() -> None:
 
 def test_each_tool_harness_version_banner() -> None:
     expected_banners = [
-        (cli_processes.build_harness(), "processes v"),
+        (processes.build_harness(), "processes v"),
         (agent_files.build_harness(), "agent-files v"),
         (markdown_lint.build_harness(), "lint-markdown v"),
-        (backup.build_harness(), "backup-git-repos v"),
+        (git_repository_backup.build_harness(), "backup-git-repos v"),
     ]
     for harness, prefix in expected_banners:
         assert harness.format_version().startswith(prefix)

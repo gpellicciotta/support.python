@@ -1,12 +1,12 @@
 # Agent Files Synchronization
 
 Deterministic synchronization of repository guideline digests and skills into installed AI coding tools.
-Implemented in [agent_files.py](../src/support_python/agent_files.py) and configured via [agent_files_config.py](../src/support_python/agent_files_config.py).
+Implemented in [agent_files.py](../../src/support_python/tools/agent_files.py) and configured via [agent_files_config.py](../../src/support_python/tools/agent_files_config.py).
 
 ---
 
 ## Command-Line Interface
-Run actions through the `agent-files` console script in [agent_files.py](../src/support_python/agent_files.py):
+Run actions through the `agent-files` console script in [agent_files.py](../../src/support_python/tools/agent_files.py):
 ```bash
 agent-files list [--config PATH]
 agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
@@ -72,7 +72,7 @@ All relative paths in `agent-files.json` resolve against `repo_root`.
 ---
 
 ## Default Tool Registry
-The built-in registry in [agent_files_config.py](../src/support_python/agent_files_config.py) defines three default entries:
+The built-in registry in [agent_files_config.py](../../src/support_python/tools/agent_files_config.py) defines three default entries:
 - `claude-code` (alias `claude`) targets `~/.claude/CLAUDE.md` and `~/.claude/skills`.
 - `antigravity` targets `~/.gemini/GEMINI.md` and `~/.gemini/config/skills`.
 - `codex-cli` (alias `codex`) targets `~/.codex/AGENTS.md` and `~/.agents/skills`.

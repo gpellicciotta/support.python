@@ -360,7 +360,7 @@ def print_tools(logger: TeeLogger | None = None) -> None:
 
 def select_tools(tool_names: list[str]) -> list[Tool]:
     """Return the configured tools named in tool_names (already validated), or all tools when empty."""
-    from support_python.agent_files_config import ToolRegistry
+    from support_python.tools.agent_files_config import ToolRegistry
 
     return ToolRegistry(TOOLS).select(tool_names)
 
@@ -881,7 +881,7 @@ def run_review(tool: Tool, verbose: bool, timeout: int, logger: TeeLogger) -> bo
 
 def tool_name_argument(value: str) -> str:
     """Validate a TOOL positional argument against the configured tools."""
-    from support_python.agent_files_config import ToolRegistry
+    from support_python.tools.agent_files_config import ToolRegistry
 
     registry = ToolRegistry(TOOLS)
     matched = registry.get(value)
@@ -991,7 +991,7 @@ class SyncHarness(ToolHarness):
 
     def run(self, argv: Sequence[str] | None = None, extra_startup: dict | None = None) -> int:
         """Reject unknown actions with an indicator-formatted error and usage, then delegate to the harness."""
-        from support_python.agent_files_config import load_agent_files_config
+        from support_python.tools.agent_files_config import load_agent_files_config
 
         global REPO_ROOT, DIGEST_PATH, SKILLS_DIR, MARKER_BEGIN, MARKER_END
         global SKILLS_MANIFEST_NAME, SKILLS_MANIFEST_SOURCE, LEGACY_SKILL_NAMES, TOOLS

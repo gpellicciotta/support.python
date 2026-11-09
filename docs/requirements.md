@@ -95,7 +95,7 @@ Functional and technical requirements for the `support-python` project.
 - Provide the standalone `agent-files` CLI tool supporting `list`, `sync`, `check`, `review`, `help`, and `version`,
   replacing `update-global-agent-files.py` from dev-guidelines.
 - Support discovery and configuration of installed AI coding tools (Claude Code, Antigravity, Codex CLI) through a
-  built-in, JSON-extensible tool registry (`support_python.agent_files_config`) reading `.agent-files.json`.
+  built-in, JSON-extensible tool registry (`support_python.tools.agent_files_config`) reading `.agent-files.json`.
 - Inject the guideline digest of a source repository into guarded blocks of tool-specific target files
   (`~/.claude/CLAUDE.md`, `~/.gemini/GEMINI.md`, `~/.codex/AGENTS.md`) and sync its skills into each tool's skills folder,
   preserving developer-specific content outside the guarded block and creating backups prior to mutation.

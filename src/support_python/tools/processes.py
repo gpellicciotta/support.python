@@ -7,12 +7,12 @@ from datetime import datetime
 import sys
 from typing import Sequence
 
-from .cli import ToolHarness
-from .durations import parse_date_or_datetime
-from .logging import CliLogger
-from .processes import list_processes, safe_kill
-from .tables import render_output
-from .terminal import configure_utf8_output
+from ..cli import ToolHarness
+from ..durations import parse_date_or_datetime
+from ..logging import CliLogger
+from ..processes import list_processes, safe_kill
+from ..tables import render_output
+from ..terminal import configure_utf8_output
 
 TOOL_NAME = "processes"
 DESCRIPTION = "Safely terminate processes by PID and list running processes with hierarchy, path, and time filters."

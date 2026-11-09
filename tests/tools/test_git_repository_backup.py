@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit and integration tests for support_python.backup.
+Unit and integration tests for support_python.tools.git_repository_backup.
 """
 
 from __future__ import annotations
@@ -19,10 +19,10 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from support_python import backup as backup_git_repos
+from support_python.tools import git_repository_backup as backup_git_repos
 
-SRC_DIR = Path(__file__).resolve().parent.parent / "src"
-_MODULE_PATH = SRC_DIR / "support_python" / "backup.py"
+SRC_DIR = Path(__file__).resolve().parents[2] / "src"
+_MODULE_PATH = SRC_DIR / "support_python" / "tools" / "git_repository_backup.py"
 
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "Test",
@@ -316,7 +316,7 @@ class TestHarnessCli(BackupTestCase):
         self.config.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
         env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
         result = subprocess.run(
-            [sys.executable, "-m", "support_python.backup", "list", "--config", str(self.config)],
+            [sys.executable, "-m", "support_python.tools.git_repository_backup", "list", "--config", str(self.config)],
             env=env,
             capture_output=True,
             text=True,

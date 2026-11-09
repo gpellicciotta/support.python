@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Regression tests for support_python.agent_files (`agent-files`) deterministic guarded-block sync.
+Regression tests for support_python.tools.agent_files (`agent-files`) deterministic guarded-block sync.
 
-Run directly with: pytest tests/test_agent_files.py
+Run directly with: pytest tests/tools/test_agent_files.py
 """
 
 from __future__ import annotations
@@ -20,10 +20,10 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from support_python import agent_files as sync_mod
+from support_python.tools import agent_files as sync_mod
 
-SRC_DIR = Path(__file__).resolve().parent.parent / "src"
-_MODULE_PATH = SRC_DIR / "support_python" / "agent_files.py"
+SRC_DIR = Path(__file__).resolve().parents[2] / "src"
+_MODULE_PATH = SRC_DIR / "support_python" / "tools" / "agent_files.py"
 
 
 class BuildGuardedBlockTests(unittest.TestCase):
@@ -1326,7 +1326,7 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
 
 class AgentFilesConfigTests(unittest.TestCase):
     def test_load_config_defaults_when_no_file_present(self) -> None:
-        from support_python import agent_files_config as cfg_mod
+        from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
@@ -1341,7 +1341,7 @@ class AgentFilesConfigTests(unittest.TestCase):
                 self.assertIsNotNone(reg.get(name), name)
 
     def test_load_config_overrides_from_json_and_cli_flags(self) -> None:
-        from support_python import agent_files_config as cfg_mod
+        from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
@@ -1405,14 +1405,14 @@ class AgentFilesConfigTests(unittest.TestCase):
                 self.assertIn(expected, written)
 
     def test_load_config_missing_file_raises_file_not_found(self) -> None:
-        from support_python import agent_files_config as cfg_mod
+        from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             with self.assertRaises(FileNotFoundError):
                 cfg_mod.load_agent_files_config(Path(tmp_dir) / "does-not-exist.json")
 
     def test_load_config_invalid_schema_raises_value_error(self) -> None:
-        from support_python import agent_files_config as cfg_mod
+        from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)

@@ -14,7 +14,7 @@ from unittest import mock
 
 import pytest
 
-from support_python.cli_processes import build_harness, main, normalize_argv
+from support_python.tools.processes import build_harness, main, normalize_argv
 import support_python.processes as processes
 from support_python.processes import (
     ProcessInfo,
@@ -27,11 +27,31 @@ from support_python.processes import (
 
 
 def run_cli(argv: list[str]) -> tuple[int, str, str]:
-    """Run cli_processes.main capturing exit code, stdout, and stderr."""
+    """Run tools.processes.main capturing exit code, stdout, and stderr."""
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         code = main(argv)
     return code, out.getvalue(), err.getvalue()
+
+
+def test_old_cli_module_paths_no_longer_import() -> None:
+    import importlib
+
+    for old_mod in (
+        "support_python.cli_processes",
+        "support_python.agent_files",
+        "support_python.agent_files_config",
+        "support_python.backup",
+    ):
+        with pytest.raises(ModuleNotFoundError):
+            importlib.import_module(old_mod)
+    res = subprocess.run(
+        [sys.executable, "-c", "import sys, support_python; assert 'support_python.tools.agent_files' not in sys.modules"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert res.returncode == 0, res.stderr
 
 
 def test_cli_help_version_normalization_and_parser() -> None:

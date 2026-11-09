@@ -428,7 +428,7 @@ except LockTimeoutError as error:
 - Timeouts and TTLs are floats in seconds.
 
 ## Process hierarchy and safe termination
-The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [cli_processes.py](src/support_python/cli_processes.py).
+The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [tools/processes.py](src/support_python/tools/processes.py).
 All helpers use only the Python standard library and `ctypes`.
 
 ```python
@@ -521,8 +521,8 @@ lint-markdown [check|fix] [paths...] [--fix] [--offline] [--profile PROFILE] [--
 ```
 
 ## Agent files sync
-[agent_files.py](src/support_python/agent_files.py) and [agent_files_config.py](src/support_python/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
-Settings load from `agent-files.json` in the repository root (or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/agent-files.md) for the full JSON schema and tool registry documentation:
+[agent_files.py](src/support_python/tools/agent_files.py) and [agent_files_config.py](src/support_python/tools/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
+Settings load from `agent-files.json` in the repository root (or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/tools/agent-files.md) for the full JSON schema and tool registry documentation:
 ```bash
 agent-files list [--config PATH]
 agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]

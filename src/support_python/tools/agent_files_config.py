@@ -64,7 +64,7 @@ class ToolRegistry:
     def __init__(self, tools: Sequence[Any] | None = None) -> None:
         """Initialize the registry with the given tools, or the built-in defaults when None."""
         if tools is None:
-            from support_python.agent_files import TOOLS as default_tools
+            from support_python.tools.agent_files import TOOLS as default_tools
 
             tools = default_tools
         self._tools: list[Any] = list(tools)
@@ -145,7 +145,7 @@ def _validate_str_list(value: Any, field_name: str) -> tuple[str, ...]:
 
 def build_tool_from_dict(data: dict[str, Any], default_legacy_skills: tuple[str, ...] = ()) -> Any:
     """Validate and construct a Tool instance from a JSON dictionary definition."""
-    from support_python.agent_files import Tool
+    from support_python.tools.agent_files import Tool
 
     if not isinstance(data, dict) or (set(data.keys()) - _ALLOWED_TOOL_KEYS):
         raise ValueError("invalid tool definition object or unknown keys")
@@ -216,7 +216,7 @@ def load_agent_files_config(
     base_tools: Sequence[Any] | None = None,
 ) -> AgentFilesConfig:
     """Load, validate, and resolve agent-files sync settings from JSON and explicit overrides."""
-    from support_python.agent_files import TOOLS as default_tools, find_project_root
+    from support_python.tools.agent_files import TOOLS as default_tools, find_project_root
 
     raw: dict[str, Any] = {}
     cfg_dir: Path | None = None
