@@ -15,12 +15,14 @@ size_status: approved
 size_estimate: 25 files, 2826 lines
 usage:
   worker: {turns: 4, duration_s: 2384.8, input: 1103034, output: 87402, cache_read: 22211434}
-work_duration: 1155.5
+  review: {turns: 2, duration_s: 381.2, input: 72, output: 20468, cache_read: 1923474, cache_write: 123458}
+work_duration: 2486.7
 size_approved: 25 files, 2826 lines
 size_approved_by: "@Giovanni Pellicciotta (delegated)"
 size_approved_at: "2026-11-09T19:39:18Z"
-review_status: pending
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0024: Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts
 
@@ -74,4 +76,28 @@ Document per-user and global installation of the tools in `README.md`.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: Reviewed branch tip `2957fd7` (base `886c224`), not `decca33`.
+  - Findings: [review-findings-1.md](T0024-replace-the-support-python-command-with-lint-markdown/review-findings-1.md).
+
+- [2026-11-09] **[Verify]**
+  Recorded red-phase failure proof for tests/test_console_scripts.py before implementation (10 failed; details in validation-proof.md).
+
+- [2026-11-09] **[Implement]**
+  Addressed review round 1 findings and rebased onto main (decca33, v2.0.2-pre).
+  - Updated CLI references in docs/index.md, CLAUDE.md, CHANGELOG.md, agent_files.py, and test_agent_files.py.
+  - Used sysconfig scripts path and un-resolved sys.executable parent in console script tests.
+  - Counted files excluding deletions: 17 (460 lines).
+
+- [2026-11-09] **[Verify]**
+  Verified editable install, console scripts, ruff, lint-markdown, and pytest on rebased commit 180ab88.
+  - 694 passed, 3 skipped in 187.46s.
+  - All 4 console scripts emit v2.0.2-pre+180ab88 banners.
+
+- [2026-11-09] **[Verify]**
+  Recorded updated task outcomes.
+  - Files touched: 17.
+  - Lines touched: 460.
+  - Reopenings: 0.
 

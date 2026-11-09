@@ -40,8 +40,14 @@ git-repository-backup = "support_python.backup:main"
 - src/support_python/agent_files.py
 - tests/test_console_scripts.py
 - tests/test_cli.py
+- tests/test_agent_files.py
+- tests/test_backup_git_repos.py
+- tests/test_markdown_lint.py
+- tests/test_processes_cli.py
 - README.md
 - CHANGELOG.md
+- CLAUDE.md
+- docs/index.md
 - docs/requirements.md
 - docs/agent-files.md
 - docs/markdown-lint.md

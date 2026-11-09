@@ -29,40 +29,40 @@ Obtaining file:///C:/Dev-Projects/support.python/.plan/work/T0024-replace-the-su
 Successfully built support-python
 Installing collected packages: support-python
   Attempting uninstall: support-python
-    Found existing installation: support-python 3.0.0rc0
-    Uninstalling support-python-3.0.0rc0:
-      Successfully uninstalled support-python-3.0.0rc0
-Successfully installed support-python-2.0.1rc0
+    Found existing installation: support-python 2.0.1rc0
+    Uninstalling support-python-2.0.1rc0:
+      Successfully uninstalled support-python-2.0.1rc0
+Successfully installed support-python-2.0.2rc0
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\processes.exe version` (exit code `0`)
 
 ```text
-processes v2.0.1-pre+886c224 - Copyright (c) Giovanni Pellicciotta
+processes v2.0.2-pre+180ab88 - Copyright (c) Giovanni Pellicciotta
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\agent-files.exe version` (exit code `0`)
 
 ```text
-agent-files v2.0.1-pre+886c224 - Copyright (c) Giovanni Pellicciotta
+agent-files v2.0.2-pre+180ab88 - Copyright (c) Giovanni Pellicciotta
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\lint-markdown.exe version` (exit code `0`)
 
 ```text
-lint-markdown v2.0.1-pre+886c224 - Copyright (c) Giovanni Pellicciotta
+lint-markdown v2.0.2-pre+180ab88 - Copyright (c) Giovanni Pellicciotta
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\git-repository-backup.exe version` (exit code `0`)
 
 ```text
-backup-git-repos v2.0.1-pre+886c224 - Copyright (c) Giovanni Pellicciotta
+backup-git-repos v2.0.2-pre+180ab88 - Copyright (c) Giovanni Pellicciotta
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\lint-markdown.exe check --offline docs` (exit code `0`)
 
 ```text
-Starting lint-markdown v2.0.1-pre+886c224 with configuration:
+Starting lint-markdown v2.0.2-pre+180ab88 with configuration:
 - Command: check
 - Log file: none
 - Log level: INFO
@@ -80,16 +80,16 @@ Command: `C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest -q` 
 .............................................................. [ 17%]
 ........................................................................................................ [ 32%]
 ........................................................................ [ 42%]
-...............................s........................................ [ 53%]
-..........................................s......s...................... [ 63%]
+................................s....................................... [ 53%]
+...........................................s......s..................... [ 63%]
 ........................................................................ [ 73%]
 ...................................................................... [ 83%]
 ........................................................................ [ 94%]
-........................................                                 [100%]
-693 passed, 3 skipped, 64 subtests passed in 171.04s (0:02:51)
+.........................................                                [100%]
+694 passed, 3 skipped, 64 subtests passed in 187.46s (0:03:07)
 ```
 
-Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe check src tests scripts` (exit code `0`)
+Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe check .` (exit code `0`)
 
 ```text
 All checks passed!

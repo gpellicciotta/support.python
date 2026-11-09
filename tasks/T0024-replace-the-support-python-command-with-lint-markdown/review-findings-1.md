@@ -3,7 +3,7 @@ task: T0024
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-09T19:57:04Z
+reviewed_at: 2026-11-09T20:00:18Z
 reviewed_commit: "decca33"
 base_commit: "decca33"
 branch: task/T0024-replace-the-support-python-command-with-lint-markdown
