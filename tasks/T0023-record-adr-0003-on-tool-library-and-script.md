@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 960.0, input: 269546, output: 38616, cache_read: 4595386}
+work_duration: 492.0
 ---
 # T0023: Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre
 
@@ -36,12 +39,22 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
 - [2026-11-09] **[Decide]**
   User approved v2.0.0-pre, the five standalone tools, the uniform CLI conventions, and a library-based reusable devops on 2026-11-09.
 
+- [2026-11-09] **[Read]**
+  Inspected ADR-0001, ADR-0002, requirements, index, CHANGELOG.md, and T0023 technical specifications.
+
 - [2026-11-09] **[Implement]**
-  Recorded ADR-0003, updated ADR-0001, docs, and CLAUDE.md, and opened v2.0.0-pre.
+  Authored ADR-0003 documenting standalone CLI tools, uniform CLI conventions, and reusable devops package.
+
+- [2026-11-09] **[Implement]**
+  Marked ADR-0001 partially superseded, updated requirements, docs index, and CLAUDE.md, and opened v2.0.0-pre.
 
 - [2026-11-09] **[Verify]**
   Verified offline Markdown linting on changed docs and full pytest suite.
   - Files touched: 7.
   - Lines touched: 248.
   - Reopenings: 0.
+
+- [2026-11-09] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
 
