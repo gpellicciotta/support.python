@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1647.0, input: 546764, output: 52940, cache_read: 17392998}
-review_status: pending
+  review: {turns: 2, duration_s: 343.6, input: 52, output: 14956, cache_read: 1223546, cache_write: 88034}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1012.1
 ---
 # T0028: Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
 
@@ -59,10 +62,26 @@ Replace every remaining alias use with `CliLogger` through the mechanical comman
 
 - [2026-11-09] **[Verify]**
   Recorded task outcomes.
-  - Files touched: 11.
-  - Lines touched: 109.
+  - Files touched: 17.
+  - Lines touched: 267.
   - Reopenings: 0.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: The core change is correct and well tested.
+  - Findings: [review-findings-1.md](T0028-make-toolharness-configure-utf-8-output-and-remove/review-findings-1.md).
+
+- [2026-11-09] **[Implement]**
+  Fixed duplicated CliLogger prose in processes.py, removed alias mentions in CLAUDE.md and docs/index.md, and renamed the agent_files subclass to StderrRoutingLogger.
+
+- [2026-11-09] **[Doc]**
+  Recorded the 6 extra sweep-touched files and the python -c cp1252-pipe integration test mechanism in technical-spec.md.
+
+- [2026-11-09] **[Verify]**
+  Recorded updated task outcomes after review rework.
+  - Files touched: 17.
+  - Lines touched: 267.
+  - Reopenings: 0.
 

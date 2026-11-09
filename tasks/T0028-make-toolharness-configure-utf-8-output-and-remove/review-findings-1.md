@@ -3,7 +3,7 @@ task: T0028
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-09T22:07:58Z
+reviewed_at: 2026-11-09T22:10:53Z
 reviewed_commit: "54b0133"
 base_commit: "887e11a"
 branch: task/T0028-make-toolharness-configure-utf-8-output-and-remove

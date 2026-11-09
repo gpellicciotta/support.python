@@ -33,7 +33,14 @@ Exit code: `0`
 All checks passed!
 ```
 
-Command: `C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest -q`
+Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe format --check .`
+Exit code: `0`
+
+```text
+97 files already formatted
+```
+
+Command: `$env:PYTHONPATH = "C:\Dev-Projects\support.python\.plan\work\T0028-make-toolharness-configure-utf-8-output-and-remove\src"; C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest -q`
 Exit code: `0`
 
 ```text
@@ -47,7 +54,7 @@ Exit code: `0`
 ........................................................ [ 87%]
 ........................................ [ 93%]
 ................................................                     [100%]
-705 passed, 3 skipped, 64 subtests passed in 92.49s (0:01:32)
+705 passed, 3 skipped, 64 subtests passed in 157.06s (0:02:37)
 ```
 
 ### Console Script Help Verification
