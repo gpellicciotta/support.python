@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2937.6, input: 646172, output: 157004, cache_read: 12093552}
+review_status: pending
+review_round: 1
 ---
 # T0019: Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script
 
@@ -60,4 +64,7 @@ Generalization follows in T0020.
   - Files touched: 6.
   - Lines touched: 115.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
