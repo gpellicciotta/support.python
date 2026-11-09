@@ -6,11 +6,19 @@ needs: []
 branch: task/T0024-replace-the-support-python-command-with-lint-markdown
 worktree: .plan/work/T0024-replace-the-support-python-command-with-lint-markdown
 status: active
-started_at: "2026-11-09T19:18:53Z"
+started_at: "2026-11-09T19:56:03Z"
 ended_at: —
 review: agent
 preview: none
 protocol: standard
+size_status: approved
+size_estimate: 25 files, 2826 lines
+usage:
+  worker: {turns: 2, duration_s: 2286.2, input: 606628, output: 85684, cache_read: 21233828}
+work_duration: 1155.5
+size_approved: 25 files, 2826 lines
+size_approved_by: "@Giovanni Pellicciotta (delegated)"
+size_approved_at: "2026-11-09T19:39:18Z"
 ---
 # T0024: Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts
 
@@ -52,4 +60,13 @@ Document per-user and global installation of the tools in `README.md`.
   - Files touched: 15.
   - Lines touched: 433.
   - Reopenings: 0.
+
+- [2026-11-09] **[Size]**
+  Size approval requested by the work loop: 25 files, 2826 lines exceeds 8x the approved 11 files, 350 lines.
+
+- [2026-11-09] **[Size]**
+  Size approved by @Giovanni Pellicciotta (delegated) for 25 files, 2826 lines.
+  - Decided by the Claude Code orchestrator under the user's size delegation.
+  - Counted diff is 15 files, 432 lines, excluding deleted files.
+  - The loop total included 10 wholly deleted files, 2394 lines.
 
