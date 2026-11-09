@@ -1,11 +1,12 @@
 ---
 id: T0024
-owner: ~
-needs: [T0023]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@gemini"
+session: antigravity-20261109-4e3d15
+needs: []
+branch: task/T0024-replace-the-support-python-command-with-lint-markdown
+worktree: .plan/work/T0024-replace-the-support-python-command-with-lint-markdown
+status: active
+started_at: "2026-11-09T19:18:53Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Delete the checkout wrappers and duplicated helpers under `scripts/` listed in t
 Document per-user and global installation of the tools in `README.md`.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read cli.py main, the pyproject scripts table, the wrapper scripts, and every test using them.
-- [ ] **[Implement]** Write tests/test_console_scripts.py covering entry points, banners, and the removed support-python command.
-- [ ] **[Verify]**    Run the new tests and record their failures as red-phase proof.
-- [ ] **[Implement]** Update pyproject.toml, cli.py, package exports, and the agent-files TOOL_NAME; delete the listed files.
-- [ ] **[Verify]**    Reinstall editable, run the full suite, and run each console script's version action.
-- [ ] **[Doc]**       Update README.md, CHANGELOG.md, docs/requirements.md, docs/agent-files.md, and docs/markdown-lint.md.
+- [x] **[Read]**      Read cli.py main, the pyproject scripts table, the wrapper scripts, and every test using them.
+- [x] **[Implement]** Write tests/test_console_scripts.py covering entry points, banners, and the removed support-python command.
+- [x] **[Verify]**    Run the new tests and record their failures as red-phase proof.
+- [x] **[Implement]** Update pyproject.toml, cli.py, package exports, and the agent-files TOOL_NAME; delete the listed files.
+- [x] **[Verify]**    Reinstall editable, run the full suite, and run each console script's version action.
+- [x] **[Doc]**       Update README.md, CHANGELOG.md, docs/requirements.md, docs/agent-files.md, and docs/markdown-lint.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -35,3 +36,20 @@ Document per-user and global installation of the tools in `README.md`.
 
 - [2026-11-09] **[Decide]**
   Scope agreed with the user on 2026-11-09 as part of the v2.0.0 standalone-tools and reusable-devops restructuring. The user confirmed tools run directly from the terminal, so the wrappers go.
+
+- [2026-11-09] **[Implement]**
+  Replaced support-python and wrapper scripts with processes, agent-files, lint-markdown, and git-repository-backup console scripts.
+  - Undeclared test files updated: 4.
+  - Counted files excluding deletions: 15 (433 lines).
+
+- [2026-11-09] **[Verify]**
+  Verified editable install, console script version banners, lint-markdown check, and full pytest suite.
+  - 693 passed, 3 skipped.
+  - All 4 console scripts verified.
+
+- [2026-11-09] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 15.
+  - Lines touched: 433.
+  - Reopenings: 0.
+
