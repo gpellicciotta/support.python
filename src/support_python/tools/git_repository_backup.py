@@ -27,7 +27,8 @@ from typing import Any, Callable, Sequence
 from support_python.cli import COPYRIGHT, PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
 from support_python.logging import ToolLogger  # noqa: E402
 
-TOOL_NAME = "backup-git-repos"
+TOOL_NAME = "git-repository-backup"
+LEGACY_TOOL_NAME = "backup-git-repos"
 TOOL_VERSION = PROJECT_VERSION
 DESCRIPTION = "Backs up Git repos to bare mirror repos and encrypted 7-Zip archives."
 
@@ -96,12 +97,12 @@ def get_long_usage(verbose: bool = False) -> str:
 {DESCRIPTION}
 
 Usage:
-  backup-git-repos backup [options]
-  backup-git-repos list [options]
-  backup-git-repos restore (--source PATH | --name NAME) --target DIR [options]
-  backup-git-repos set-password --archive-dir PATH --password-keyring NAME
-  backup-git-repos version
-  backup-git-repos help [--verbose]
+  git-repository-backup backup [options]
+  git-repository-backup list [options]
+  git-repository-backup restore (--source PATH | --name NAME) --target DIR [options]
+  git-repository-backup set-password --archive-dir PATH --password-keyring NAME
+  git-repository-backup version
+  git-repository-backup help [--verbose]
 
 Actions:
   backup                 back up all discovered repos
@@ -114,7 +115,7 @@ Actions:
 Options:
   -h, --help             show help message and exit
   --version              show version information and exit
-  --config PATH          JSON config file (default: ~/.config/backup-git-repos/config.json if present)
+  --config PATH          JSON config file (default: ~/.config/git-repository-backup/config.json if present)
   --root PATH            directory to scan for repos; repeatable, replaces config roots
   --depth N              maximum scan depth below each root (default: {DEFAULT_DEPTH})
   --mirror-dir PATH      directory holding one bare mirror repo per project
@@ -128,6 +129,7 @@ Options:
   --password-env NAME    read the archive password from this environment variable
   --password-keyring NAME
                          read the archive password from this OS keyring service
+  --format text|json     output format for list (default: text)
   --dry-run              report planned actions without writing anything
   -v, --verbose          enable verbose output logging
   --log-file PATH        append operational logs to specified file
@@ -166,7 +168,7 @@ Detailed Action Descriptions:
       Setting both --password-env and --password-keyring is rejected.
 
   list
-      Prints each discovered repo as '{{{{name}}}}  {{{{path}}}}'.
+      Prints each discovered repo as '{{{{name}}}}  {{{{path}}}}' (or as a JSON array with --format json).
 
   restore
       Rebuilds a working repo in --target, which must be absent or empty. --source names a bare
@@ -209,25 +211,26 @@ Config File Format:
 
 Restoring:
   From the configured mirror or archive directory:
-    backup-git-repos restore --name {{{{name}}}} --target {{{{directory}}}}
+    git-repository-backup restore --name {{{{name}}}} --target {{{{directory}}}}
   From a specific backup:
-    backup-git-repos restore --source {{{{mirror-dir}}}}/{{{{name}}}}.git --target {{{{directory}}}}
-    backup-git-repos restore --source {{{{archive-dir}}}}/{{{{name}}}}.7z --target {{{{directory}}}}
+    git-repository-backup restore --source {{{{mirror-dir}}}}/{{{{name}}}}.git --target {{{{directory}}}}
+    git-repository-backup restore --source {{{{archive-dir}}}}/{{{{name}}}}.7z --target {{{{directory}}}}
   Then add a remote: git remote add origin {{{{url}}}}
 
 Scheduling Nightly Runs:
   Remove any "password-env" key from the config file, store the password once, then set "password-keyring":
-    backup-git-repos set-password --archive-dir {{{{archive-directory}}}} --password-keyring {{{{keyring-service}}}}
+    git-repository-backup set-password --archive-dir {{{{archive-directory}}}} --password-keyring {{{{keyring-service}}}}
   Run the scheduled job under the account that stored the password; keyrings are per user.
   Windows Task Scheduler:
-    schtasks /Create /TN "backup-git-repos" /SC DAILY /ST 02:00 /TR "python {{{{script-path}}}} backup --log-file {{{{log-path}}}}"
+    schtasks /Create /TN "git-repository-backup" /SC DAILY /ST 02:00 /TR "python {{{{script-path}}}} backup --log-file {{{{log-path}}}}"
   cron:
     0 2 * * * python3 {{{{script-path}}}} backup --log-file {{{{log-path}}}}
 
 Examples:
-  backup-git-repos list --root ~/projects
-  backup-git-repos backup --root ~/projects --mirror-dir //server/backups/git --no-archive
-  backup-git-repos backup --config ~/backup.json --verbose
+  git-repository-backup list --root ~/projects
+  git-repository-backup list --root ~/projects --format json
+  git-repository-backup backup --root ~/projects --mirror-dir //server/backups/git --no-archive
+  git-repository-backup backup --config ~/backup.json --verbose
 """
 
 
@@ -236,14 +239,32 @@ def default_config_path() -> Path:
     return Path.home() / ".config" / TOOL_NAME / "config.json"
 
 
-def load_config(path: Path | None) -> dict[str, Any]:
-    """Load the JSON config file; an explicit path must exist, the default path is optional."""
+def legacy_config_path() -> Path:
+    """Return the legacy config file location in the user's home directory."""
+    return Path.home() / ".config" / LEGACY_TOOL_NAME / "config.json"
+
+
+def load_config(path: Path | None, logger: ToolLogger | None = None) -> dict[str, Any]:
+    """Load the JSON config file; an explicit path must exist, the default path falls back to the legacy path."""
     explicit = path is not None
-    config_path = path if path is not None else default_config_path()
-    if not config_path.exists():
-        if explicit:
+    if explicit:
+        assert path is not None
+        config_path = path
+        if not config_path.exists():
             raise UsageError(f"Config file not found: {config_path}")
-        return {}
+    else:
+        default_path = default_config_path()
+        legacy_path = legacy_config_path()
+        if default_path.exists():
+            config_path = default_path
+        elif legacy_path.exists():
+            config_path = legacy_path
+            warn_logger = logger if logger is not None else ToolLogger()
+            warn_logger.warn(
+                f"Reading legacy config {legacy_path}; move it to {default_path}. The legacy path is dropped in v3.0.0."
+            )
+        else:
+            return {}
     try:
         data = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -884,7 +905,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: ToolLogger
 
 def run_action(action: str, args: argparse.Namespace, logger: ToolLogger) -> int:
     """Resolve the settings and run one action; raises UsageError for invalid arguments or configuration."""
-    settings = resolve_settings(args, load_config(to_path(args.config) if args.config else None))
+    settings = resolve_settings(args, load_config(to_path(args.config) if args.config else None, logger=logger))
     if action == "set-password":
         return run_set_password(settings, logger)
     if action == "restore":
@@ -898,6 +919,11 @@ def run_action(action: str, args: argparse.Namespace, logger: ToolLogger) -> int
         raise UsageError(f"Duplicate backup names: {details}")
 
     if action == "list":
+        output_format = getattr(args, "format", "text")
+        if output_format == "json":
+            payload = [{"name": repo.name, "path": str(repo)} for repo in repos]
+            logger.emit(json.dumps(payload, indent=2))
+            return 0
         for repo in repos:
             logger.emit(f"{repo.name}  {repo}")
         return 0
@@ -931,7 +957,17 @@ def describe_config(value: str | None) -> str:
     if value:
         return str(to_path(value))
     path = default_config_path()
-    return f"{path} (default)" if path.exists() else f"{path} (default, absent)"
+    if path.exists():
+        return f"{path} (default)"
+    legacy = legacy_config_path()
+    if legacy.exists():
+        return f"{legacy} (legacy)"
+    return f"{path} (default, absent)"
+
+
+def configure_list_parser(parser: argparse.ArgumentParser) -> None:
+    """Register output format flags for the list action."""
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (text or json).")
 
 
 class BackupHarness(ToolHarness):
@@ -939,6 +975,7 @@ class BackupHarness(ToolHarness):
 
     config_file: str = ""
     dry_run: bool = False
+    json_mode: bool = False
 
     def format_help(self, verbose: bool = False) -> str:
         """Return the help screen, which documents option values, config files, and scheduling."""
@@ -948,12 +985,34 @@ class BackupHarness(ToolHarness):
         """Record the config file and dry-run mode for the startup banner, then build the logger."""
         self.config_file = describe_config(args.config)
         self.dry_run = args.dry_run
+        self.json_mode = getattr(args, "format", "text") == "json"
         return super().create_logger(args)
 
     def log_startup(self, logger: ToolLogger, action: str, extra: dict[str, Any] | None = None) -> None:
         """Emit the standard startup banner including the config file and dry-run mode."""
         config = {"Config file": self.config_file, "Dry run": str(self.dry_run).lower(), **(extra or {})}
+        if self.json_mode:
+            lines = [
+                f"Starting {self.name} v{get_full_version(self.version, cwd=self.repo_dir)} with configuration:",
+                f"- Command: {action}",
+                f"- Log file: {logger.log_file or 'none'}",
+                f"- Log level: {logger.effective_level}",
+                f"- Verbose: {str(logger.verbose).lower()}",
+                *(f"- {key}: {val}" for key, val in config.items()),
+            ]
+            logger.info("\n".join(lines), to_stdout=False)
+            return
         super().log_startup(logger, action, extra=config)
+
+    def log_completion(self, logger: ToolLogger, action: str, exit_code: int, started_at: float) -> None:
+        """Emit completion summary upon exit, suppressing stdout when JSON mode succeeds."""
+        if self.json_mode and exit_code == 0:
+            import time
+
+            duration = time.monotonic() - started_at
+            logger.info(f"Finished {self.name} {action} in {duration:.1f}s with status: succeeded", to_stdout=False)
+            return
+        super().log_completion(logger, action, exit_code, started_at)
 
     def _build_parser(self, action_name: str | None = None) -> argparse.ArgumentParser:
         """Build the action parser, reporting argument errors with severity indicators."""
@@ -1000,7 +1059,12 @@ def build_harness() -> BackupHarness:
     harness.add_global_argument("--password-keyring", type=str, default=None, help="Keyring service holding the password.")
     harness.add_global_argument("--dry-run", action="store_true", help="Report planned actions without writing.")
     harness.add_action("backup", "back up all discovered repos", handler=action_handler("backup"))
-    harness.add_action("list", "list discovered repos and their backup names", handler=action_handler("list"))
+    harness.add_action(
+        "list",
+        "list discovered repos and their backup names",
+        handler=action_handler("list"),
+        configure_parser=configure_list_parser,
+    )
     harness.add_action("restore", "rebuild a working repo from one mirror or archive", handler=action_handler("restore"))
     harness.add_action("set-password", "verify the archive password and store it", handler=action_handler("set-password"))
     return harness

@@ -530,6 +530,16 @@ agent-files check [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [
 agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
 ```
 
+## Git repository backup
+[git_repository_backup.py](src/support_python/tools/git_repository_backup.py) backs up discovered Git repositories to bare mirror repositories and AES-256 encrypted 7-Zip bundle archives, exposed on the CLI as `git-repository-backup`.
+Settings load from `~/.config/git-repository-backup/config.json` (falling back to `~/.config/backup-git-repos/config.json` with a warning, or `--config PATH`); see [git-repository-backup.md](docs/tools/git-repository-backup.md) for the full JSON schema and action reference:
+```bash
+git-repository-backup list [--root PATH] [--format text|json] [--config PATH]
+git-repository-backup backup [--root PATH] [--mirror-dir PATH] [--archive-dir PATH] [--dry-run] [--config PATH]
+git-repository-backup restore (--source PATH | --name NAME) --target DIR [--config PATH]
+git-repository-backup set-password --archive-dir PATH --password-keyring NAME [--config PATH]
+```
+
 ## Duration and time formatting helpers
 The package exports duration and timestamp helpers from [durations.py](src/support_python/durations.py), also available through `support_python.durations`.
 All helpers use only the Python standard library and preserve `support_python.dates.format_datetime`.

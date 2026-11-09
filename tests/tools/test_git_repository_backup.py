@@ -151,7 +151,7 @@ class TestCli(BackupTestCase):
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
                 self.assertIn(f"Detailed Action Description: {action}", out)
-                self.assertIn(f"Usage:\n  backup-git-repos {action} [options]", out)
+                self.assertIn(f"Usage:\n  git-repository-backup {action} [options]", out)
                 for other_action in ("backup", "list", "restore", "set-password"):
                     if other_action != action:
                         self.assertNotIn(f"Detailed Action Description: {other_action}", out)
@@ -166,7 +166,7 @@ class TestCli(BackupTestCase):
     def test_version_banner_format(self) -> None:
         code, out, _ = self.run_main("version")
         self.assertEqual(code, 0)
-        self.assertRegex(out.strip(), r"^backup-git-repos v\S+ - Copyright")
+        self.assertRegex(out.strip(), r"^git-repository-backup v\S+ - Copyright")
 
     def test_backup_without_roots_exits_two(self) -> None:
         code, _, _ = self.run_main("backup", "--mirror-dir", str(self.mirrors))
@@ -193,7 +193,7 @@ class TestCli(BackupTestCase):
 
 
 ERROR_INDENT = " " * 12
-FINISHED_PATTERN = r"Finished backup-git-repos {action} in \d+\.\ds with status: {status}"
+FINISHED_PATTERN = r"Finished git-repository-backup {action} in \d+\.\ds with status: {status}"
 
 
 class TestHarnessCli(BackupTestCase):
@@ -203,14 +203,14 @@ class TestHarnessCli(BackupTestCase):
         code, out, err = self.run_raw()
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
-        self.assertRegex(out.splitlines()[0], r"^backup-git-repos v\S+ - Copyright")
+        self.assertRegex(out.splitlines()[0], r"^git-repository-backup v\S+ - Copyright")
         self.assertIn("Usage:", out)
         self.assertIn("Exit codes:", out)
         self.assertNotIn("Detailed Action Descriptions:", out)
 
     def test_help_requires_explicit_backup_action(self) -> None:
         _, out, _ = self.run_raw("help")
-        self.assertIn("  backup-git-repos backup [options]", out)
+        self.assertIn("  git-repository-backup backup [options]", out)
         self.assertNotIn("[backup]", out)
         self.assertNotIn("default action", out)
 
@@ -222,7 +222,7 @@ class TestHarnessCli(BackupTestCase):
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** "), err)
         self.assertIn("--root", lines[0])
-        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: backup-git-repos {{help|version|"), err)
+        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: git-repository-backup {{help|version|"), err)
 
     def test_unknown_action_exits_two_with_formatted_usage(self) -> None:
         code, out, err = self.run_raw("bogus")
@@ -230,7 +230,7 @@ class TestHarnessCli(BackupTestCase):
         self.assertEqual(out, "")
         lines = err.splitlines()
         self.assertEqual(lines[0], "**[ERROR]** Unknown subcommand: 'bogus'")
-        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: backup-git-repos {{help|version|"), err)
+        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: git-repository-backup {{help|version|"), err)
         for action in ("backup", "list", "restore", "set-password"):
             self.assertIn(action, lines[1])
 
@@ -240,14 +240,14 @@ class TestHarnessCli(BackupTestCase):
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** "), err)
         self.assertIn("--bogus", lines[0])
-        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: backup-git-repos list"), err)
+        self.assertTrue(lines[1].startswith(f"{ERROR_INDENT}Usage: git-repository-backup list"), err)
 
     def test_startup_banner_lists_configuration(self) -> None:
         make_repo(self.root / "alpha")
         code, out, err = self.run_main("list", "--root", str(self.root))
         self.assertEqual(code, 0, err)
         lines = out.splitlines()
-        self.assertRegex(lines[0], r"^Starting backup-git-repos v\S+ with configuration:$")
+        self.assertRegex(lines[0], r"^Starting git-repository-backup v\S+ with configuration:$")
         self.assertEqual(lines[1], "- Command: list")
         self.assertIn("- Command: list", lines)
         self.assertIn(f"- Config file: {self.config}", lines)
@@ -256,10 +256,11 @@ class TestHarnessCli(BackupTestCase):
 
     def test_startup_banner_names_default_config_file(self) -> None:
         home = self.tmp / "home"
-        with mock.patch.object(backup_git_repos, "default_config_path", return_value=home / "config.json"):
+        expected = home / ".config" / "git-repository-backup" / "config.json"
+        with mock.patch.object(Path, "home", return_value=home):
             code, out, _ = self.run_raw("list", "--root", str(self.root), "--dry-run")
         self.assertEqual(code, 0)
-        self.assertIn(f"- Config file: {home / 'config.json'} (default, absent)", out.splitlines())
+        self.assertIn(f"- Config file: {expected} (default, absent)", out.splitlines())
         self.assertIn("- Dry run: true", out.splitlines())
 
     def test_backup_emits_completion_summary_with_duration(self) -> None:
@@ -286,7 +287,7 @@ class TestHarnessCli(BackupTestCase):
         code, _, err = self.run_main("list", "--root", str(self.root), "--log-file", str(log_file))
         self.assertEqual(code, 0, err)
         text = log_file.read_text(encoding="utf-8")
-        self.assertRegex(text, r"\*\*\[INFO\]\*\*  Starting backup-git-repos v")
+        self.assertRegex(text, r"\*\*\[INFO\]\*\*  Starting git-repository-backup v")
         self.assertRegex(text, FINISHED_PATTERN.format(action="list", status="succeeded"))
 
     def test_list_writes_discovered_repos_to_log_file(self) -> None:
@@ -301,7 +302,7 @@ class TestHarnessCli(BackupTestCase):
 
     def test_script_entry_point_shows_help_and_version(self) -> None:
         env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
-        for args, expected in (([], "Usage:"), (["version"], "backup-git-repos v")):
+        for args, expected in (([], "Usage:"), (["version"], "git-repository-backup v")):
             with self.subTest(args=args):
                 result = subprocess.run(
                     [sys.executable, str(_MODULE_PATH), *args], env=env, capture_output=True, text=True, encoding="utf-8"
@@ -344,6 +345,66 @@ class TestConfig(BackupTestCase):
         self.assertEqual(code, 0)
         self.assertIn("beta", out)
         self.assertNotIn("alpha", out)
+
+    def test_config_resolution_new_legacy_and_absent(self) -> None:
+        home = self.tmp / "home"
+        new_cfg = home / ".config" / "git-repository-backup" / "config.json"
+        legacy_cfg = home / ".config" / "backup-git-repos" / "config.json"
+        root_new = self.tmp / "root_new"
+        root_legacy = self.tmp / "root_legacy"
+        make_repo(root_new / "new_repo")
+        make_repo(root_legacy / "legacy_repo")
+
+        with mock.patch.object(Path, "home", return_value=home):
+            # 1. Neither exists -> command-line options only, no warning
+            code, out, err = self.run_raw("list", "--root", str(root_new))
+            self.assertEqual(code, 0, err)
+            self.assertEqual(err, "")
+            self.assertIn("new_repo", out)
+
+            # 2. Only legacy exists -> uses legacy and emits warning on stderr
+            legacy_cfg.parent.mkdir(parents=True, exist_ok=True)
+            legacy_cfg.write_text(json.dumps({"roots": [str(root_legacy)]}), encoding="utf-8")
+            code, out, err = self.run_raw("list")
+            self.assertEqual(code, 0, err)
+            self.assertIn("legacy_repo", out)
+            expected_warn = f"Reading legacy config {legacy_cfg}; move it to {new_cfg}. The legacy path is dropped in v3.0.0."
+            self.assertIn(expected_warn, err)
+            self.assertEqual(err.count("Reading legacy config"), 1)
+
+            # 3. Both exist -> new config wins without warning
+            new_cfg.parent.mkdir(parents=True, exist_ok=True)
+            new_cfg.write_text(json.dumps({"roots": [str(root_new)]}), encoding="utf-8")
+            code, out, err = self.run_raw("list")
+            self.assertEqual(code, 0, err)
+            self.assertEqual(err, "")
+            self.assertIn("new_repo", out)
+            self.assertNotIn("legacy_repo", out)
+
+    def test_list_format_json_and_text(self) -> None:
+        alpha = make_repo(self.root / "alpha")
+        beta = make_repo(self.root / "beta")
+        code, text_out, err = self.run_main("list", "--root", str(self.root), "--format", "text")
+        self.assertEqual(code, 0, err)
+        self.assertIn(f"alpha  {alpha}", text_out)
+        self.assertIn(f"beta  {beta}", text_out)
+        self.assertIn("Starting git-repository-backup", text_out)
+
+        code, json_out, err = self.run_main("list", "--root", str(self.root), "--format", "json")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(err, "")
+        parsed = json.loads(json_out)
+        self.assertEqual(
+            parsed,
+            [
+                {"name": "alpha", "path": str(alpha)},
+                {"name": "beta", "path": str(beta)},
+            ],
+        )
+
+        # Invalid format exits 2
+        code, _, err = self.run_main("list", "--root", str(self.root), "--format", "xml")
+        self.assertEqual(code, 2)
 
 
 class TestDiscovery(BackupTestCase):
@@ -902,7 +963,7 @@ class TestActionCompletionSummaries(RestoreTestCase):
         self.assertIn(f"**[ERROR]** {action} interrupted", err)
         pattern = FINISHED_PATTERN.format(action=action, status="failed")
         self.assertRegex(err.splitlines()[-1], r"^\*\*\[ERROR\]\*\* " + pattern + "$")
-        self.assertEqual((out + err).count("Finished backup-git-repos"), 1)
+        self.assertEqual((out + err).count("Finished git-repository-backup"), 1)
 
     def test_interrupted_backup_emits_failed_summary(self) -> None:
         with mock.patch.object(backup_git_repos, "mirror_repo", side_effect=KeyboardInterrupt):
@@ -936,7 +997,7 @@ class TestActionCompletionSummaries(RestoreTestCase):
         self.assertFalse(self.target.exists())
         pattern = FINISHED_PATTERN.format(action="restore", status="failed")
         self.assertRegex(err.splitlines()[-1], r"^\*\*\[ERROR\]\*\* " + pattern + "$")
-        self.assertEqual((out + err).count("Finished backup-git-repos"), 1)
+        self.assertEqual((out + err).count("Finished git-repository-backup"), 1)
 
 
 class TestRestoreMirror(RestoreTestCase):
@@ -999,7 +1060,7 @@ class TestRestoreMirror(RestoreTestCase):
             raise KeyboardInterrupt
 
         def locked_work_dir(path: Path) -> None:
-            if path.name.startswith("backup-git-repos-"):
+            if path.name.startswith("git-repository-backup-"):
                 raise PermissionError("file in use")
             real_remove_tree(path)
 
@@ -1111,7 +1172,7 @@ class TestRestoreMirror(RestoreTestCase):
     def test_help_verbose_documents_restore(self) -> None:
         self.assertIn("restore", backup_git_repos.get_long_usage(verbose=False))
         details = backup_git_repos.get_long_usage(verbose=True)
-        for text in ("--source PATH", "--name NAME", "--target DIR", "backup-git-repos restore --name"):
+        for text in ("--source PATH", "--name NAME", "--target DIR", "git-repository-backup restore --name"):
             with self.subTest(text=text):
                 self.assertIn(text, details)
         self.assertNotIn("then git clone", details)
@@ -1227,6 +1288,36 @@ class TestRestoreIntegration(BackupTestCase):
                 self.assertEqual(refs_of(self.tmp / name), refs_of(alpha))
                 self.assertIn("refs/tags/orphan", refs_of(self.tmp / name))
                 self.assertEqual(git(self.tmp / name, "symbolic-ref", "HEAD"), "refs/heads/main")
+
+    def test_installed_cli_legacy_config_and_json_list(self) -> None:
+        alpha = make_repo(self.root / "alpha")
+        home = self.tmp / "home"
+        legacy_cfg = home / ".config" / "backup-git-repos" / "config.json"
+        new_cfg = home / ".config" / "git-repository-backup" / "config.json"
+        legacy_cfg.parent.mkdir(parents=True, exist_ok=True)
+        legacy_cfg.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
+        cli_bin = Path(sys.executable).parent / (
+            "git-repository-backup.exe" if sys.platform == "win32" else "git-repository-backup"
+        )
+        cmd = [str(cli_bin)] if cli_bin.exists() else [sys.executable, "-m", "support_python.tools.git_repository_backup"]
+        env = {
+            **os.environ,
+            "HOME": str(home),
+            "USERPROFILE": str(home),
+            "PYTHONPATH": str(SRC_DIR),
+        }
+        result = subprocess.run(
+            [*cmd, "list", "--format", "json"],
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(json.loads(result.stdout), [{"name": "alpha", "path": str(alpha)}])
+        expected_warn = f"Reading legacy config {legacy_cfg}; move it to {new_cfg}. The legacy path is dropped in v3.0.0."
+        self.assertIn(expected_warn, result.stderr)
 
 
 if __name__ == "__main__":

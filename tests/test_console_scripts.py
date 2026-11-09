@@ -36,13 +36,18 @@ def resolve_console_script(name: str) -> str:
 
 def run_console_script(name: str, *args: str, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     """Run an installed console script as a subprocess and return the completed process."""
+    import os
+
     executable = resolve_console_script(name)
+    src_dir = str(Path(__file__).resolve().parent.parent / "src")
+    env = {**os.environ, "PYTHONPATH": src_dir}
     return subprocess.run(
         [executable, *args],
         capture_output=True,
         text=True,
         encoding="utf-8",
         cwd=cwd,
+        env=env,
         timeout=60,
     )
 
@@ -80,7 +85,7 @@ def test_each_tool_harness_version_banner() -> None:
         (processes.build_harness(), "processes v"),
         (agent_files.build_harness(), "agent-files v"),
         (lint_markdown.build_harness(), "lint-markdown v"),
-        (git_repository_backup.build_harness(), "backup-git-repos v"),
+        (git_repository_backup.build_harness(), "git-repository-backup v"),
     ]
     for harness, prefix in expected_banners:
         assert harness.format_version().startswith(prefix)
@@ -92,7 +97,7 @@ def test_each_tool_harness_version_banner() -> None:
         ("processes", "processes v"),
         ("agent-files", "agent-files v"),
         ("lint-markdown", "lint-markdown v"),
-        ("git-repository-backup", "backup-git-repos v"),
+        ("git-repository-backup", "git-repository-backup v"),
     ],
 )
 def test_console_script_version_action(script_name: str, expected_prefix: str) -> None:

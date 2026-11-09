@@ -10,7 +10,7 @@ Overview of all documentation for the `support-python` project.
   process.
 - [CLI harness and helpers](../README.md#shared-cli-helpers-tabular-output-and-session-storage): Action-oriented `ToolHarness`, `Action`, `build_action_parser`, version/help banners, and build-metadata version formatting.
 - [CLI logging](../README.md#cli-logging): Unified `CliLogger` (`ToolLogger`/`TeeLogger`), `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
-- [Git repository backup](../src/support_python/tools/git_repository_backup.py): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup`.
+- [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
 - [Process helpers and CLI](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI.
