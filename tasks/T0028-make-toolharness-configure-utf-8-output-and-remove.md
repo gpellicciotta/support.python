@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1647.0, input: 546764, output: 52940, cache_read: 17392998}
+review_status: pending
+review_round: 1
 ---
 # T0028: Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
 
@@ -58,4 +62,7 @@ Replace every remaining alias use with `CliLogger` through the mechanical comman
   - Files touched: 11.
   - Lines touched: 109.
   - Reopenings: 0.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
