@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2899.6, input: 587150, output: 92424, cache_read: 20595840}
+review_status: pending
+review_round: 1
 ---
 # T0027: Rename backup-git-repos to git-repository-backup, read its legacy config with a warning, and add JSON list output
 
@@ -61,4 +65,7 @@ Write `docs/tools/git-repository-backup.md`.
   - Lines touched: 334.
   - Reopenings: 0.
   - Undeclared files: pyproject.toml, tests/test_console_scripts.py.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
