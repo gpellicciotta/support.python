@@ -33,6 +33,8 @@ Overview of all documentation for the `support-python` project.
 
 - [ADR-0001: Scope for a Shared DevOps-Scripts Toolkit](adrs/ADR-0001-devops-scripts-toolkit-scope.md): Why
   deploy and bootstrap scripts stay project-local while a pinned-dependency pattern shares narrow helpers.
+- [ADR-0002: Modular Guidelines and Mechanical Skill Derivation](adrs/ADR-0002-modular-agent-skills-architecture.md): Why
+  guidelines carry skill front-matter and `agent-digest` derives a size-capped digest and on-demand skills from them.
 
 ---
 

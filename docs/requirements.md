@@ -81,6 +81,16 @@ Functional and technical requirements for the `support-python` project.
 - Provide Java application server lifecycle, background execution, and health status polling (`LocalServerManager`).
 - Provide sample email template test dispatching (`LocalMailManager`) and live endpoint/deployment verification (`LocalVerifier`).
 
+### Agent Files Synchronization
+- Provide an `agent-files` CLI action (`support-python agent-files`, [agent-files.py](../scripts/agent-files.py)) supporting
+  `list`, `sync`, `check`, `review`, `help`, and `version`, replacing `update-global-agent-files.py` from dev-guidelines.
+- Support discovery and configuration of installed AI coding tools (Claude Code, Antigravity, Codex CLI) through a
+  built-in, JSON-extensible tool registry (`support_python.agent_files_config`).
+- Inject the guideline digest of a source repository into guarded blocks of tool-specific target files
+  (`~/.claude/CLAUDE.md`, `~/.gemini/GEMINI.md`, `~/.codex/AGENTS.md`) and sync its skills into each tool's skills folder,
+  preserving developer-specific content outside the guarded block.
+- Create automated backups of existing target files prior to mutation.
+
 ### Models and Wire Helpers
 - Provide a `WireEnum` base class supporting kebab-case string conversion and case/underscore-insensitive deserialization.
 - Provide immutable dataclass models for standard server endpoints (`ApiRoute`, `ApiInfo`, `ServerStatus`, `LogEntry`) with bidirectional wire dictionary mapping.
