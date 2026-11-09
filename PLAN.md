@@ -13,23 +13,23 @@ An overview of all tasks and their planning.
 - [x] T0025 Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes.
 - [x] T0026 Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module.
 - [x] T0027 Rename backup-git-repos to git-repository-backup, read its legacy config with a warning, and add JSON list output.
-- [ ] T0028 Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
-- [ ] T0029 [needs: T0028] Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
-- [ ] T0030 [needs: T0028] Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
-- [ ] T0031 [needs: T0028] Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.
+- [x] T0028 Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
+- [ ] T0029 Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
+- [ ] T0030 Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
+- [ ] T0031 Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.
 - [ ] T0032 [needs: T0020] Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
 - [ ] T0033 [needs: T0030] Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
 - [x] T0034 Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged.
 - [ ] T0035 Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins.
 - [ ] T0036 [needs: T0035] Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development.
 - [ ] T0037 [needs: T0036] Rebuild extract-release-notes, migrate-namespace, and reset-history on support_python.devops.release, and delete scripts/_repo_common.py.
-- [ ] T0038 [needs: T0036, T0028] Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them.
+- [ ] T0038 [needs: T0036] Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them.
 - [ ] T0039 [needs: T0038] Add a GradleProject adapter to support_python.devops for gradlew-based lint, test, build, check, clean, and release.
 - [ ] T0040 [needs: T0039] Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release.
 - [ ] T0041 [needs: T0038] Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
 - [ ] T0042 [needs: T0041] Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers.
 - [ ] T0043 [needs: T0031, T0032, T0033, T0037, T0040, T0042, T0044] Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
-- [ ] T0044 [needs: T0028] Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
+- [ ] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 
 ---
 
