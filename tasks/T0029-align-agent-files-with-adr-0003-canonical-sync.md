@@ -12,12 +12,11 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 6, duration_s: 6074.8, input: 602830, output: 123942, cache_read: 18388540}
+  worker: {turns: 8, duration_s: 6187.4, input: 1742992, output: 303220, cache_read: 33318614}
   review: {turns: 2, duration_s: 357.8, input: 20, output: 5608, cache_read: 692278, cache_write: 7148}
 work_duration: 3288.4
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 ---
 # T0029: Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback
 
@@ -79,4 +78,7 @@ Fix the stale help examples.
 
 - [2026-11-10] **[Implement]**
   Addressed round 1 review findings: unified check logic, emitted unavailable status on invalid targets, aligned pyproject.toml version, removed legacy verb branches, routed legacy warnings to --log-file, and dropped duplicate JSON keys (TF020 fixed via [Doc] log).
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
