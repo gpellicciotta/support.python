@@ -14,15 +14,14 @@ protocol: standard
 size_status: approved
 size_estimate: 25 files, 2826 lines
 usage:
-  worker: {turns: 4, duration_s: 2384.8, input: 1103034, output: 87402, cache_read: 22211434}
+  worker: {turns: 6, duration_s: 3591.0, input: 1317030, output: 127478, cache_read: 27142550}
   review: {turns: 2, duration_s: 381.2, input: 72, output: 20468, cache_read: 1923474, cache_write: 123458}
 work_duration: 2486.7
 size_approved: 25 files, 2826 lines
 size_approved_by: "@Giovanni Pellicciotta (delegated)"
 size_approved_at: "2026-11-09T19:39:18Z"
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 ---
 # T0024: Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts
 
@@ -100,4 +99,7 @@ Document per-user and global installation of the tools in `README.md`.
   - Files touched: 17.
   - Lines touched: 460.
   - Reopenings: 0.
+
+- [2026-11-09] **[Review]**
+  Round 2 requested (mode: agent).
 
