@@ -1,22 +1,22 @@
 ### Verification Evidence
 
-- Offline Markdown Linter on Changed Documents:
-  - Command: `.venv/Scripts/support-python lint markdown check --offline docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md docs/requirements.md docs/index.md CHANGELOG.md CLAUDE.md`
+- Offline Markdown Linter on `docs`, `CHANGELOG.md`, and `CLAUDE.md` (run from worktree with `PYTHONPATH=src` using the primary checkout `.venv`):
+  - Command: `$env:PYTHONPATH="src"; {{project-root}}/.venv/Scripts/support-python.exe lint markdown check --offline docs CHANGELOG.md CLAUDE.md`
   - Exit Code: `0`
   - Output:
     ```text
-    Starting lint-markdown v1.3.6-pre+08b4ecf with configuration:
+    Starting lint-markdown v2.0.0-pre+4834dae with configuration:
     - Command: check
     - Log file: none
     - Log level: INFO
     - Verbose: false
     - Working directory: {{project-root}}/.plan/work/T0023-record-adr-0003-on-tool-library-and-script
-    All 6 markdown files passed linting.
-    Finished lint-markdown check in 0.2s with status: succeeded
+    All 10 markdown files passed linting.
+    Finished lint-markdown check in 0.4s with status: succeeded
     ```
 
-- Automated Test Suite:
-  - Command: `.venv/Scripts/python -m pytest -q`
+- Automated Test Suite (run from worktree using the primary checkout `.venv`):
+  - Command: `{{project-root}}/.venv/Scripts/python.exe -m pytest -q`
   - Exit Code: `0`
   - Output:
     ```text

@@ -13,9 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 1034.8, input: 288204, output: 40242, cache_read: 5162610}
-work_duration: 492.0
-review_status: pending
+  review: {turns: 2, duration_s: 384.0, input: 64, output: 18684, cache_read: 1743992, cache_write: 112662}
+work_duration: 754.3
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0023: Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre
 
@@ -62,4 +64,17 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: ADR-0003 covers all nine technical-spec decisions and the three alternatives.
+  - Findings: [review-findings-1.md](T0023-record-adr-0003-on-tool-library-and-script/review-findings-1.md).
+
+- [2026-11-09] **[Implement]**
+  Addressed review round 1 findings across CLAUDE.md, index.md, ADR-0003, and declared docs/devops.md for MD019 fixes.
+
+- [2026-11-09] **[Verify]**
+  Verified exact completion Markdown lint command with PYTHONPATH=src and pytest suite.
+  - Files touched: 8.
+  - Lines touched: 230.
+  - Reopenings: 0.
 

@@ -3,7 +3,7 @@ task: T0023
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-09T19:08:22Z
+reviewed_at: 2026-11-09T19:11:37Z
 reviewed_commit: "c2ceed5"
 base_commit: "08b4ecf"
 branch: task/T0023-record-adr-0003-on-tool-library-and-script

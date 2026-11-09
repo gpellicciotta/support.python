@@ -52,6 +52,7 @@ and downstream CI call), a global `devops` command (rejected: unpinned release b
 - docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md
 - docs/requirements.md
 - docs/index.md
+- docs/devops.md
 - CHANGELOG.md
 - pyproject.toml
 - CLAUDE.md
@@ -61,5 +62,5 @@ and downstream CI call), a global `devops` command (rejected: unpinned release b
 - Integration: `.venv/Scripts/support-python lint markdown check --offline docs CHANGELOG.md CLAUDE.md` exits 0.
 
 Completion check: the integration command above, plus `.venv/Scripts/python -m pytest -q`.
-Size estimate: 7 files, 250 lines.
+Size estimate: 8 files, 250 lines.
 Combined task: the two-line version bump opens the breaking release this ADR justifies and cannot be reviewed meaningfully alone.
