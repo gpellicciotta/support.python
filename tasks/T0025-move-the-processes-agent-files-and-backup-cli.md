@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2209.2, input: 532622, output: 111262, cache_read: 16184400}
+review_status: pending
+review_round: 1
 ---
 # T0025: Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes
 
@@ -53,4 +57,7 @@ Change no behavior: existing tests must pass with only import and path fix-ups.
   - Files touched: 18.
   - Lines touched: 129.
   - Reopenings: 0.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
