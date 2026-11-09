@@ -485,8 +485,7 @@ class CliLogger:
         config_lines = [f"- {k:<24}: {v}" for k, v in config.items()]
         cmd_line = " ".join(argv)
         msg_parts = [
-            f"Starting {name} v{version}",
-            "with following configuration:",
+            f"Starting {name} v{version} with following configuration:",
             f"- Full command line given : {cmd_line}",
             *config_lines,
         ]
