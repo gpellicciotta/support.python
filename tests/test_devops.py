@@ -23,6 +23,57 @@ from support_python import (
 )
 
 
+class DevopsPackageExportsTests(unittest.TestCase):
+    def test_pre_split_public_names_import_from_devops_and_submodules(self) -> None:
+        import support_python.devops as devops_pkg
+        from support_python.devops import (
+            EXIT_COMMAND_NOT_FOUND,
+            CloudSqlProxyManager,
+            LocalDockerManager,
+            LocalMailManager,
+            LocalMySqlManager,
+            LocalServerManager,
+            LocalVerifier,
+            resolve_cloud_sql_proxy_bin,
+            resolve_executable,
+            run_step,
+            run_step_command,
+            stream_subprocess,
+        )
+        from support_python.devops import services, steps
+
+        expected_all = [
+            "EXIT_COMMAND_NOT_FOUND",
+            "resolve_executable",
+            "stream_subprocess",
+            "run_step_command",
+            "run_step",
+            "resolve_cloud_sql_proxy_bin",
+            "CloudSqlProxyManager",
+            "LocalDockerManager",
+            "LocalMySqlManager",
+            "LocalServerManager",
+            "LocalMailManager",
+            "LocalVerifier",
+        ]
+        self.assertCountEqual(devops_pkg.__all__, expected_all)
+
+        self.assertIs(steps.EXIT_COMMAND_NOT_FOUND, EXIT_COMMAND_NOT_FOUND)
+        self.assertIs(steps.resolve_executable, resolve_executable)
+        self.assertIs(steps.stream_subprocess, stream_subprocess)
+        self.assertIs(steps.run_step_command, run_step_command)
+        self.assertIs(steps.run_step, run_step)
+
+        self.assertIs(services.resolve_cloud_sql_proxy_bin, resolve_cloud_sql_proxy_bin)
+        self.assertIs(services.CloudSqlProxyManager, CloudSqlProxyManager)
+        self.assertIs(services.LocalDockerManager, LocalDockerManager)
+        self.assertIs(services.LocalMySqlManager, LocalMySqlManager)
+        self.assertIs(services.LocalServerManager, LocalServerManager)
+        self.assertIs(services.LocalMailManager, LocalMailManager)
+        self.assertIs(services.LocalVerifier, LocalVerifier)
+        self.assertTrue(callable(services._candidate_cloud_sql_proxy_dirs))
+
+
 class RunStepTests(unittest.TestCase):
     def test_returns_true_and_prints_banner_on_success(self) -> None:
         buffer = io.StringIO()
@@ -41,14 +92,14 @@ class RunStepTests(unittest.TestCase):
 
     def test_runs_in_given_cwd(self) -> None:
         with TemporaryDirectory() as tmp_dir:
-            with patch("support_python.devops.subprocess.run") as mock_run:
+            with patch("support_python.devops.steps.subprocess.run") as mock_run:
                 mock_run.return_value = MagicMock(returncode=0)
                 run_step("List things", ["some-command"], cwd=tmp_dir)
             self.assertEqual(mock_run.call_args.kwargs["cwd"], tmp_dir)
 
     def test_logs_progress_and_warning_through_given_logger(self) -> None:
         logger = MagicMock(spec=CliLogger)
-        with patch("support_python.devops.subprocess.run") as mock_run:
+        with patch("support_python.devops.steps.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=1)
             run_step("Doing a thing", ["some-command"], logger=logger)
         logger.progress.assert_called_once_with("Doing a thing")
@@ -389,7 +440,7 @@ class LocalMySqlManagerTests(unittest.TestCase):
     def test_wait_for_mysql_ready_success(self) -> None:
         mgr = LocalMySqlManager(db_password="test-user", db_root_password="test-root")
         with (
-            patch("support_python.devops.is_port_in_use", return_value=True),
+            patch("support_python.devops.services.is_port_in_use", return_value=True),
             patch("subprocess.run", return_value=MagicMock(returncode=0)),
         ):
             self.assertTrue(mgr.wait_for_mysql_ready(timeout_seconds=2.0))
@@ -481,7 +532,7 @@ class LocalServerManagerTests(unittest.TestCase):
                 patch.object(mgr, "build_server_if_needed", return_value=True),
                 patch.object(mgr, "poll_health_status", return_value=(True, {"status": "running"})),
                 patch("subprocess.Popen") as mock_popen,
-                patch("support_python.devops.is_port_in_use", return_value=False),
+                patch("support_python.devops.services.is_port_in_use", return_value=False),
             ):
                 mock_proc = MagicMock(pid=1234)
                 mock_popen.return_value = mock_proc

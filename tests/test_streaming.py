@@ -32,8 +32,8 @@ class StreamSubprocessUnitTests(unittest.TestCase):
         logger.log.side_effect = lambda msg, **kwargs: logged.append((msg, kwargs.get("origin")))
 
         with (
-            patch("support_python.devops.resolve_executable", return_value="/usr/bin/fake"),
-            patch("support_python.devops.subprocess.Popen", return_value=fake_proc) as mock_popen,
+            patch("support_python.devops.steps.resolve_executable", return_value="/usr/bin/fake"),
+            patch("support_python.devops.steps.subprocess.Popen", return_value=fake_proc) as mock_popen,
         ):
             code = stream_subprocess(["fake", "--arg"], logger=logger, origin="worker")
 
@@ -63,8 +63,8 @@ class StreamSubprocessUnitTests(unittest.TestCase):
         logger.log.side_effect = lambda msg, **kwargs: logged.append(msg)
 
         with (
-            patch("support_python.devops.resolve_executable", return_value="/usr/bin/my-tool"),
-            patch("support_python.devops.subprocess.Popen", return_value=fake_proc),
+            patch("support_python.devops.steps.resolve_executable", return_value="/usr/bin/my-tool"),
+            patch("support_python.devops.steps.subprocess.Popen", return_value=fake_proc),
         ):
             code = stream_subprocess(["my-tool", "alpha", "beta gamma"], logger=logger, origin="agent")
 
@@ -84,14 +84,14 @@ class StreamSubprocessUnitTests(unittest.TestCase):
 
         logger = MagicMock(spec=CliLogger)
         with (
-            patch("support_python.devops.resolve_executable", return_value="/bin/tool"),
-            patch("support_python.devops.subprocess.Popen", return_value=fake_proc),
+            patch("support_python.devops.steps.resolve_executable", return_value="/bin/tool"),
+            patch("support_python.devops.steps.subprocess.Popen", return_value=fake_proc),
         ):
             code = stream_subprocess(["tool"], logger=logger)
         self.assertEqual(code, 7)
 
         err_logger = MagicMock(spec=CliLogger)
-        with patch("support_python.devops.resolve_executable", return_value=None):
+        with patch("support_python.devops.steps.resolve_executable", return_value=None):
             not_found_code = stream_subprocess(["no-such-binary-xyz-999"], logger=err_logger, origin="runner")
         self.assertEqual(not_found_code, EXIT_COMMAND_NOT_FOUND)
         self.assertEqual(EXIT_COMMAND_NOT_FOUND, 127)
@@ -101,8 +101,8 @@ class StreamSubprocessUnitTests(unittest.TestCase):
     def test_oserror_on_launch_returns_one_and_logs_error(self) -> None:
         logger = MagicMock(spec=CliLogger)
         with (
-            patch("support_python.devops.resolve_executable", return_value="/bin/broken"),
-            patch("support_python.devops.subprocess.Popen", side_effect=OSError("Permission denied")),
+            patch("support_python.devops.steps.resolve_executable", return_value="/bin/broken"),
+            patch("support_python.devops.steps.subprocess.Popen", side_effect=OSError("Permission denied")),
         ):
             code = stream_subprocess(["broken"], logger=logger)
         self.assertEqual(code, 1)
@@ -128,8 +128,8 @@ class StreamSubprocessUnitTests(unittest.TestCase):
         logger.log.side_effect = lambda msg, **kwargs: logged.append(msg)
 
         with (
-            patch("support_python.devops.resolve_executable", return_value="/bin/tool"),
-            patch("support_python.devops.subprocess.Popen", return_value=fake_proc),
+            patch("support_python.devops.steps.resolve_executable", return_value="/bin/tool"),
+            patch("support_python.devops.steps.subprocess.Popen", return_value=fake_proc),
         ):
             code = stream_subprocess(["tool"], logger=logger, on_line=callback)
 
@@ -165,8 +165,8 @@ class StreamSubprocessUnitTests(unittest.TestCase):
 
         logger = MagicMock(spec=CliLogger)
         with (
-            patch("support_python.devops.resolve_executable", return_value="/bin/tool"),
-            patch("support_python.devops.subprocess.Popen", return_value=fake_proc),
+            patch("support_python.devops.steps.resolve_executable", return_value="/bin/tool"),
+            patch("support_python.devops.steps.subprocess.Popen", return_value=fake_proc),
         ):
             with self.assertRaises(KeyboardInterrupt):
                 stream_subprocess(["tool"], logger=logger, origin="agent")
@@ -184,7 +184,7 @@ class StreamSubprocessUnitTests(unittest.TestCase):
             tool = Path(tmp) / (f"{name}.exe" if os.name == "nt" else name)
             tool.write_text("", encoding="utf-8")
             tool.chmod(0o755)
-            with patch("support_python.devops.sysconfig.get_path", return_value=tmp):
+            with patch("support_python.devops.steps.sysconfig.get_path", return_value=tmp):
                 resolved = resolve_executable(name)
             self.assertIsNotNone(resolved)
             assert resolved is not None
@@ -203,7 +203,7 @@ class StreamSubprocessUnitTests(unittest.TestCase):
         buf = io.StringIO()
         with (
             contextlib.redirect_stdout(buf),
-            patch("support_python.devops.stream_subprocess", return_value=0) as mock_stream,
+            patch("support_python.devops.steps.stream_subprocess", return_value=0) as mock_stream,
         ):
             ok = run_step("Streaming step", ["some-cmd", "--flag"], stream=True, origin="step")
         self.assertTrue(ok)

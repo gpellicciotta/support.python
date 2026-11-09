@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.1-pre
+## v2.0.2-pre
+- DevEx: **[breaking]** Split `support_python.devops` into [steps.py](src/support_python/devops/steps.py) and [services.py](src/support_python/devops/services.py) with [devops/__init__.py](src/support_python/devops/__init__.py) re-exports; mock patch targets moved from `support_python.devops.<name>` to `support_python.devops.steps.<name>` or `support_python.devops.services.<name>` (e.g. `support_python.devops.services.is_port_in_use`, `support_python.devops.services.signal.signal`).
 - Docs: Recorded [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) on standalone CLI tools, uniform CLI conventions, and reusable `support_python.devops`.
 
 ---
