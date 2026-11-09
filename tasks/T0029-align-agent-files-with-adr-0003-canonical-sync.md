@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2365.8, input: 572164, output: 121496, cache_read: 16384024}
+work_duration: 1195.2
 ---
 # T0029: Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback
 
@@ -49,4 +52,11 @@ Fix the stale help examples.
   - Files touched: 6.
   - Lines touched: 481.
   - Reopenings: 0.
+
+- [2026-11-09] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-09] **[Doc]**
+  Updated docs/tools/agent-files.md, README.md, and CHANGELOG.md for canonical sync/check verbs, --format text|json, and .agent-files.json discovery.
 
