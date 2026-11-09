@@ -3,7 +3,7 @@ task: T0029
 round: 2
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-09T23:19:06Z
+reviewed_at: 2026-11-09T23:24:03Z
 reviewed_commit: "9e0044f"
 base_commit: "f0e01fb"
 branch: task/T0029-align-agent-files-with-adr-0003-canonical-sync
