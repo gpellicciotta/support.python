@@ -1,11 +1,12 @@
 ---
 id: T0029
-owner: ~
-needs: [T0028]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@gemini"
+session: antigravity-20261109-b2120f
+needs: []
+branch: task/T0029-align-agent-files-with-adr-0003-canonical-sync
+worktree: .plan/work/T0029-align-agent-files-with-adr-0003-canonical-sync
+status: active
+started_at: "2026-11-09T22:22:36Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Read project config from `.agent-files.json`, falling back to `agent-files.json`
 Fix the stale help examples.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the agent-files action registration, alias mapping, list and diff output, and config lookup.
-- [ ] **[Implement]** Write failing tests for verbs, check exit codes, JSON output, config names, and help examples.
-- [ ] **[Verify]**    Run the new tests and record their failures as red-phase proof.
-- [ ] **[Implement]** Rename the actions, add --format, and add the config fallback in tools/agent_files_config.py.
-- [ ] **[Verify]**    Run the full suite and the installed integration commands from the technical spec.
-- [ ] **[Doc]**       Update docs/tools/agent-files.md, README.md, and CHANGELOG.md.
+- [x] **[Read]**      Read the agent-files action registration, alias mapping, list and diff output, and config lookup.
+- [x] **[Implement]** Write failing tests for verbs, check exit codes, JSON output, config names, and help examples.
+- [x] **[Verify]**    Run the new tests and record their failures as red-phase proof.
+- [x] **[Implement]** Rename the actions, add --format, and add the config fallback in tools/agent_files_config.py.
+- [x] **[Verify]**    Run the full suite and the installed integration commands from the technical spec.
+- [x] **[Doc]**       Update docs/tools/agent-files.md, README.md, and CHANGELOG.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -35,3 +36,17 @@ Fix the stale help examples.
 
 - [2026-11-09] **[Decide]**
   Scope agreed with the user on 2026-11-09 as part of the v2.0.0 standalone-tools and reusable-devops restructuring. It absorbs cancelled T0022's verb and naming goals.
+
+- [2026-11-09] **[Verify]**
+  Verified red-phase failures for canonical verbs, JSON output, and .agent-files.json discovery.
+  - 17 failed, 87 passed in tests/tools/test_agent_files.py.
+
+- [2026-11-09] **[Implement]**
+  Made sync and check canonical, added --format text|json to list and check, and added .agent-files.json discovery with legacy fallback.
+
+- [2026-11-09] **[Verify]**
+  Recorded task outcomes. Size note: 481 lines across 6 files keeps the coupled verb, JSON format, and config fallback changes in one self-contained commit.
+  - Files touched: 6.
+  - Lines touched: 481.
+  - Reopenings: 0.
+
