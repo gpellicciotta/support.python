@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 3183.0, input: 761564, output: 185354, cache_read: 16610146}
+  worker: {turns: 4, duration_s: 3655.6, input: 1004268, output: 203894, cache_read: 18956606}
   review: {turns: 2, duration_s: 474.2, input: 80, output: 25632, cache_read: 2725650, cache_write: 143260}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 work_duration: 1848.1
 ---
 # T0026: Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module
@@ -76,4 +75,7 @@ Repoint the `lint-markdown` console script, imports, tests, and docs, changing n
 
 - [2026-11-09] **[Verify]**
   Captured verbatim pip editable install (task-211) and pre/post-split lint-markdown check outputs (both exit 1 with identical 10 issues across 10 files).
+
+- [2026-11-09] **[Review]**
+  Round 2 requested (mode: agent).
 
