@@ -93,7 +93,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool(tool, block, "update", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
 
             self.assertTrue(ok)
             content = target.read_text(encoding="utf-8")
@@ -108,7 +108,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                sync_mod.sync_tool(tool, block, "update", sync_mod.StderrRoutingLogger(None))
+                sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
 
             backups = list(Path(tmp_dir).glob("AGENT.md.bak-*"))
             self.assertEqual(len(backups), 1)
@@ -121,11 +121,11 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                sync_mod.sync_tool(tool, block, "update", sync_mod.StderrRoutingLogger(None))
+                sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
                 backups_after_first = list(Path(tmp_dir).glob("AGENT.md.bak-*"))
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
-                    ok = sync_mod.sync_tool(tool, block, "update", sync_mod.StderrRoutingLogger(None))
+                    ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("already up to date", out.getvalue())
@@ -140,7 +140,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                ok = sync_mod.sync_tool(tool, block, "diff", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "check", sync_mod.StderrRoutingLogger(None))
 
             self.assertFalse(ok)
             self.assertFalse(target.exists())
@@ -154,7 +154,7 @@ class SyncToolTests(unittest.TestCase):
             target.write_text(block.strip() + "\n", encoding="utf-8")
 
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                ok = sync_mod.sync_tool(tool, block, "diff", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "check", sync_mod.StderrRoutingLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("already up to date", out.getvalue())
@@ -278,7 +278,7 @@ class MainCliLoggingTests(unittest.TestCase):
             self.assertIn("Configured AI tools", content)
             self.assertRegex(content, r"\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\] Configured AI tools")
 
-    def test_diff_writes_start_and_end_banner_to_log_file(self) -> None:
+    def test_check_writes_start_and_end_banner_to_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "sync.log"
             digest_path = Path(tmp_dir) / "agent-digest.md"
@@ -291,18 +291,18 @@ class MainCliLoggingTests(unittest.TestCase):
             sync_mod.TOOLS = [fake_tool]
             try:
                 with contextlib.redirect_stdout(io.StringIO()):
-                    sync_mod.main(["diff", "--log-file", str(log_path)])
+                    sync_mod.main(["check", "--log-file", str(log_path)])
             finally:
                 sync_mod.DIGEST_PATH = original_digest
                 sync_mod.TOOLS = original_tools
 
             content = log_path.read_text(encoding="utf-8")
             self.assertIn("Starting agent-files v", content)
-            self.assertIn("- Command: diff", content)
+            self.assertIn("- Command: check", content)
             self.assertIn("- Tools selected: fake-tool", content)
             self.assertIn("- Dry run: false", content)
-            self.assertIn("Finished agent-files diff in", content)
-            # The fake target file does not exist yet, so diff reports pending changes and exits 1.
+            self.assertIn("Finished agent-files check in", content)
+            # The fake target file does not exist yet, so check reports pending changes and exits 1.
             self.assertIn("with status: failed", content)
 
 
@@ -319,8 +319,10 @@ class HarnessHelpTests(unittest.TestCase):
         self.assertRegex(text.splitlines()[0], r"^agent-files v\d+\.\d+\.\d+.* - .+$")
         for section in ("Usage:", "Actions:", "Options:", "Exit codes:"):
             self.assertIn(section, text)
-        for action in ("list", "update", "diff", "review", "version", "help"):
+        for action in ("list", "sync", "check", "review", "version", "help"):
             self.assertRegex(text, rf"(?m)^  {action}\s{{2,}}\S")
+        for removed in ("update", "diff"):
+            self.assertNotRegex(text, rf"(?m)^  {removed}\s{{2,}}\S")
         for option in ("--dry-run", "--no-prune", "--timeout", "--log-file", "--log-level", "--verbose", "--debug"):
             self.assertRegex(text, rf"(?m)^  (-\w, )?{option}\b")
         self.assertRegex(text, r"(?m)^  --timeout SECONDS\s+\S")
@@ -346,6 +348,10 @@ class HarnessHelpTests(unittest.TestCase):
         self.assert_full_help(out)
         self.assertIn("Detailed Action Descriptions:", out)
         self.assertIn("Examples:", out)
+        self.assertIn("agent-files check claude-code", out)
+        self.assertIn("agent-files sync --dry-run", out)
+        self.assertNotIn("agent-files diff", out)
+        self.assertNotIn("agent-files update", out)
 
     def test_help_does_not_document_a_default_log_file(self) -> None:
         for argv in (["help"], ["help", "--verbose"]):
@@ -354,22 +360,22 @@ class HarnessHelpTests(unittest.TestCase):
                 self.assertNotIn("agent-files.log", out)
 
     def test_action_specific_help_shows_only_target_action(self) -> None:
-        for action in ("list", "update", "diff", "review"):
+        for action in ("list", "sync", "check", "review"):
             with self.subTest(action=action):
                 code, out, err = _run_main([action, "--help"])
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
                 self.assertIn(f"Detailed Action Description: {action}", out)
                 self.assertIn(f"Usage:\n  agent-files {action}", out)
-                for other_action in ("list", "update", "diff", "review"):
+                for other_action in ("list", "sync", "check", "review"):
                     if other_action != action:
                         self.assertNotIn(f"Detailed Action Description: {other_action}", out)
 
     def test_help_subcommand_with_action_argument(self) -> None:
-        code, out, err = _run_main(["help", "update"])
+        code, out, err = _run_main(["help", "sync"])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
-        self.assertIn("Detailed Action Description: update", out)
+        self.assertIn("Detailed Action Description: sync", out)
         self.assertNotIn("Detailed Action Description: review", out)
 
 
@@ -382,24 +388,34 @@ class HarnessErrorFormattingTests(unittest.TestCase):
         self.assertEqual(lines[0], "**[ERROR]** Unknown subcommand: 'bogus'")
         self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files {"))
 
+    def test_update_and_diff_are_rejected_as_unknown_actions_exiting_two(self) -> None:
+        for legacy_verb in ("update", "diff"):
+            with self.subTest(verb=legacy_verb):
+                code, out, err = _run_main([legacy_verb])
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                lines = err.splitlines()
+                self.assertEqual(lines[0], f"**[ERROR]** Unknown subcommand: '{legacy_verb}'")
+                self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files {"))
+
     def test_invalid_option_logs_indicator_error_and_exits_two(self) -> None:
-        code, _, err = _run_main(["diff", "--bogus"])
+        code, _, err = _run_main(["check", "--bogus"])
         self.assertEqual(code, 2)
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** "), lines[0])
         self.assertIn("--bogus", lines[0])
-        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files diff"))
+        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files check"))
 
     def test_unknown_tool_name_logs_indicator_error_and_exits_two(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "sync.log"
-            code, out, err = _run_main(["diff", "no-such-tool", "--log-file", str(log_path)])
+            code, out, err = _run_main(["check", "no-such-tool", "--log-file", str(log_path)])
             self.assertFalse(log_path.exists())
         self.assertEqual(code, 2)
         self.assertEqual(out, "")
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** argument TOOL: unknown tool name 'no-such-tool'"), lines[0])
-        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files diff [TOOL ...]"))
+        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files check [TOOL ...]"))
 
     def test_missing_digest_logs_indicator_error_and_exits_one(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -410,7 +426,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
                 mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
             ):
-                code, _, err = _run_main(["diff", "--log-file", str(root / "sync.log")])
+                code, _, err = _run_main(["check", "--log-file", str(root / "sync.log")])
         self.assertEqual(code, 1)
         error_lines = [line for line in err.splitlines() if "agent-digest.md not found" in line]
         self.assertEqual(len(error_lines), 1)
@@ -418,7 +434,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
 
 
 class DefaultLogFileTests(unittest.TestCase):
-    def test_diff_without_log_file_option_creates_no_log_file(self) -> None:
+    def test_check_without_log_file_option_creates_no_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
             digest_path = root / "agent-digest.md"
@@ -433,7 +449,7 @@ class DefaultLogFileTests(unittest.TestCase):
                     mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
                     mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 ):
-                    code, out, _ = _run_main(["diff"])
+                    code, out, _ = _run_main(["check"])
             finally:
                 os.chdir(original_cwd)
             self.assertEqual(code, 1)
@@ -472,7 +488,7 @@ class EnsureDigestTests(unittest.TestCase):
             sync_mod.DIGEST_PATH = digest_path
             try:
                 with mock.patch.object(sync_mod, "get_digest_generator", return_value=mock_generator):
-                    result = sync_mod.ensure_digest("diff", logger)
+                    result = sync_mod.ensure_digest("check", logger)
             finally:
                 sync_mod.DIGEST_PATH = orig_path
                 logger.close()
@@ -495,7 +511,7 @@ class EnsureDigestTests(unittest.TestCase):
             sync_mod.DIGEST_PATH = digest_path
             try:
                 with mock.patch.object(sync_mod, "get_digest_generator", return_value=mock_generator):
-                    result = sync_mod.ensure_digest("update", logger)
+                    result = sync_mod.ensure_digest("sync", logger)
             finally:
                 sync_mod.DIGEST_PATH = orig_path
                 logger.close()
@@ -600,7 +616,7 @@ class SyncToolSkillsTests(unittest.TestCase):
 
             logger = sync_mod.StderrRoutingLogger(None)
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "update", logger)
+                ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "sync", logger)
 
             self.assertTrue(ok)
             installed_skill = target_skills_dir / "my-skill" / "SKILL.md"
@@ -625,7 +641,7 @@ class SyncToolSkillsTests(unittest.TestCase):
 
             logger = sync_mod.StderrRoutingLogger(None)
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "diff", logger)
+                ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "check", logger)
 
             self.assertFalse(ok)
 
@@ -661,10 +677,10 @@ class SkillPruningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
-            self.assertIn("update: pruned stale skill 'renamed-skill'", output)
+            self.assertIn("sync: pruned stale skill 'renamed-skill'", output)
             self.assertFalse((target / "renamed-skill").exists())
             self.assertTrue((target / "kept-skill" / "SKILL.md").is_file())
             # Legacy names are only a bootstrap fallback; an existing manifest does not list them.
@@ -680,7 +696,7 @@ class SkillPruningTests(unittest.TestCase):
             for name in names:
                 (target / name).mkdir()
                 (target / name / "SKILL.md").write_text("old skill", encoding="utf-8")
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
             self.assertTrue(ok)
             for name in names:
                 self.assertFalse((target / name).exists())
@@ -694,7 +710,7 @@ class SkillPruningTests(unittest.TestCase):
             tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
             manifest_before = (target / sync_mod.SKILLS_MANIFEST_NAME).read_text(encoding="utf-8")
 
-            ok, output = self._run(tool, skills, "diff")
+            ok, output = self._run(tool, skills, "check")
 
             self.assertFalse(ok)
             self.assertIn("stale skill 'renamed-skill' would be removed", output)
@@ -705,7 +721,7 @@ class SkillPruningTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target = self._setup(tmp_dir)
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
             self.assertIn("[WARN]", output)
@@ -721,7 +737,7 @@ class SkillPruningTests(unittest.TestCase):
             tool, skills, target = self._setup(tmp_dir)
             (target / sync_mod.SKILLS_MANIFEST_NAME).write_text("{not json", encoding="utf-8")
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
             self.assertIn("[WARN]", output)
@@ -730,7 +746,7 @@ class SkillPruningTests(unittest.TestCase):
             self.assertTrue((target / "renamed-skill").is_dir())
 
     def test_unlisted_directory_survives_every_action(self) -> None:
-        for action, prune in (("diff", True), ("update", True), ("update", False)):
+        for action, prune in (("check", True), ("sync", True), ("sync", False)):
             with self.subTest(action=action, prune=prune), tempfile.TemporaryDirectory() as tmp_dir:
                 tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
                 self._run(tool, skills, action, prune=prune)
@@ -741,7 +757,7 @@ class SkillPruningTests(unittest.TestCase):
             tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
             (target / "kept-skill" / "old.md").write_text("old", encoding="utf-8")
 
-            ok, output = self._run(tool, skills, "update", prune=False)
+            ok, output = self._run(tool, skills, "sync", prune=False)
 
             self.assertTrue(ok)
             self.assertIn("stale skill 'renamed-skill' kept (--no-prune)", output)
@@ -758,12 +774,12 @@ class SkillPruningTests(unittest.TestCase):
             stale.parent.mkdir()
             stale.write_text("old", encoding="utf-8")
 
-            ok, output = self._run(tool, skills, "diff")
+            ok, output = self._run(tool, skills, "check")
             self.assertFalse(ok)
             self.assertIn("stale file in target: references/old.md", output)
             self.assertTrue(stale.is_file())
 
-            ok, _ = self._run(tool, skills, "update")
+            ok, _ = self._run(tool, skills, "sync")
             self.assertTrue(ok)
             self.assertFalse(stale.exists())
             self.assertFalse(stale.parent.exists())
@@ -776,7 +792,7 @@ class SkillPruningTests(unittest.TestCase):
             (outside / "keep.txt").write_text("keep", encoding="utf-8")
             tool, skills, target = self._setup(tmp_dir, ["kept-skill", "../outside", "synced/SKILL.md"])
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertFalse(ok)
             self.assertIn("[ERROR]", output)
@@ -788,7 +804,7 @@ class SkillPruningTests(unittest.TestCase):
             tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
 
             with mock.patch.object(sync_mod.shutil, "rmtree", side_effect=PermissionError("locked")):
-                ok, output = self._run(tool, skills, "update")
+                ok, output = self._run(tool, skills, "sync")
 
             self.assertFalse(ok)
             self.assertIn("[ERROR]", output)
@@ -839,11 +855,11 @@ class LegacySkillsDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target, legacy = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
             self.assertTrue((target / "kept-skill" / "SKILL.md").is_file())
-            self.assertIn(f"update: pruned stale skill 'kept-skill' from {legacy}", output)
+            self.assertIn(f"sync: pruned stale skill 'kept-skill' from {legacy}", output)
             self.assertFalse((legacy / "kept-skill").exists())
             self.assertFalse((legacy / "renamed-skill").exists())
             self.assertTrue((legacy / ".system" / "SKILL.md").is_file())
@@ -852,7 +868,7 @@ class LegacySkillsDirTests(unittest.TestCase):
             self.assertEqual(manifest["skills"], ["kept-skill"])
 
             # A second run finds nothing left to do and stays quiet about the missing legacy manifest.
-            ok, output = self._run(tool, skills, "diff")
+            ok, output = self._run(tool, skills, "check")
             self.assertTrue(ok)
             self.assertNotIn("[WARN]", output)
 
@@ -860,7 +876,7 @@ class LegacySkillsDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target, legacy = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
 
-            ok, output = self._run(tool, skills, "diff")
+            ok, output = self._run(tool, skills, "check")
 
             self.assertFalse(ok)
             self.assertIn(f"stale skill 'renamed-skill' in {legacy} would be removed", output)
@@ -873,7 +889,7 @@ class LegacySkillsDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target, legacy = self._setup(tmp_dir, ["kept-skill", "renamed-skill", "already-gone"])
 
-            ok, output = self._run(tool, skills, "update", prune=False)
+            ok, output = self._run(tool, skills, "sync", prune=False)
 
             self.assertTrue(ok)
             self.assertIn("kept (--no-prune)", output)
@@ -886,7 +902,7 @@ class LegacySkillsDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target, _ = self._setup(tmp_dir, ["kept-skill"])
 
-            ok, _ = self._run(tool, skills, "update")
+            ok, _ = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
             self.assertTrue((target / "ui-verification").is_dir())
@@ -895,7 +911,7 @@ class LegacySkillsDirTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, _, legacy = self._setup(tmp_dir, None)
 
-            ok, output = self._run(tool, skills, "update")
+            ok, output = self._run(tool, skills, "sync")
 
             self.assertTrue(ok)
             self.assertIn("[WARN]", output)
@@ -909,7 +925,7 @@ class LegacySkillsDirTests(unittest.TestCase):
             tool, skills, _, legacy = self._setup(tmp_dir, ["kept-skill"])
 
             with mock.patch.object(sync_mod.shutil, "rmtree", side_effect=PermissionError("locked")):
-                ok, output = self._run(tool, skills, "update")
+                ok, output = self._run(tool, skills, "sync")
 
             self.assertFalse(ok)
             self.assertIn("[ERROR]", output)
@@ -918,7 +934,7 @@ class LegacySkillsDirTests(unittest.TestCase):
 
 
 class DryRunCliTests(unittest.TestCase):
-    def test_update_dry_run_writes_and_deletes_nothing(self) -> None:
+    def test_sync_dry_run_writes_and_deletes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
             digest_path = root / "agent-digest.md"
@@ -938,7 +954,7 @@ class DryRunCliTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 contextlib.redirect_stdout(io.StringIO()) as out,
             ):
-                exit_code = sync_mod.main(["update", "--dry-run", "--log-file", str(root / "sync.log")])
+                exit_code = sync_mod.main(["sync", "--dry-run", "--log-file", str(root / "sync.log")])
 
             self.assertEqual(exit_code, 1)
             self.assertIn("stale skill 'ui-verification' would be removed", out.getvalue())
@@ -1174,7 +1190,7 @@ class HiddenTargetFileTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool(tool, block, "update", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("DIGEST", target.read_text(encoding="utf-8"))
@@ -1204,7 +1220,7 @@ class HiddenTargetFileTests(unittest.TestCase):
             tool = sync_mod.Tool("fake-tool", "fake-cmd", root / "AGENT.md", lambda p, t, to: [], skills_dir=root / "tool_skills")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool_skills(tool, [skill_dir], "update", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool_skills(tool, [skill_dir], "sync", sync_mod.StderrRoutingLogger(None))
 
             self.assertTrue(ok)
             self.assertEqual(installed.read_text(encoding="utf-8"), "new skill text")
@@ -1235,7 +1251,7 @@ class HiddenTargetFileTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 contextlib.redirect_stdout(io.StringIO()) as out,
             ):
-                exit_code = sync_mod.main(["update", "--log-file", str(root / "sync.log")])
+                exit_code = sync_mod.main(["sync", "--log-file", str(root / "sync.log")])
 
             self.assertEqual(exit_code, 0, out.getvalue())
             self.assertIn("Fresh digest text.", agent_file.read_text(encoding="utf-8"))
@@ -1301,6 +1317,11 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                     self.assertEqual(sync_mod.main(["list"]), 0)
                 self.assertIn("Configured AI tools", list_out.getvalue())
 
+                check_pending_out = io.StringIO()
+                with contextlib.redirect_stdout(check_pending_out):
+                    self.assertEqual(sync_mod.main(["check"]), 1)
+                self.assertFalse(fake_target.exists())
+
                 sync_dry_out = io.StringIO()
                 with contextlib.redirect_stdout(sync_dry_out):
                     self.assertEqual(sync_mod.main(["sync", "--dry-run"]), 1)
@@ -1323,11 +1344,91 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                     self.assertEqual(sync_mod.main(["review"]), 0)
                 self.assertIn("skip: 'nonexistent-fake-cmd-xyz' not found", review_out.getvalue())
 
+    def test_list_json_output_parses_and_contains_documented_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            fake_target, fake_skills = root / "FAKE_AGENTS.md", root / "fake_skills"
+            fake_tool = sync_mod.Tool(
+                "fake-tool", "nonexistent-fake-cmd-xyz", fake_target, lambda p, t, to: [], skills_dir=fake_skills
+            )
+            with mock.patch.object(sync_mod, "TOOLS", [fake_tool]):
+                code, out, err = _run_main(["list", "--format", "json"])
+            self.assertEqual((code, err), (0, ""))
+            entry = json.loads(out)[0]
+            self.assertEqual(
+                entry,
+                {
+                    "tool": "fake-tool",
+                    "command": "nonexistent-fake-cmd-xyz",
+                    "available": False,
+                    "executable": "not found",
+                    "version": "not found",
+                    "instructions_file": str(fake_target),
+                    "skills_dir": str(fake_skills),
+                },
+            )
+
+    def test_check_json_output_parses_and_reports_pending_and_up_to_date(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            digest_path = root / "agent-digest.md"
+            digest_path.write_text("JSON check digest.", encoding="utf-8")
+            skill_dir = root / "skills" / "sample-skill"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("---\nname: sample-skill\n---\nSkill body\n", encoding="utf-8")
+            fake_target, fake_skills = root / "FAKE_AGENTS.md", root / "fake_skills"
+            fake_tool = sync_mod.Tool(
+                "fake-tool",
+                "nonexistent-fake-cmd-xyz",
+                fake_target,
+                lambda p, t, to: [],
+                skills_dir=fake_skills,
+                native_skill_discovery=True,
+            )
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
+            ):
+                code_pending, out_pending, err_pending = _run_main(["check", "--format", "json"])
+                self.assertEqual(code_pending, 1, err_pending)
+                self.assertFalse(fake_target.exists())
+                pending_data = json.loads(out_pending)
+                self.assertEqual((pending_data[0]["tool"], pending_data[0]["status"]), ("fake-tool", "changes-pending"))
+                self.assertTrue(len(pending_data[0]["changes"]) >= 1)
+
+                self.assertEqual(_run_main(["sync"])[0], 0)
+                code_clean, out_clean, err_clean = _run_main(["check", "--format", "json"])
+                self.assertEqual((code_clean, err_clean), (0, ""))
+                self.assertEqual(json.loads(out_clean), [{"tool": "fake-tool", "status": "up-to-date", "changes": []}])
+
+                # Text and JSON check agree on stale files under --no-prune.
+                (fake_skills / "sample-skill" / "extra.md").write_text("stale", encoding="utf-8")
+                code_np_txt, out_np_txt, _ = _run_main(["check", "--no-prune"])
+                code_np_json, out_np_json, _ = _run_main(["check", "--no-prune", "--format", "json"])
+                self.assertEqual((code_np_txt, code_np_json), (1, 1))
+                self.assertIn("stale file in target: extra.md", out_np_txt)
+                np_entry = json.loads(out_np_json)[0]
+                self.assertEqual(np_entry["status"], "changes-pending")
+                self.assertTrue(any("stale file in target: extra.md" in c for c in np_entry["changes"]))
+
+                # Invalid guarded-block markers report status: unavailable and exit 1 in both modes.
+                (fake_skills / "sample-skill" / "extra.md").unlink()
+                fake_target.write_text(f"{sync_mod.MARKER_BEGIN}\nbroken markers without end\n", encoding="utf-8")
+                code_err_txt, _, _ = _run_main(["check"])
+                code_err_json, out_err_json, _ = _run_main(["check", "--format", "json"])
+                self.assertEqual((code_err_txt, code_err_json), (1, 1))
+                err_entry = json.loads(out_err_json)[0]
+                self.assertEqual(err_entry["status"], "unavailable")
+                self.assertTrue(any("invalid target" in c for c in err_entry["changes"]))
+
 
 class AgentFilesConfigTests(unittest.TestCase):
     def test_load_config_defaults_when_no_file_present(self) -> None:
         from support_python.tools import agent_files_config as cfg_mod
 
+        self.assertEqual(cfg_mod.DEFAULT_CONFIG_FILENAME, ".agent-files.json")
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
             cfg = cfg_mod.load_agent_files_config(repo_root=root)
@@ -1340,12 +1441,48 @@ class AgentFilesConfigTests(unittest.TestCase):
             for name in ("claude", "claude-code", "antigravity", "codex", "codex-cli"):
                 self.assertIsNotNone(reg.get(name), name)
 
+    def test_config_discovery_prefers_dotfile_and_warns_on_legacy(self) -> None:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            dot_cfg = root / ".agent-files.json"
+            legacy_cfg = root / "agent-files.json"
+
+            # 1. Only .agent-files.json present -> reads without warning.
+            dot_cfg.write_text(json.dumps({"marker": "dot-marker"}), encoding="utf-8")
+            err_buf = io.StringIO()
+            with contextlib.redirect_stderr(err_buf):
+                cfg1 = cfg_mod.load_agent_files_config(repo_root=root)
+            self.assertEqual(cfg1.marker, "dot-marker")
+            self.assertEqual(err_buf.getvalue(), "")
+
+            # 2. Only legacy agent-files.json present -> reads and logs a WARN mentioning v3.0.0 (and reaches --log-file).
+            dot_cfg.unlink()
+            legacy_cfg.write_text(json.dumps({"marker": "legacy-marker"}), encoding="utf-8")
+            log_file = root / "legacy.log"
+            code_l, _, err_l = _run_main(["list", "--repo-root", str(root), "--log-file", str(log_file)])
+            self.assertEqual(code_l, 0)
+            for text in (err_l, log_file.read_text(encoding="utf-8")):
+                self.assertIn("**[WARN]**", text)
+                self.assertIn(".agent-files.json", text)
+                self.assertIn("v3.0.0", text)
+
+            # 3. Both present -> uses .agent-files.json and warns that legacy file is ignored.
+            dot_cfg.write_text(json.dumps({"marker": "dot-wins"}), encoding="utf-8")
+            err_buf = io.StringIO()
+            with contextlib.redirect_stderr(err_buf):
+                cfg3 = cfg_mod.load_agent_files_config(repo_root=root)
+            self.assertEqual(cfg3.marker, "dot-wins")
+            self.assertIn("**[WARN]**", err_buf.getvalue())
+            self.assertIn("ignored", err_buf.getvalue().lower())
+
     def test_load_config_overrides_from_json_and_cli_flags(self) -> None:
         from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
-            cfg_file = root / "agent-files.json"
+            cfg_file = root / ".agent-files.json"
             cfg_file.write_text(
                 json.dumps(
                     {
@@ -1443,10 +1580,10 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
             (dg_root / "guidelines" / "agent-digest.md").write_text("Dev guidelines digest content.", encoding="utf-8")
             (dg_root / "skills" / "dg-skill").mkdir(parents=True)
             (dg_root / "skills" / "dg-skill" / "SKILL.md").write_text("---\nname: dg-skill\n---\nDG\n", encoding="utf-8")
-            dg_cfg = dg_root / "agent-files.json"
+            dg_cfg = dg_root / ".agent-files.json"
             dg_cfg.write_text(json.dumps({"tools": [tool_entry], "replace_tools": True}), encoding="utf-8")
 
-            code, out, err = _run_main(["update", "--config", str(dg_cfg)])
+            code, out, err = _run_main(["sync", "--config", str(dg_cfg)])
             self.assertEqual(code, 0, out + err)
 
             p2_root = root / "second-project"
@@ -1456,7 +1593,7 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
             p2_skill_old = p2_root / "team-skills" / "team-skill-old" / "SKILL.md"
             p2_skill_old.parent.mkdir(parents=True)
             p2_skill_old.write_text("---\nname: team-skill-old\n---\nOld\n", encoding="utf-8")
-            p2_cfg = p2_root / "agent-files.json"
+            p2_cfg = p2_root / ".agent-files.json"
             p2_cfg.write_text(
                 json.dumps(
                     {
@@ -1471,7 +1608,7 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
                 encoding="utf-8",
             )
 
-            code, out, err = _run_main(["update", "--config", str(p2_cfg)])
+            code, out, err = _run_main(["sync", "--config", str(p2_cfg)])
             self.assertEqual(code, 0, out + err)
             combined = target_md.read_text(encoding="utf-8")
             for text in (
@@ -1490,7 +1627,7 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
             p2_skill_new.parent.mkdir(parents=True)
             p2_skill_new.write_text("---\nname: team-skill-new\n---\nNew\n", encoding="utf-8")
 
-            code, out, err = _run_main(["update", "--config", str(p2_cfg)])
+            code, out, err = _run_main(["sync", "--config", str(p2_cfg)])
             self.assertEqual(code, 0, out + err)
             updated = target_md.read_text(encoding="utf-8")
             self.assertIn("Dev guidelines digest content.", updated)
@@ -1499,7 +1636,7 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
             self.assertTrue((target_skills / "dg-skill" / "SKILL.md").is_file())
             self.assertFalse((target_skills / "team-skill-old").exists())
             self.assertTrue((target_skills / "team-skill-new" / "SKILL.md").is_file())
-            self.assertEqual(_run_main(["update", "--dry-run", "--config", str(dg_cfg)])[0], 0)
+            self.assertEqual(_run_main(["sync", "--dry-run", "--config", str(dg_cfg)])[0], 0)
 
 
 class ToolRegistryAndAddedToolTests(unittest.TestCase):
@@ -1541,6 +1678,35 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()) as dry_out:
                 self.assertEqual(sync_mod.main(["sync", "cursor-agent", "--dry-run", "--config", str(cfg_file)]), 0)
             self.assertIn("already up to date", dry_out.getvalue())
+
+    def test_installed_agent_files_sync_and_check_integration(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            for d in (root / ".git", root / "guidelines", root / "skills" / "int-skill"):
+                d.mkdir(parents=True)
+            (root / "guidelines" / "agent-digest.md").write_text("Integration fixture digest.", encoding="utf-8")
+            (root / "skills" / "int-skill" / "SKILL.md").write_text("---\nname: int-skill\n---\nSkill\n", encoding="utf-8")
+            target_file, target_skills = root / "targets" / "CLAUDE.md", root / "targets" / "skills"
+            tool_cfg = {
+                "name": "claude-code",
+                "command": "claude",
+                "target_file": str(target_file),
+                "skills_dir": str(target_skills),
+                "native_skill_discovery": True,
+            }
+            (root / ".agent-files.json").write_text(json.dumps({"replace_tools": True, "tools": [tool_cfg]}), encoding="utf-8")
+            env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
+            exe = shutil.which("agent-files", path=str(Path(sys.executable).parent))
+            cmd = [exe] if exe else [sys.executable, str(_MODULE_PATH)]
+
+            res_sync = subprocess.run([*cmd, "sync"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(res_sync.returncode, 0, res_sync.stderr)
+            self.assertTrue(target_file.is_file())
+            res_clean = subprocess.run([*cmd, "check"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(res_clean.returncode, 0, res_clean.stderr)
+            target_file.write_text("Edited target file causing drift.\n", encoding="utf-8")
+            res_dirty = subprocess.run([*cmd, "check"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(res_dirty.returncode, 1, res_dirty.stderr)
 
 
 if __name__ == "__main__":

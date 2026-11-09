@@ -8,14 +8,15 @@ Implemented in [agent_files.py](../../src/support_python/tools/agent_files.py) a
 ## Command-Line Interface
 Run actions through the `agent-files` console script in [agent_files.py](../../src/support_python/tools/agent_files.py):
 ```bash
-agent-files list [--config PATH]
+agent-files list [--format text|json] [--config PATH]
 agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
-agent-files check [TOOL ...] [--config PATH]
+agent-files check [TOOL ...] [--format text|json] [--config PATH]
 agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
 ```
 
 Supported configuration flags override JSON settings and built-in defaults:
 - `--config PATH` loads explicit JSON settings from `PATH`.
+- `--format text|json` selects text or JSON output on `list` and `check` (default: `text`; `check` JSON reports `up-to-date`, `changes-pending`, or `unavailable` when a target file cannot be read or has invalid guarded-block markers).
 - `--repo-root PATH` overrides the source repository root directory.
 - `--digest PATH` overrides the source Markdown digest file path.
 - `--skills-dir PATH` overrides the source skills directory path.
@@ -28,8 +29,8 @@ Supported configuration flags override JSON settings and built-in defaults:
 ---
 
 ## JSON Configuration Schema
-When `--config` is omitted, the loader checks `agent-files.json` in the resolved repository root.
-All relative paths in `agent-files.json` resolve against `repo_root`.
+When `--config` is omitted, the loader checks `.agent-files.json` in the resolved repository root, falling back to `agent-files.json` with a deprecation warning (removed in `v3.0.0`).
+All relative paths in `.agent-files.json` resolve against `repo_root`.
 ```json
 {
   "repo_root": ".",

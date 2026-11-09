@@ -522,11 +522,11 @@ lint-markdown [check|fix] [paths...] [--fix] [--offline] [--profile PROFILE] [--
 
 ## Agent files sync
 [agent_files.py](src/support_python/tools/agent_files.py) and [agent_files_config.py](src/support_python/tools/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
-Settings load from `agent-files.json` in the repository root (or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/tools/agent-files.md) for the full JSON schema and tool registry documentation:
+Settings load from `.agent-files.json` in the repository root (falling back to `agent-files.json` with a warning, or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/tools/agent-files.md) for the full JSON schema and tool registry documentation:
 ```bash
-agent-files list [--config PATH]
+agent-files list [--format text|json] [--config PATH]
 agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]
-agent-files check [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
+agent-files check [TOOL...] [--format text|json] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
 agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
 ```
 

@@ -36,10 +36,17 @@ from support_python.logging import (  # noqa: E402
 class StderrRoutingLogger(CliLogger):
     """CLI logger routing WARN and ERROR messages logged via .log() to stderr."""
 
+    def __init__(self, *args, json_mode: bool = False, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.json_mode = json_mode
+
     def log(self, message: str = "", level: str | None = "INFO", origin: str | None = None, **kwargs) -> None:
         is_err = (level or "").strip().upper() in ("WARN", "WARNING", "ERROR")
         kwargs.setdefault("to_stderr", is_err)
-        kwargs.setdefault("to_stdout", not is_err)
+        if self.json_mode and level is not None:
+            kwargs["to_stdout"] = False
+        else:
+            kwargs.setdefault("to_stdout", not is_err)
         super().log(message, level=level, origin=origin, **kwargs)
 
 
@@ -88,7 +95,7 @@ def _resolve_skills_dir() -> Path:
 
 DEFAULT_TIMEOUT_SECONDS = 900
 
-# Ownership manifest written into each tool's skills directory, so `update` can prune skills this
+# Ownership manifest written into each tool's skills directory, so `sync` can prune skills this
 # script installed earlier without ever touching skills installed by anything else.
 SKILLS_MANIFEST_NAME = ".dev-guidelines-skills.json"
 SKILLS_MANIFEST_SCHEMA_VERSION = 1
@@ -142,7 +149,7 @@ class Tool:
     fallback_paths: tuple[Path, ...] = ()  # well-known install locations to try when not on PATH
     skills_dir: Path | None = None
     native_skill_discovery: bool = False  # tool indexes skills_dir itself, so no catalog is injected
-    # Directories this script installed skills into before skills_dir moved; cleaned up on update.
+    # Directories this script installed skills into before skills_dir moved; cleaned up on sync.
     legacy_skills_dirs: tuple[Path, ...] = ()
     # Names assumed to be owned in skills_dir when it has no manifest yet.
     bootstrap_skill_names: tuple[str, ...] = LEGACY_SKILL_NAMES
@@ -239,9 +246,11 @@ def load_digest() -> str:
 def ensure_digest(action: str, logger: CliLogger) -> str:
     """Load the digest from guidelines/agent-digest.md. If generate-agent-digest is available,
     verify that the digest is in sync with source guidelines. If out of sync:
-    - on 'update': automatically regenerate guidelines/agent-digest.md and log the update.
-    - on 'diff': log a warning that the digest file on disk is out of date.
+    - on 'sync': automatically regenerate guidelines/agent-digest.md and log the update.
+    - on 'check': log a warning that the digest file on disk is out of date.
     Returns the loaded digest string (or empty string if unavailable)."""
+    is_write = action == "sync"
+    is_check = action == "check"
     digest_path = _resolve_digest_path()
     skills_dir = _resolve_skills_dir()
     generator = get_digest_generator()
@@ -249,7 +258,7 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
         try:
             expected = generator.build_digest()
             current = digest_path.read_text(encoding="utf-8") if digest_path.is_file() else ""
-            if action == "update" and hasattr(generator, "build_skills"):
+            if is_write and hasattr(generator, "build_skills"):
                 try:
                     skills = generator.build_skills()
                     for skill_name, skill_content in skills.items():
@@ -261,16 +270,16 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
                     logger.log(f"Failed to synchronize derived skills: {skill_err}", level="DEBUG", origin=TOOL_NAME)
 
             if expected != current:
-                if action == "update":
+                if is_write:
                     digest_path.write_text(expected, encoding="utf-8", newline="\n")
                     logger.log(
                         f"Regenerated {digest_path.name} from source guidelines",
                         origin=TOOL_NAME,
                     )
                     return expected.strip()
-                elif action == "diff":
+                elif is_check:
                     logger.log(
-                        f"{digest_path.name} is out of date compared to source guidelines (run 'generate-agent-digest' or 'agent-files update' to synchronize)",
+                        f"{digest_path.name} is out of date compared to source guidelines (run 'generate-agent-digest' or 'agent-files sync' to synchronize)",
                         level="WARN",
                         origin=TOOL_NAME,
                     )
@@ -306,36 +315,51 @@ def apply_guarded_block(current_content: str, guarded_block: str) -> str:
     else:
         raise ValueError(
             "found only one of the dev-guidelines BEGIN/END markers -- the file may have been "
-            "edited by hand into an inconsistent state; resolve manually before running update"
+            "edited by hand into an inconsistent state; resolve manually before running sync"
         )
 
     return new_content.strip() + "\n"
 
 
-def print_tools(logger: CliLogger | None = None) -> None:
-    def executable_version(tool: Tool) -> tuple[str, str]:
+def collect_tools_info() -> list[dict[str, str | bool]]:
+    """Return structured metadata for each configured tool."""
+    entries: list[dict[str, str | bool]] = []
+    for tool in TOOLS:
         executable = resolve_command(tool)
         if executable is None:
-            return "not found", "not found"
+            executable, version = "not found", "not found"
+        else:
+            try:
+                res = subprocess.run([executable, "--version"], capture_output=True, text=True, timeout=10)
+                version = (res.stdout.strip() or res.stderr.strip() or "unknown").splitlines()[0]
+            except (OSError, subprocess.TimeoutExpired):
+                version = "unknown"
+        entries.append(
+            {
+                "tool": tool.name,
+                "command": tool.command,
+                "available": executable != "not found",
+                "executable": executable,
+                "version": version,
+                "instructions_file": str(tool.target_file),
+                "skills_dir": str(tool.skills_dir) if tool.skills_dir else "n/a",
+            }
+        )
+    return entries
 
-        try:
-            result = subprocess.run([executable, "--version"], capture_output=True, text=True, timeout=10)
-        except (OSError, subprocess.TimeoutExpired):
-            return executable, "unknown"
 
-        version = (result.stdout.strip() or result.stderr.strip() or "unknown").splitlines()[0]
-        return executable, version
-
+def print_tools(logger: CliLogger | None = None) -> None:
     rows = [
         (
-            tool.name,
-            tool.command,
-            "available" if resolve_command(tool) else "unavailable",
-            *executable_version(tool),
-            str(tool.target_file),
-            str(tool.skills_dir) if tool.skills_dir else "n/a",
+            str(i["tool"]),
+            str(i["command"]),
+            "available" if i["available"] else "unavailable",
+            str(i["executable"]),
+            str(i["version"]),
+            str(i["instructions_file"]),
+            str(i["skills_dir"]),
         )
-        for tool in TOOLS
+        for i in collect_tools_info()
     ]
     headers = ("Tool", "Command", "Status", "Executable", "Version", "Target", "Skills Target")
     widths = [max(len(header), *(len(row[index]) for row in rows)) for index, header in enumerate(headers)]
@@ -345,15 +369,10 @@ def print_tools(logger: CliLogger | None = None) -> None:
         "-------------------",
         "  ".join(header.ljust(width) for header, width in zip(headers, widths)),
         "  ".join("-" * width for width in widths),
+        *("  ".join(value.ljust(width) for value, width in zip(row, widths)) for row in rows),
     ]
-    for row in rows:
-        lines.append("  ".join(value.ljust(width) for value, width in zip(row, widths)))
-
     for line in lines:
-        if logger is not None:
-            logger.emit(line)
-        else:
-            print(line)
+        logger.emit(line) if logger is not None else print(line)
 
 
 def select_tools(tool_names: list[str]) -> list[Tool]:
@@ -410,23 +429,30 @@ def resolve_command(tool: Tool) -> str | None:
     return None
 
 
-def sync_tool(tool: Tool, guarded_block: str, action: str, logger: CliLogger) -> bool:
-    """Apply (action == "update") or preview (action == "diff") the deterministic guarded-block sync
-    for one tool. Returns True on success with no error; for `diff`, also returns False if the tool
-    has pending changes, so the overall exit code can signal "needs sync"."""
-    current_content = tool.target_file.read_text(encoding="utf-8") if tool.target_file.exists() else ""
-
+def sync_tool(
+    tool: Tool,
+    guarded_block: str,
+    action: str,
+    logger: CliLogger,
+    changes: list[str] | None = None,
+) -> bool:
+    """Apply (action == 'sync') or preview (action == 'check') the deterministic guarded-block sync
+    for one tool. Returns True on success with no error; for `check`, also returns False if the tool
+    has pending changes, so the overall exit code can signal 'needs sync'."""
     try:
+        current_content = tool.target_file.read_text(encoding="utf-8") if tool.target_file.exists() else ""
         new_content = apply_guarded_block(current_content, guarded_block)
-    except ValueError as error:
+    except (OSError, ValueError) as error:
         logger.log(f"FAILED: {error}", level="ERROR", origin=tool.name)
+        if changes is not None:
+            changes.append(f"invalid target {tool.target_file}: {error}")
         return False
 
     if new_content == current_content:
         logger.log(f"{action}: already up to date", origin=tool.name)
         return True
 
-    if action == "diff":
+    if action == "check":
         diff_lines = list(
             difflib.unified_diff(
                 current_content.splitlines(keepends=True),
@@ -435,7 +461,9 @@ def sync_tool(tool: Tool, guarded_block: str, action: str, logger: CliLogger) ->
                 tofile=str(tool.target_file),
             )
         )
-        logger.log(f"diff: pending changes --\n{''.join(diff_lines)}", origin=tool.name)
+        logger.log(f"{action}: pending changes --\n{''.join(diff_lines)}", origin=tool.name)
+        if changes is not None:
+            changes.append(f"instructions file out of date: {tool.target_file}")
         return False
 
     tool.target_file.parent.mkdir(parents=True, exist_ok=True)
@@ -443,7 +471,7 @@ def sync_tool(tool: Tool, guarded_block: str, action: str, logger: CliLogger) ->
     if backup_path is not None:
         logger.log(f"backed up existing file to {backup_path}", origin=tool.name)
     write_text_in_place(tool.target_file, new_content)
-    logger.log("update: guarded dev-guidelines block synced", origin=tool.name)
+    logger.log(f"{action}: guarded dev-guidelines block synced", origin=tool.name)
     return True
 
 
@@ -623,8 +651,9 @@ def prune_skill_dirs(
     logger: CliLogger,
     prune: bool,
     deprecated: bool = False,
+    changes: list[str] | None = None,
 ) -> tuple[bool, list[str]]:
-    """Report (diff) or delete (update) the named skill directories this script owns in skills_dir.
+    """Report (check) or delete (sync) the named skill directories this script owns in skills_dir.
     Returns (ok, names still present afterwards); ok is False on pending changes or failed deletions.
     """
     located_in = f" in {skills_dir}" if deprecated else ""
@@ -636,20 +665,23 @@ def prune_skill_dirs(
         if not stale_dir.exists() and not stale_dir.is_symlink():
             continue
 
-        if action == "diff":
-            logger.log(f"stale skill '{skill_name}'{located_in} would be removed", origin=tool_name)
+        if action == "check":
+            msg = f"stale skill '{skill_name}'{located_in} would be removed"
+            logger.log(msg, origin=tool_name)
+            if changes is not None:
+                changes.append(msg)
             retained.append(skill_name)
             ok = False
-        elif action == "update":
+        elif action == "sync":
             if not prune:
-                logger.log(f"update: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
+                logger.log(f"{action}: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
                 retained.append(skill_name)
                 continue
             try:
                 if not is_direct_child_dir(skills_dir, stale_dir):
                     raise OSError(f"{stale_dir} is not a direct child directory of {skills_dir}")
                 shutil.rmtree(stale_dir)
-                logger.log(f"update: pruned stale skill '{skill_name}'{removed_from}", origin=tool_name)
+                logger.log(f"{action}: pruned stale skill '{skill_name}'{removed_from}", origin=tool_name)
             except Exception as error:
                 logger.log(
                     f"FAILED to prune stale skill '{skill_name}'{removed_from}: {error}",
@@ -669,9 +701,10 @@ def clean_legacy_skills_dir(
     action: str,
     logger: CliLogger,
     prune: bool,
+    changes: list[str] | None = None,
 ) -> bool:
     """Remove the skills this script installed in a directory the tool's skills target moved away from.
-    Returns True if clean/successful, False if diff has pending changes or a deletion failed.
+    Returns True if clean/successful, False if check has pending changes or a deletion failed.
     """
     if not legacy_dir.is_dir():
         return True
@@ -686,9 +719,9 @@ def clean_legacy_skills_dir(
                 origin=tool.name,
             )
 
-    ok, retained = prune_skill_dirs(tool.name, legacy_dir, owned_names, action, logger, prune, deprecated=True)
+    ok, retained = prune_skill_dirs(tool.name, legacy_dir, owned_names, action, logger, prune, deprecated=True, changes=changes)
 
-    if action == "update" and ok:
+    if action == "sync" and ok:
         manifest_path = legacy_dir / SKILLS_MANIFEST_NAME
         try:
             if retained:
@@ -761,9 +794,10 @@ def sync_tool_skills(
     action: str,
     logger: CliLogger,
     prune: bool = True,
+    changes: list[str] | None = None,
 ) -> bool:
-    """Sync or diff skills for one tool, pruning stale skills and stale skill files this script owns.
-    Returns True if clean/successful, False if diff has pending changes or update failed.
+    """Sync or check skills for one tool, pruning stale skills and stale skill files this script owns.
+    Returns True if clean/successful, False if check has pending changes or sync failed.
     """
     if tool.skills_dir is None or not skills:
         return True
@@ -775,10 +809,10 @@ def sync_tool_skills(
         diffs, _ = compare_skill_trees(skill_path, target_dir)
         stale_files = find_stale_skill_files(skill_path, target_dir)
 
-        if action == "update" and not prune and stale_files:
+        if action == "sync" and not prune and stale_files:
             for rel_path in stale_files:
                 logger.log(
-                    f"update: stale file kept in skill '{skill_name}' (--no-prune): {rel_path.as_posix()}",
+                    f"{action}: stale file kept in skill '{skill_name}' (--no-prune): {rel_path.as_posix()}",
                     origin=tool.name,
                 )
             diffs = [diff for diff in diffs if not diff.startswith(STALE_FILE_DIFF_PREFIX)]
@@ -788,16 +822,18 @@ def sync_tool_skills(
             logger.log(f"{action}: skill '{skill_name}' already up to date", level="DEBUG", origin=tool.name)
             continue
 
-        if action == "diff":
+        if action == "check":
             diff_summary = "\n  ".join(diffs)
-            logger.log(f"diff: skill '{skill_name}' pending changes --\n  {diff_summary}", origin=tool.name)
+            logger.log(f"{action}: skill '{skill_name}' pending changes --\n  {diff_summary}", origin=tool.name)
+            if changes is not None:
+                changes.extend(f"skill '{skill_name}': {d}" for d in diffs)
             all_ok = False
-        elif action == "update":
+        elif action == "sync":
             try:
                 target_dir.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(skill_path, target_dir, copy_function=copy_file_in_place, dirs_exist_ok=True)
                 remove_stale_skill_files(target_dir, stale_files)
-                logger.log(f"update: synced skill '{skill_name}'", origin=tool.name)
+                logger.log(f"{action}: synced skill '{skill_name}'", origin=tool.name)
             except Exception as error:
                 logger.log(f"FAILED to sync skill '{skill_name}': {error}", level="ERROR", origin=tool.name)
                 all_ok = False
@@ -806,13 +842,13 @@ def sync_tool_skills(
     current_names = {skill_path.name for skill_path in skills}
     previous_names = load_skills_manifest(tool.skills_dir, logger, tool.name, fallback_names=tool.bootstrap_skill_names)
     stale_names = sorted(set(previous_names) - current_names)
-    prune_ok, retained = prune_skill_dirs(tool.name, tool.skills_dir, stale_names, action, logger, prune)
+    prune_ok, retained = prune_skill_dirs(tool.name, tool.skills_dir, stale_names, action, logger, prune, changes=changes)
     all_ok = all_ok and prune_ok
 
     for legacy_dir in tool.legacy_skills_dirs:
-        all_ok = clean_legacy_skills_dir(tool, legacy_dir, skills, action, logger, prune) and all_ok
+        all_ok = clean_legacy_skills_dir(tool, legacy_dir, skills, action, logger, prune, changes=changes) and all_ok
 
-    if action == "update" and all_ok:
+    if action == "sync" and all_ok:
         try:
             write_skills_manifest(tool.skills_dir, [*current_names, *retained])
         except OSError as error:
@@ -893,16 +929,32 @@ def configure_tool_names(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("tool_names", nargs="*", metavar="TOOL", type=tool_name_argument)
 
 
+def configure_list_parser(parser: argparse.ArgumentParser) -> None:
+    """Register output format flags for the list action."""
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json)")
+
+
+def configure_check_parser(parser: argparse.ArgumentParser) -> None:
+    """Register tool names and output format flags for the check action."""
+    configure_tool_names(parser)
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json)")
+
+
 def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
+    output_format = getattr(args, "format", "text")
+    if output_format == "json":
+        print(json.dumps(collect_tools_info(), indent=2))
+        return 0
     print_tools(logger)
     return 0
 
 
 def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
-    """Run the update or diff action across the selected tools."""
+    """Run the sync or check action across the selected tools."""
     selected = select_tools(args.tool_names)
-    # A dry-run update only reports, so it runs the read-only diff path end to end.
-    sync_action = "diff" if args.dry_run else action
+    is_json = action == "check" and getattr(args, "format", "text") == "json"
+    # A dry-run sync only reports, so it runs the read-only check path end to end.
+    sync_action = "check" if args.dry_run else action
     digest_path = _resolve_digest_path()
     skills_dir = _resolve_skills_dir()
     digest = ensure_digest(sync_action, logger)
@@ -916,13 +968,21 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
             level="DEBUG",
             origin=TOOL_NAME,
         )
+    payload: list[dict[str, object]] = []
     ok = True
     for tool in selected:
         skills_catalog = build_skills_catalog(tool, skills)
         guarded_block = build_guarded_block(digest, skills_catalog)
-        tool_ok = sync_tool(tool, guarded_block, sync_action, logger)
-        skills_ok = sync_tool_skills(tool, skills, sync_action, logger, prune=not args.no_prune)
+        tool_changes: list[str] = []
+        tool_ok = sync_tool(tool, guarded_block, sync_action, logger, changes=tool_changes)
+        skills_ok = sync_tool_skills(tool, skills, sync_action, logger, prune=not args.no_prune, changes=tool_changes)
         ok = ok and tool_ok and skills_ok
+        if is_json:
+            has_invalid = any(c.startswith("invalid target ") for c in tool_changes)
+            status = "up-to-date" if (tool_ok and skills_ok) else ("unavailable" if has_invalid else "changes-pending")
+            payload.append({"tool": tool.name, "status": status, "changes": tool_changes})
+    if is_json:
+        print(json.dumps(payload, indent=2))
     return 0 if ok else 1
 
 
@@ -939,16 +999,19 @@ class SyncHarness(ToolHarness):
     argument errors with severity indicators."""
 
     args: argparse.Namespace | None = None
+    json_mode: bool = False
 
     def create_logger(self, args: argparse.Namespace) -> StderrRoutingLogger:
         """Record the parsed arguments for the startup banner, then build the logger."""
         self.args = args
+        self.json_mode = getattr(args, "format", "text") == "json"
         base = super().create_logger(args)
         return StderrRoutingLogger(
             log_file=base.log_file,
             log_level=base.effective_level if base._explicit_level_set else None,
             debug=base.debug_flag,
             verbose=base.verbose,
+            json_mode=self.json_mode,
         )
 
     def log_startup(self, logger: CliLogger, action: str, extra: dict | None = None) -> None:
@@ -999,11 +1062,6 @@ class SyncHarness(ToolHarness):
             else (f"--digest={arg.split('=', 1)[1]}" if arg.startswith("--digest-path=") else arg)
             for arg in (sys.argv[1:] if argv is None else argv)
         ]
-        action_aliases = {"sync": "update", "check": "diff"}
-        if raw_args and raw_args[0] in action_aliases:
-            raw_args[0] = action_aliases[raw_args[0]]
-        elif len(raw_args) >= 2 and raw_args[0] in ("help", "-h", "--help"):
-            raw_args[1:] = [action_aliases.get(arg, arg) for arg in raw_args[1:]]
         known = {*self._actions, "help", "version", "-h", "--help", "--version"}
         if raw_args and raw_args[0] not in known:
             usage = f"Usage: {self.name} {{help|version|{'|'.join(self._actions)}}} [TOOL ...] [options]"
@@ -1042,6 +1100,7 @@ class SyncHarness(ToolHarness):
                 pre.add_argument("--digest", dest="digest_path", default=None)
                 pre.add_argument("--legacy-skill", action="append", dest="legacy_skill_names", default=None)
                 ns, _ = pre.parse_known_args(raw_args[1:])
+                early_logger = self._extract_early_logger(raw_args)
                 try:
                     cfg = load_agent_files_config(
                         ns.config,
@@ -1054,10 +1113,13 @@ class SyncHarness(ToolHarness):
                         manifest_source=ns.manifest_source,
                         legacy_skill_names=ns.legacy_skill_names,
                         base_tools=TOOLS if TOOLS != _INITIAL_TOOLS else None,
+                        logger=early_logger,
                     )
                 except (FileNotFoundError, ValueError) as exc:
-                    CliLogger().error(str(exc))
+                    early_logger.error(str(exc))
                     return 2
+                finally:
+                    early_logger.close()
                 if REPO_ROOT == _INITIAL_REPO_ROOT:
                     REPO_ROOT = cfg.repo_root
                 if DIGEST_PATH == _INITIAL_DIGEST_PATH:
@@ -1083,26 +1145,26 @@ class SyncHarness(ToolHarness):
 
 
 def build_harness() -> SyncHarness:
-    """Construct the CLI harness with the list, update, diff, and review actions."""
+    """Construct the CLI harness with the list, sync, check, and review actions."""
     harness = SyncHarness(
         name=TOOL_NAME,
         description="Sync this repository's guidelines digest and skills into installed AI coding tools.",
         version=TOOL_VERSION,
         exit_codes={
-            0: "success (diff: no tool has pending changes)",
-            1: "a tool failed, the digest is missing, a runtime error occurred, or (diff) changes are pending",
+            0: "success (check: no tool has pending changes)",
+            1: "a tool failed, the digest is missing, a runtime error occurred, or (check) changes are pending",
             2: "invalid command-line arguments or unknown tool names",
         },
         examples=[
             f"{TOOL_NAME} list",
-            f"{TOOL_NAME} diff claude-code",
-            f"{TOOL_NAME} update --dry-run",
+            f"{TOOL_NAME} check claude-code",
+            f"{TOOL_NAME} sync --dry-run",
             f"{TOOL_NAME} review codex-cli --timeout 1200 --log-file logs/review.log",
         ],
         detailed_help="Configured tools:\n" + "\n".join(f"  {tool.name:<23}{tool.target_file}" for tool in TOOLS),
     )
     for flag, meta, desc in (
-        ("--config", "PATH", "path to agent-files.json configuration file"),
+        ("--config", "PATH", "path to .agent-files.json configuration file"),
         ("--repo-root", "PATH", "repository root directory override"),
         ("--digest", "PATH", "guidelines digest file path override"),
         ("--skills-dir", "PATH", "source skills directory override"),
@@ -1129,12 +1191,12 @@ def build_harness() -> SyncHarness:
     harness.add_global_argument(
         "--dry-run",
         action="store_true",
-        help="report what update would change without writing or deleting anything",
+        help="report what sync would change without writing or deleting anything",
     )
     harness.add_global_argument(
         "--no-prune",
         action="store_true",
-        help="keep stale skills and stale skill files on update, reporting them only",
+        help="keep stale skills and stale skill files on sync, reporting them only",
     )
     harness.add_global_argument(
         "--timeout",
@@ -1148,12 +1210,13 @@ def build_harness() -> SyncHarness:
         "list configured tools with their executables, versions, and targets",
         handler=action_list,
         detail="Prints a table of each configured tool: command, availability, executable,\n"
-        "version, global instructions file, and skills directory.",
+        "version, global instructions file, and skills directory (or JSON with --format json).",
+        configure_parser=configure_list_parser,
     )
     harness.add_action(
-        "update",
+        "sync",
         "sync guidelines and skills into each tool's configuration (default: all tools)",
-        handler=lambda args, logger: action_sync("update", args, logger),
+        handler=lambda args, logger: action_sync("sync", args, logger),
         detail="Regenerates guidelines/agent-digest.md when stale, rewrites the guarded block in each\n"
         "tool's instructions file, and installs skills, pruning stale owned skills unless --no-prune.\n"
         "With --dry-run, reports what would change without writing or deleting anything.",
@@ -1161,13 +1224,13 @@ def build_harness() -> SyncHarness:
         configure_parser=configure_tool_names,
     )
     harness.add_action(
-        "diff",
-        "show what update would change, without writing anything (default: all tools)",
-        handler=lambda args, logger: action_sync("diff", args, logger),
+        "check",
+        "show what sync would change, without writing anything (default: all tools)",
+        handler=lambda args, logger: action_sync("check", args, logger),
         detail="Compares each tool's guarded block and installed skills against this repository.\n"
         "Exits 1 when any tool has pending changes.",
         usage_suffix="[TOOL ...] [options]",
-        configure_parser=configure_tool_names,
+        configure_parser=configure_check_parser,
     )
     harness.add_action(
         "review",

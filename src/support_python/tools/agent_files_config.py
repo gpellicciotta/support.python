@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-DEFAULT_CONFIG_FILENAME = "agent-files.json"
+DEFAULT_CONFIG_FILENAME = ".agent-files.json"
+LEGACY_CONFIG_FILENAME = "agent-files.json"
 DEFAULT_DIGEST_RELPATH = "guidelines/agent-digest.md"
 DEFAULT_SKILLS_RELPATH = "skills"
 DEFAULT_MARKER = "dev-guidelines"
@@ -214,6 +215,7 @@ def load_agent_files_config(
     manifest_name: str | None = None,
     legacy_skill_names: Sequence[str] | None = None,
     base_tools: Sequence[Any] | None = None,
+    logger: Any | None = None,
 ) -> AgentFilesConfig:
     """Load, validate, and resolve agent-files sync settings from JSON and explicit overrides."""
     from support_python.tools.agent_files import TOOLS as default_tools, find_project_root
@@ -228,8 +230,22 @@ def load_agent_files_config(
     else:
         init_root = Path(repo_root).expanduser().resolve() if repo_root is not None else find_project_root()
         candidate = init_root / DEFAULT_CONFIG_FILENAME
+        legacy = init_root / LEGACY_CONFIG_FILENAME
         if candidate.is_file():
             cfg_dir, raw = candidate.parent, _read_and_validate_json(candidate)
+            if legacy.is_file():
+                from support_python.logging import CliLogger
+
+                (logger or CliLogger()).warn(
+                    f"Legacy config {legacy} is ignored because {candidate} exists; remove {LEGACY_CONFIG_FILENAME} before v3.0.0."
+                )
+        elif legacy.is_file():
+            from support_python.logging import CliLogger
+
+            (logger or CliLogger()).warn(
+                f"Reading legacy config {legacy}; rename it to {DEFAULT_CONFIG_FILENAME}. The legacy filename is removed in v3.0.0."
+            )
+            cfg_dir, raw = legacy.parent, _read_and_validate_json(legacy)
 
     if repo_root is not None:
         resolved_root = Path(repo_root).expanduser().resolve()
