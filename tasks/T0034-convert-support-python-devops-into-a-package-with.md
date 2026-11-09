@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 946.4, input: 354726, output: 33080, cache_read: 7277008}
+review_status: pending
+review_round: 1
 ---
 # T0034: Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged
 
@@ -58,4 +62,7 @@ Change no behavior; update only mock patch targets in tests.
   - Files touched: 7.
   - Lines touched: 582.
   - Reopenings: 0.
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
