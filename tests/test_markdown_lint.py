@@ -1095,15 +1095,13 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("All 1 markdown files passed linting.", result.stdout)
         self.assertIn("Finished lint-markdown check in", result.stdout)
 
-    def test_support_python_lint_markdown_cli_subcommand(self) -> None:
-        from support_python.cli import main as cli_main
-
+    def test_lint_markdown_cli_check_and_fix_actions(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             clean = Path(tmp_dir) / "clean.md"
             clean.write_bytes(b"# Clean Document\n\n- Item 1\n- Item 2\n")
             out, err = io.StringIO(), io.StringIO()
             with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-                code = cli_main(["lint", "markdown", "--offline", str(clean)])
+                code = lint_markdown.main(["check", "--offline", str(clean)])
             self.assertEqual(code, 0, err.getvalue())
             self.assertIn("All 1 markdown files passed linting.", out.getvalue())
 
@@ -1111,7 +1109,7 @@ class TestEndToEnd(unittest.TestCase):
             dirty.write_bytes(b"# Title\n\n* Asterisk bullet \n")
             out_fix, err_fix = io.StringIO(), io.StringIO()
             with contextlib.redirect_stdout(out_fix), contextlib.redirect_stderr(err_fix):
-                code_fix = cli_main(["lint", "markdown", "--fix", "--offline", str(dirty)])
+                code_fix = lint_markdown.main(["fix", "--offline", str(dirty)])
             self.assertEqual(code_fix, 0, err_fix.getvalue())
             self.assertEqual(dirty.read_bytes(), b"# Title\n\n- Asterisk bullet\n")
 

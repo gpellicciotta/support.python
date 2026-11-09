@@ -25,8 +25,6 @@ from support_python.processes import (
     list_processes,
 )
 
-SCRIPT_PATH = Path(__file__).resolve().parent.parent / "scripts" / "processes.py"
-
 
 def run_cli(argv: list[str]) -> tuple[int, str, str]:
     """Run cli_processes.main capturing exit code, stdout, and stderr."""
@@ -150,12 +148,19 @@ def test_processes_list_and_kill_integration(tmp_path: Path) -> None:
         assert any(p.pid == child.pid for p in list_processes(open_path=open_file))
         assert str(child.pid) in run_cli(["list", "--cwd", str(work_dir), "--format", "json"])[1]
         assert str(child.pid) in run_cli(["list", "--open-path", str(open_file)])[1]
+        processes_bin = str(Path(sys.executable).parent / ("processes.exe" if sys.platform == "win32" else "processes"))
         list_res = subprocess.run(
-            [sys.executable, str(SCRIPT_PATH), "list", "--cwd", str(work_dir)], capture_output=True, text=True, timeout=30
+            [processes_bin, "list", "--cwd", str(work_dir)],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         assert list_res.returncode == 0 and str(child.pid) in list_res.stdout
         kill_res = subprocess.run(
-            [sys.executable, str(SCRIPT_PATH), "kill", str(child.pid), "--force"], capture_output=True, text=True, timeout=30
+            [processes_bin, "kill", str(child.pid), "--force"],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         assert kill_res.returncode == 0 and f"Killed PID {child.pid}" in kill_res.stdout
         child.wait(timeout=10)

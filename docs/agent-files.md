@@ -6,12 +6,12 @@ Implemented in [agent_files.py](../src/support_python/agent_files.py) and config
 ---
 
 ## Command-Line Interface
-Run actions through the unified CLI in [cli.py](../src/support_python/cli.py):
+Run actions through the `agent-files` console script in [agent_files.py](../src/support_python/agent_files.py):
 ```bash
-support-python agent-files list [--config PATH]
-support-python agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
-support-python agent-files check [TOOL ...] [--config PATH]
-support-python agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
+agent-files list [--config PATH]
+agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
+agent-files check [TOOL ...] [--config PATH]
+agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
 ```
 
 Supported configuration flags override JSON settings and built-in defaults:

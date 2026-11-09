@@ -45,7 +45,7 @@ class ToolLogger(_BaseCliLogger):
 
 TeeLogger = ToolLogger
 
-TOOL_NAME = "update-global-agent-files"
+TOOL_NAME = "agent-files"
 TOOL_VERSION = PROJECT_VERSION
 
 
@@ -272,7 +272,7 @@ def ensure_digest(action: str, logger: TeeLogger) -> str:
                     return expected.strip()
                 elif action == "diff":
                     logger.log(
-                        f"{digest_path.name} is out of date compared to source guidelines (run 'generate-agent-digest' or 'update-global-agent-files update' to synchronize)",
+                        f"{digest_path.name} is out of date compared to source guidelines (run 'generate-agent-digest' or 'agent-files update' to synchronize)",
                         level="WARN",
                         origin=TOOL_NAME,
                     )

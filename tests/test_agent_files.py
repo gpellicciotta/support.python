@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Regression tests for scripts/update-global-agent-files.py's deterministic guarded-block sync.
+Regression tests for support_python.agent_files (`agent-files`) deterministic guarded-block sync.
 
-Run directly with: python scripts/tests/test_update_global_agent_files.py
+Run directly with: pytest tests/test_agent_files.py
 """
 
 from __future__ import annotations
@@ -246,7 +246,7 @@ class MainCliLoggingTests(unittest.TestCase):
         self.assertEqual(code, 0)
         output = out.getvalue().strip()
         self.assertEqual(output.count("\n"), 0)
-        self.assertRegex(output, r"^update-global-agent-files v\d+\.\d+\.\d+.* - .+$")
+        self.assertRegex(output, r"^agent-files v\d+\.\d+\.\d+.* - .+$")
 
     def test_version_subcommand_output_format_and_exit_code(self) -> None:
         out = io.StringIO()
@@ -255,7 +255,7 @@ class MainCliLoggingTests(unittest.TestCase):
         self.assertEqual(code, 0)
         output = out.getvalue().strip()
         self.assertEqual(output.count("\n"), 0)
-        self.assertRegex(output, r"^update-global-agent-files v\d+\.\d+\.\d+.* - .+$")
+        self.assertRegex(output, r"^agent-files v\d+\.\d+\.\d+.* - .+$")
 
     def test_version_and_help_do_not_create_a_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -297,11 +297,11 @@ class MainCliLoggingTests(unittest.TestCase):
                 sync_mod.TOOLS = original_tools
 
             content = log_path.read_text(encoding="utf-8")
-            self.assertIn("Starting update-global-agent-files v", content)
+            self.assertIn("Starting agent-files v", content)
             self.assertIn("- Command: diff", content)
             self.assertIn("- Tools selected: fake-tool", content)
             self.assertIn("- Dry run: false", content)
-            self.assertIn("Finished update-global-agent-files diff in", content)
+            self.assertIn("Finished agent-files diff in", content)
             # The fake target file does not exist yet, so diff reports pending changes and exits 1.
             self.assertIn("with status: failed", content)
 
@@ -316,7 +316,7 @@ def _run_main(argv: list[str]) -> tuple[int, str, str]:
 
 class HarnessHelpTests(unittest.TestCase):
     def assert_full_help(self, text: str) -> None:
-        self.assertRegex(text.splitlines()[0], r"^update-global-agent-files v\d+\.\d+\.\d+.* - .+$")
+        self.assertRegex(text.splitlines()[0], r"^agent-files v\d+\.\d+\.\d+.* - .+$")
         for section in ("Usage:", "Actions:", "Options:", "Exit codes:"):
             self.assertIn(section, text)
         for action in ("list", "update", "diff", "review", "version", "help"):
@@ -351,7 +351,7 @@ class HarnessHelpTests(unittest.TestCase):
         for argv in (["help"], ["help", "--verbose"]):
             with self.subTest(argv=argv):
                 _, out, _ = _run_main(argv)
-                self.assertNotIn("update-global-agent-files.log", out)
+                self.assertNotIn("agent-files.log", out)
 
     def test_action_specific_help_shows_only_target_action(self) -> None:
         for action in ("list", "update", "diff", "review"):
@@ -360,7 +360,7 @@ class HarnessHelpTests(unittest.TestCase):
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
                 self.assertIn(f"Detailed Action Description: {action}", out)
-                self.assertIn(f"Usage:\n  update-global-agent-files {action}", out)
+                self.assertIn(f"Usage:\n  agent-files {action}", out)
                 for other_action in ("list", "update", "diff", "review"):
                     if other_action != action:
                         self.assertNotIn(f"Detailed Action Description: {other_action}", out)
@@ -380,7 +380,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
         self.assertEqual(out, "")
         lines = err.splitlines()
         self.assertEqual(lines[0], "**[ERROR]** Unknown subcommand: 'bogus'")
-        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: update-global-agent-files {"))
+        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files {"))
 
     def test_invalid_option_logs_indicator_error_and_exits_two(self) -> None:
         code, _, err = _run_main(["diff", "--bogus"])
@@ -388,7 +388,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** "), lines[0])
         self.assertIn("--bogus", lines[0])
-        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: update-global-agent-files diff"))
+        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files diff"))
 
     def test_unknown_tool_name_logs_indicator_error_and_exits_two(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -399,7 +399,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
         self.assertEqual(out, "")
         lines = err.splitlines()
         self.assertTrue(lines[0].startswith("**[ERROR]** argument TOOL: unknown tool name 'no-such-tool'"), lines[0])
-        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: update-global-agent-files diff [TOOL ...]"))
+        self.assertTrue(lines[1].startswith(" " * 12 + "Usage: agent-files diff [TOOL ...]"))
 
     def test_missing_digest_logs_indicator_error_and_exits_one(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -439,7 +439,7 @@ class DefaultLogFileTests(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn("- Log file: none", out)
             self.assertEqual(list(root.glob("*.log")), [])
-            self.assertFalse((sync_mod.REPO_ROOT / "update-global-agent-files.log").exists())
+            self.assertFalse((sync_mod.REPO_ROOT / "agent-files.log").exists())
 
 
 class EntryPointTests(unittest.TestCase):
@@ -1282,9 +1282,7 @@ class RepoRootResolutionTests(unittest.TestCase):
 
 
 class SupportPythonAgentFilesCliTests(unittest.TestCase):
-    def test_support_python_agent_files_subcommands_dispatch(self) -> None:
-        from support_python.cli import main as cli_main
-
+    def test_agent_files_subcommands_dispatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
             digest_path = root / "agent-digest.md"
@@ -1300,29 +1298,29 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
             ):
                 list_out = io.StringIO()
                 with contextlib.redirect_stdout(list_out):
-                    self.assertEqual(cli_main(["agent-files", "list"]), 0)
+                    self.assertEqual(sync_mod.main(["list"]), 0)
                 self.assertIn("Configured AI tools", list_out.getvalue())
 
                 sync_dry_out = io.StringIO()
                 with contextlib.redirect_stdout(sync_dry_out):
-                    self.assertEqual(cli_main(["agent-files", "sync", "--dry-run"]), 1)
+                    self.assertEqual(sync_mod.main(["sync", "--dry-run"]), 1)
                 self.assertIn("pending changes", sync_dry_out.getvalue())
                 self.assertFalse(fake_target.exists())
 
                 sync_out = io.StringIO()
                 with contextlib.redirect_stdout(sync_out):
-                    self.assertEqual(cli_main(["agent-files", "sync"]), 0)
+                    self.assertEqual(sync_mod.main(["sync"]), 0)
                 self.assertTrue(fake_target.is_file())
                 self.assertIn("CLI subcommand digest.", fake_target.read_text(encoding="utf-8"))
 
                 check_out = io.StringIO()
                 with contextlib.redirect_stdout(check_out):
-                    self.assertEqual(cli_main(["agent-files", "check"]), 0)
+                    self.assertEqual(sync_mod.main(["check"]), 0)
                 self.assertIn("already up to date", check_out.getvalue())
 
                 review_out = io.StringIO()
                 with contextlib.redirect_stdout(review_out):
-                    self.assertEqual(cli_main(["agent-files", "review"]), 0)
+                    self.assertEqual(sync_mod.main(["review"]), 0)
                 self.assertIn("skip: 'nonexistent-fake-cmd-xyz' not found", review_out.getvalue())
 
 
@@ -1506,8 +1504,6 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
 
 class ToolRegistryAndAddedToolTests(unittest.TestCase):
     def test_added_registry_entry_is_listed_and_synced_like_builtin_tools(self) -> None:
-        from support_python.cli import main as cli_main
-
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
             (root / "guidelines").mkdir(parents=True)
@@ -1534,16 +1530,16 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
             )
             list_out = io.StringIO()
             with contextlib.redirect_stdout(list_out):
-                self.assertEqual(cli_main(["agent-files", "list", "--config", str(cfg_file)]), 0)
+                self.assertEqual(sync_mod.main(["list", "--config", str(cfg_file)]), 0)
             self.assertIn("cursor-agent", list_out.getvalue())
             self.assertIn("claude-code", list_out.getvalue())
 
             with contextlib.redirect_stdout(io.StringIO()):
-                self.assertEqual(cli_main(["agent-files", "sync", "cursor-agent", "--config", str(cfg_file)]), 0)
+                self.assertEqual(sync_mod.main(["sync", "cursor-agent", "--config", str(cfg_file)]), 0)
             self.assertIn("Registry test digest.", custom_target.read_text(encoding="utf-8"))
             self.assertTrue((custom_skills / "reg-skill" / "SKILL.md").is_file())
             with contextlib.redirect_stdout(io.StringIO()) as dry_out:
-                self.assertEqual(cli_main(["agent-files", "sync", "cursor-agent", "--dry-run", "--config", str(cfg_file)]), 0)
+                self.assertEqual(sync_mod.main(["sync", "cursor-agent", "--dry-run", "--config", str(cfg_file)]), 0)
             self.assertIn("already up to date", dry_out.getvalue())
 
 

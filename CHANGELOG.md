@@ -12,15 +12,16 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.2-pre
+## v2.0.3-pre
+- CLI: **[breaking]** Replaced `support-python` and wrapper scripts with `processes`, `agent-files`, `lint-markdown`, and `git-repository-backup` console scripts in [pyproject.toml](pyproject.toml).
 - DevEx: **[breaking]** Split `support_python.devops` into [steps.py](src/support_python/devops/steps.py) and [services.py](src/support_python/devops/services.py) with [devops/__init__.py](src/support_python/devops/__init__.py) re-exports; mock patch targets moved from `support_python.devops.<name>` to `support_python.devops.steps.<name>` or `support_python.devops.services.<name>` (e.g. `support_python.devops.services.is_port_in_use`, `support_python.devops.services.signal.signal`).
 - Docs: Recorded [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) on standalone CLI tools, uniform CLI conventions, and reusable `support_python.devops`.
 
 ---
 
 ## v1.3.5 [2026-11-08]
-- CLI: Added standalone [lint-markdown.py](scripts/lint-markdown.py) and [agent-files.py](scripts/agent-files.py) wrapper scripts.
-- CLI: Added the `processes` CLI and [processes.py](scripts/processes.py) script with `kill` and filtered `list` subcommands.
+- CLI: Added standalone `scripts/lint-markdown.py` and `scripts/agent-files.py` wrapper scripts.
+- CLI: Added the `processes` CLI and `scripts/processes.py` script with `kill` and filtered `list` subcommands.
 - CLI: Split Markdown lint rules into [rules.py](src/support_python/markdown/rules.py), [registry.py](src/support_python/markdown/registry.py), [profiles.py](src/support_python/markdown/profiles.py), and [tables.py](src/support_python/markdown/tables.py).
 
 ---

@@ -310,13 +310,13 @@ class TestHarnessCli(BackupTestCase):
                 self.assertIn(expected, result.stdout)
                 self.assertEqual(result.stderr, "")
 
-    def test_support_python_backup_list_subcommand_integration(self) -> None:
+    def test_backup_module_list_subcommand_integration(self) -> None:
         make_repo(self.root / "alpha")
         make_repo(self.root / "beta")
         self.config.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
         env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
         result = subprocess.run(
-            [sys.executable, "-m", "support_python.cli", "backup", "list", "--config", str(self.config)],
+            [sys.executable, "-m", "support_python.backup", "list", "--config", str(self.config)],
             env=env,
             capture_output=True,
             text=True,

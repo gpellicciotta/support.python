@@ -46,15 +46,6 @@ DEFAULT_EXIT_CODES: dict[int, str] = {
     2: "invalid arguments or syntax errors",
 }
 
-#: Application executable name for the demo CLI.
-PROG: str = "support-python"
-
-#: Application short description string for the demo CLI.
-DESCRIPTION: str = "Python support CLI - reference implementation of the shared CLI version/help helper"
-
-#: Supported action subcommands for the demo CLI.
-ACTIONS: list[str] = ["greet", "backup", "lint", "agent-files", "version", "help"]
-
 #: Type alias for an action handler callable returning an integer exit code.
 ActionHandler = Callable[..., int]
 
@@ -494,102 +485,20 @@ def print_help(
         print(f"  {code}  {meaning}")
 
 
-def format_support_message(name: str) -> str:
-    """Format support greeting message for demo CLI greeting.
-
-    Args:
-        name: Name string to greet.
-
-    Returns:
-        Formatted greeting string.
-    """
-    normalized = name.strip() or "there"
-    return f"Hello {normalized}, from support.python!"
-
-
-def _build_demo_parser() -> argparse.ArgumentParser:
-    parser = build_action_parser(PROG, DESCRIPTION, ACTIONS, default_action="greet")
-    parser.add_argument("name", nargs="?", default="there", help="Name to greet (used by the 'greet' action)")
-    return parser
-
-
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    """Execute the reference demonstration CLI application.
-
-    Args:
-        argv: Optional sequence of command-line argument strings. Defaults to ``sys.argv[1:]``.
-
-    Returns:
-        Exit code integer (0 for success).
-    """
-    raw_args = list(sys.argv[1:] if argv is None else argv)
-    if raw_args and raw_args[0] == "backup":
-        from .backup import main as backup_main
-
-        return backup_main(raw_args[1:])
-    if raw_args and raw_args[0] == "lint":
-        from .markdown_lint import main as markdown_lint_main
-
-        rest = raw_args[1:]
-        if not rest or rest[0] in ("help", "-h", "--help", "version", "--version"):
-            return markdown_lint_main(rest)
-        if rest[0] != "markdown":
-            logger = CliLogger()
-            logger.error(
-                f"Unknown lint target: '{rest[0]}'\n"
-                f"Usage: {PROG} lint markdown [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH]"
-            )
-            logger.close()
-            return 2
-        md_args = rest[1:]
-        if not md_args or md_args[0] not in ("check", "fix", "help", "version", "-h", "--help", "--version"):
-            md_args = ["check", *md_args]
-        return markdown_lint_main(md_args)
-    if raw_args and raw_args[0] == "agent-files":
-        from .agent_files import main as agent_files_main
-
-        return agent_files_main(raw_args[1:])
-
-    parser = _build_demo_parser()
-    args = parser.parse_args(argv)
-
-    version = get_package_version("support-python")
-    if version.startswith("0.0.0"):
-        version = get_project_version()
-
-    if args.help or args.action == "help":
-        print_help(PROG, version, DESCRIPTION, parser)
-        return 0
-    if args.version or args.action == "version":
-        print_version(PROG, version)
-        return 0
-
-    print(format_support_message(args.name))
-    return 0
-
-
 __all__ = [
-    "ACTIONS",
     "APP_AUTHOR",
     "COPYRIGHT",
     "Action",
     "ActionHandler",
     "DEFAULT_EXIT_CODES",
-    "DESCRIPTION",
-    "PROG",
     "PROJECT_VERSION",
     "ParserConfigurator",
     "STANDARD_EXIT_CODES",
     "ToolHarness",
     "build_action_parser",
-    "format_support_message",
     "format_version",
     "get_full_version",
-    "main",
     "print_help",
     "print_version",
     "resolve_build_metadata",
 ]
-
-if __name__ == "__main__":
-    sys.exit(main())

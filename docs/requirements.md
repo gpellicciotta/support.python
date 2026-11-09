@@ -33,7 +33,7 @@ Functional and technical requirements for the `support-python` project.
 - Provide a shared, reusable CLI harness (`ToolHarness`, `Action`, `build_action_parser`/`print_version`/`print_help`) for
   guideline-compliant, action-oriented CLIs: `-h`/`--help`, `-v`/`--version`, `--verbose`/`--debug`, the
   standard `{prog} v{version} - Copyright (c) {author}` header, centralized UTF-8 console output setup, and standard
-  exit codes (`0` success, `1` failure or `check` findings, `2` invalid arguments) in `support_python.cli`.
+  exit codes (`0` success, `1` failure or `check` findings, `2` invalid arguments) in `support_python.cli`, with no umbrella `support-python` command or `python -m support_python` entry point.
 - Provide five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`,
   `git-repository-backup`) implemented under `support_python.tools.<snake_name>` with uniform CLI conventions:
   `list`/`check`/write verbs, `--dry-run` on write actions, `--format text|json` on `list` and `check`, and

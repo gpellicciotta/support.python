@@ -5,9 +5,9 @@ Automated Markdown style, structure, and link validation implemented in [markdow
 ---
 
 ## Command-Line Interface
-Run Markdown linting through the unified CLI in [cli.py](../src/support_python/cli.py):
+Run Markdown linting through the `lint-markdown` console script in [markdown_lint.py](../src/support_python/markdown_lint.py):
 ```bash
-support-python lint markdown [check|fix] [PATH ...] [--profile PROFILE] [--config PATH] [--rules RULES] [--offline] [--fix]
+lint-markdown [check|fix] [PATH ...] [--profile PROFILE] [--config PATH] [--rules RULES] [--offline] [--fix]
 ```
 
 Supported profile and rule options:

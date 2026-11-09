@@ -25,23 +25,23 @@ dev extras, lints, tests, builds sdist/wheel):
   `.venv\Scripts\pip install -e ".[dev]"`
 - Lint: `.venv\Scripts\ruff check .` / `.venv\Scripts\ruff format --check .`
 - Run the test suite: `.venv\Scripts\python -m pytest` (or `python -m unittest discover -s tests`)
-- Run the demo CLI: `.venv\Scripts\support-python greet <name>` (once installed), or
-  `python -m support_python.cli greet <name>`.
+- Run the standalone CLIs (once installed): `.venv\Scripts\processes`, `.venv\Scripts\agent-files`,
+  `.venv\Scripts\lint-markdown`, and `.venv\Scripts\git-repository-backup`.
 
 Dependencies are declared once, in [pyproject.toml](pyproject.toml) — there is no separate `requirements.txt` to keep in sync.
 
 ## Architecture
 Modules under `src/support_python/` (public symbols are re-exported from the package root):
 - [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger` (`ToolLogger`/`TeeLogger` aliases), `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
-- [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers. `main` (`support-python` entry point) is a reference implementation.
-- [agent_files.py](src/support_python/agent_files.py), [agent_files_config.py](src/support_python/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `support-python agent-files` (see [agent-files.md](docs/agent-files.md)).
+- [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers.
+- [agent_files.py](src/support_python/agent_files.py), [agent_files_config.py](src/support_python/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `agent-files` (see [agent-files.md](docs/agent-files.md)).
 - [net.py](src/support_python/net.py): stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - [git.py](src/support_python/git.py): Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.
 - [locking.py](src/support_python/locking.py): `Lock` ABC, re-entrant `FileLock`, `NullLock`, `RedisLock`, `MySQLLock`, `LockTimeoutError`, and the `create_lock` backend factory.
 - [processes.py](src/support_python/processes.py): process hierarchy, start-time lookup, PID-reuse-safe liveness checks, termination, and ancestor-protected `safe_kill`.
 - [files.py](src/support_python/files.py): atomic UTF-8 text writes via sibling temporary files, Windows-safe `atomic_replace` retries, and `read_text_retrying`.
-- [tables.py](src/support_python/markdown/tables.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py), [markdown_lint.py](src/support_python/markdown_lint.py): ANSI-aware Markdown table formatting (`format_markdown_table`, `format_markdown_table_block`, `check_table_alignment`) and rule-based Markdown linting (`MarkdownLinter`, `RuleRegistry`, `LintProfile`, `load_profile`) exposed via `support-python lint markdown` (see [markdown-lint.md](docs/markdown-lint.md)).
+- [tables.py](src/support_python/markdown/tables.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py), [markdown_lint.py](src/support_python/markdown_lint.py): ANSI-aware Markdown table formatting (`format_markdown_table`, `format_markdown_table_block`, `check_table_alignment`) and rule-based Markdown linting (`MarkdownLinter`, `RuleRegistry`, `LintProfile`, `load_profile`) exposed via `lint-markdown` (see [markdown-lint.md](docs/markdown-lint.md)).
 - [durations.py](src/support_python/durations.py): duration and timestamp parsing (`parse_duration_to_seconds`, `parse_iso8601`, `parse_date_or_datetime`) and human-readable/epoch formatting (`format_duration`, `format_short_duration`, `format_epoch`, `format_past_epoch`).
 - [ratelimit.py](src/support_python/ratelimit.py): sliding-window task dispatch rate limiter (`TaskRateLimiter`) with injectable `now` timestamps and a 1-second minimum wait duration when blocked.
 - [errors.py](src/support_python/errors.py): REST-client exception hierarchy and status-code mapping helpers.

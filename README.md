@@ -30,23 +30,24 @@ This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packa
 On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
 `.github/workflows/python-package.yml`.
 
-## Install CLI
+## Installing the command-line tools
+Installing the `support-python` package installs all standalone command-line tools (`processes`, `agent-files`, `lint-markdown`, and `git-repository-backup`) together:
+
+```bash
+pipx install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
+uv tool install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
+pip install --user "git+https://github.com/gpellicciotta/support.python.git@v<version>"
+python scripts/install-from-github-release.py <version> --global
+```
+
+From a local checkout, install into the active environment and invoke each command directly:
 
 ```bash
 python -m pip install .
-support-python greet Alice
-support-python lint markdown [paths] [--fix] [--offline]
-support-python agent-files list|sync|check|review
-support-python --version
-support-python --help
-```
-
-## Use from another Python project
-
-```python
-from support_python import format_support_message
-
-print(format_support_message("Alice"))
+processes list --cwd .
+agent-files list
+lint-markdown check [paths] [--offline]
+git-repository-backup list --root ~/projects
 ```
 
 ## Shared CLI helpers, tabular output, and session storage
@@ -86,7 +87,7 @@ store.store_token("my-auth-token")
 saved_token = store.load_token()
 ```
 
-This library's own `support-python` CLI (`greet`/`version`/`help` actions) is a reference implementation built on top of it:
+An action-oriented CLI can also be built directly on `build_action_parser`/`print_version`/`print_help`:
 
 ```python
 from support_python import build_action_parser, print_help, print_version
@@ -457,7 +458,7 @@ safe_kill([pid])  # Skips the current process and its ancestors with a warning.
 processes list --cwd . --format json
 processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
 processes kill 1234 5678 --force
-python scripts/processes.py list --descendants-of 1234
+processes list --descendants-of 1234
 ```
 
 - `get_process_hierarchy(start_pid)` returns `start_pid` and all ancestor PIDs, failing closed with `OSError` when inspection fails.
@@ -514,19 +515,19 @@ issues = check_table_alignment(table)
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
 
 ## Markdown linter
-[markdown_lint.py](src/support_python/markdown_lint.py) and `support_python.markdown` ([registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provide `MarkdownLinter`, `RuleRegistry`, `LintProfile`, and `load_profile`, exposed on the CLI as `support-python lint markdown` (see [markdown-lint.md](docs/markdown-lint.md)):
+[markdown_lint.py](src/support_python/markdown_lint.py) and `support_python.markdown` ([registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provide `MarkdownLinter`, `RuleRegistry`, `LintProfile`, and `load_profile`, exposed on the CLI as `lint-markdown` (see [markdown-lint.md](docs/markdown-lint.md)):
 ```bash
-support-python lint markdown [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown [check|fix] [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
 ```
 
 ## Agent files sync
-[agent_files.py](src/support_python/agent_files.py) and [agent_files_config.py](src/support_python/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `support-python agent-files`.
+[agent_files.py](src/support_python/agent_files.py) and [agent_files_config.py](src/support_python/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
 Settings load from `agent-files.json` in the repository root (or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/agent-files.md) for the full JSON schema and tool registry documentation:
 ```bash
-support-python agent-files list [--config PATH]
-support-python agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]
-support-python agent-files check [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
-support-python agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
+agent-files list [--config PATH]
+agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]
+agent-files check [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
+agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
 ```
 
 ## Duration and time formatting helpers
