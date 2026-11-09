@@ -617,11 +617,11 @@ class TestReviewRound1(BackupTestCase):
 
     def test_fingerprint_ignores_refs_outside_branches_and_tags(self) -> None:
         alpha = make_repo(self.root / "alpha")
-        before = backup_git_repos.ref_fingerprint(alpha, backup_git_repos.ToolLogger())
+        before = backup_git_repos.ref_fingerprint(alpha, backup_git_repos.CliLogger())
         git(alpha, "update-ref", "refs/remotes/origin/main", "HEAD")
         (alpha / "file.txt").write_text("stashed change\n", encoding="utf-8")
         git(alpha, "stash", "-q")
-        self.assertEqual(backup_git_repos.ref_fingerprint(alpha, backup_git_repos.ToolLogger()), before)
+        self.assertEqual(backup_git_repos.ref_fingerprint(alpha, backup_git_repos.CliLogger()), before)
 
     def test_store_file_removes_partial_on_failure(self) -> None:
         source = self.tmp / "source.bin"

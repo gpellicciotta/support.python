@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.9-pre
+## v2.0.10-pre
+- CLI: **[breaking]** Configured UTF-8 streams in `ToolHarness.run` and removed `ToolLogger` and `TeeLogger` aliases in favor of `CliLogger` ([cli.py](src/support_python/cli.py), [logging.py](src/support_python/logging.py)).
 - CLI: **[breaking]** Renamed `backup-git-repos` to `git-repository-backup` in [git_repository_backup.py](src/support_python/tools/git_repository_backup.py) ([git-repository-backup.md](docs/tools/git-repository-backup.md)), with legacy config fallback and `list --format text|json`.
 - CLI: **[breaking]** Split `support_python.markdown_lint` into [lint.py](src/support_python/markdown/lint.py) (import from `support_python.markdown`) and [lint_markdown.py](src/support_python/tools/lint_markdown.py) (CLI in `support_python.tools.lint_markdown`).
 - CLI: **[breaking]** Moved `cli_processes`, `agent_files`, `agent_files_config`, and `backup` into `support_python.tools` ([processes.py](src/support_python/tools/processes.py), [agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py), [git_repository_backup.py](src/support_python/tools/git_repository_backup.py)).

@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import patch
 
 from support_python.cli import COPYRIGHT, ToolHarness, get_full_version
-from support_python.logging import ToolLogger, format_severity_indicator
+from support_python.logging import CliLogger, format_severity_indicator
 from support_python.markdown.lint import MarkdownLinter
 from support_python.tools import lint_markdown
 
@@ -91,7 +91,7 @@ class TestCLIAndMain(unittest.TestCase):
         self.assertNotIn("Detailed Action Description: fix", out)
 
     def test_argument_error_routes_through_tool_logger(self) -> None:
-        with patch.object(ToolLogger, "error") as mock_logger_error:
+        with patch.object(CliLogger, "error") as mock_logger_error:
             code, _, _ = run_main(["check", "--bogus-flag"])
             self.assertEqual(code, 2)
             mock_logger_error.assert_called_once()

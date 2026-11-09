@@ -178,6 +178,28 @@ class ToolHarnessUnitTests(unittest.TestCase):
             self.assertEqual(harness.run(["unknown-cmd"]), 2)
             self.assertEqual(harness.run(["run", "--nonexistent-flag"]), 2)
 
+    def test_run_configures_utf8_output_once_before_action_dispatch(self) -> None:
+        import contextlib
+
+        events: list[str] = []
+        harness = self._make_harness()
+        harness.add_action("check-order", "check order", handler=lambda a, logger: (events.append("handler"), 0)[1])
+        with (
+            patch("support_python.cli.configure_utf8_output", side_effect=lambda: events.append("utf8"), create=True) as mock_utf8,
+            redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(harness.run(["check-order"]), 0)
+        self.assertEqual(mock_utf8.call_count, 1)
+        self.assertEqual(events, ["utf8", "handler"])
+
+    def test_no_tool_module_calls_stream_reconfigure(self) -> None:
+        from pathlib import Path
+
+        tools_dir = Path(__file__).resolve().parent.parent / "src" / "support_python" / "tools"
+        offending = [p.name for p in sorted(tools_dir.glob("*.py")) if "reconfigure(" in p.read_text(encoding="utf-8")]
+        self.assertEqual(offending, [])
+
 
 class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
     def test_demo_cli_subprocess_end_to_end(self) -> None:
@@ -253,6 +275,36 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
             res_bad = run_cli("work", "--invalid-opt", "--log-file", str(log_path))
             self.assertEqual(res_bad.returncode, 2)
             self.assertIn("**[ERROR]**", res_bad.stderr)
+
+    def test_tools_help_and_non_ascii_output_under_cp1252_pipe(self) -> None:
+        import os
+        from pathlib import Path
+        import subprocess
+        import sys
+
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = f"{src_dir}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else src_dir
+        env["PYTHONIOENCODING"] = "cp1252"
+        env.pop("PYTHONUTF8", None)
+
+        for mod_name in ("processes", "agent_files", "lint_markdown", "git_repository_backup"):
+            code = (
+                f"from support_python.tools import {mod_name}\n"
+                f"rc = {mod_name}.main(['help'])\n"
+                "print('Non-ASCII check: \\u2713 \\u2014 \\u2603')\n"
+                "raise SystemExit(rc)\n"
+            )
+            res = subprocess.run(
+                [sys.executable, "-c", code],
+                capture_output=True,
+                env=env,
+                timeout=10,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr.decode("utf-8", errors="replace"))
+            out_text = res.stdout.decode("utf-8")
+            self.assertIn("Usage:", out_text)
+            self.assertIn("Non-ASCII check: \u2713 \u2014 \u2603", out_text)
 
 
 if __name__ == "__main__":

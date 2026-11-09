@@ -9,7 +9,7 @@ import sys
 from typing import List, NoReturn, Optional
 
 from support_python.cli import ToolHarness
-from support_python.logging import ToolLogger
+from support_python.logging import CliLogger
 from support_python.markdown.lint import DEFAULT_EXCLUDES, LintIssue, MarkdownLinter
 from support_python.markdown.lint import discover_markdown_files, find_project_root, parse_rule_codes
 from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, load_profile
@@ -50,7 +50,7 @@ def _discover_config_path(input_paths: List[Path], repo_root: Path) -> Optional[
     return None
 
 
-def run_lint(args: argparse.Namespace, logger: ToolLogger, fix: bool) -> int:
+def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
     """Lint the markdown files under the requested paths, fixing safe issues first when asked."""
     repo_root = Path.cwd()
     for p in args.paths:
@@ -194,10 +194,6 @@ def build_harness() -> ToolHarness:
 
 def main(argv: Optional[List[str]] = None) -> int:
     """Parse command-line arguments and execute the requested action."""
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     return build_harness().run(argv, extra_startup={"Working directory": str(Path.cwd())})
 
 

@@ -374,7 +374,7 @@ def terminate_process_tree(pid: int) -> bool:
 
 
 def _emit_log(logger: Any, level: str, message: str) -> None:
-    """Dispatch a log message to a CliLogger, ToolLogger, or standard logging.Logger."""
+    """Dispatch a log message to a CliLogger or standard logging.Logger."""
     if logger is None:
         return
     clean = level.upper()
@@ -413,8 +413,8 @@ def safe_kill(
 
     Args:
         pids: Sequence of process IDs to terminate.
-        logger: Optional logger instance (:class:`~support_python.logging.CliLogger`,
-            ``ToolLogger``, or standard ``logging.Logger``). Defaults to a new :class:`CliLogger`.
+        logger: Optional logger instance (:class:`~support_python.logging.CliLogger`
+            or standard ``logging.Logger``). Defaults to a new :class:`CliLogger`.
         force: If ``True``, forcefully terminate targets (``SIGKILL`` or ``taskkill /F``).
 
     Returns:

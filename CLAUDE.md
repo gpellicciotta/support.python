@@ -32,7 +32,7 @@ Dependencies are declared once, in [pyproject.toml](pyproject.toml) — there is
 
 ## Architecture
 Modules under `src/support_python/` (library symbols are re-exported from the package root; tool modules under `support_python.tools` are not re-exported):
-- [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger` (`ToolLogger`/`TeeLogger` aliases), `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
+- [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger`, `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
 - [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers.
 - [agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `agent-files` (see [agent-files.md](docs/tools/agent-files.md)).
 - [net.py](src/support_python/net.py): stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,

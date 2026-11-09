@@ -18,6 +18,7 @@ import time
 from typing import Any, Callable, NoReturn, Optional, Sequence, Tuple, Union
 
 from .logging import CliLogger
+from .terminal import configure_utf8_output
 from .version import get_package_version, get_project_version
 
 #: Default copyright author name string used in CLI banners.
@@ -310,6 +311,7 @@ class ToolHarness:
 
     def run(self, argv: Optional[Sequence[str]] = None, extra_startup: Optional[dict[str, Any]] = None) -> int:
         """Execute the requested command line, handling standard actions and logging."""
+        configure_utf8_output()
         raw_args = list(sys.argv[1:] if argv is None else argv)
         if not raw_args:
             print(self.format_help(verbose=False), end="")

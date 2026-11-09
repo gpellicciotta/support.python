@@ -147,7 +147,7 @@ password_hash = get_standard_password_hash("my-password")
 
 ## CLI logging
 
-`support_python.CliLogger` (also exported as `ToolLogger` and `TeeLogger`, paired with `resolve_log_level`,
+`support_python.CliLogger` (paired with `resolve_log_level`,
 `normalize_log_level`, `format_invocation_start`, and `init_cli_logger`) provides unified guideline-compliant
 logging for command-line tools:
 

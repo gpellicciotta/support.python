@@ -519,13 +519,6 @@ class CliLogger:
         """Compatibility hook for callers that close logger instances."""
 
 
-#: Alias for compatibility with ``dev-guidelines`` tool scripts.
-ToolLogger = CliLogger
-
-#: Alias for compatibility with ``plan`` CLI logging utilities.
-TeeLogger = CliLogger
-
-
 def log_message(
     msg: str,
     level: str = "INFO",
@@ -556,8 +549,6 @@ __all__ = [
     "LOG_LEVELS",
     "LogLevel",
     "SEVERITY_INDICATORS",
-    "TeeLogger",
-    "ToolLogger",
     "configure_safe_console_encoding",
     "format_invocation_start",
     "format_log_message",

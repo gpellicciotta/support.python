@@ -28,12 +28,12 @@ from typing import Callable, Sequence
 
 from support_python.cli import PROJECT_VERSION, ToolHarness  # noqa: E402
 from support_python.logging import (  # noqa: E402
-    CliLogger as _BaseCliLogger,
+    CliLogger,
     format_severity_indicator as format_severity_indicator,
 )
 
 
-class ToolLogger(_BaseCliLogger):
+class StderrRoutingLogger(CliLogger):
     """CLI logger routing WARN and ERROR messages logged via .log() to stderr."""
 
     def log(self, message: str = "", level: str | None = "INFO", origin: str | None = None, **kwargs) -> None:
@@ -42,8 +42,6 @@ class ToolLogger(_BaseCliLogger):
         kwargs.setdefault("to_stdout", not is_err)
         super().log(message, level=level, origin=origin, **kwargs)
 
-
-TeeLogger = ToolLogger
 
 TOOL_NAME = "agent-files"
 TOOL_VERSION = PROJECT_VERSION
@@ -238,7 +236,7 @@ def load_digest() -> str:
     return digest_path.read_text(encoding="utf-8").strip()
 
 
-def ensure_digest(action: str, logger: TeeLogger) -> str:
+def ensure_digest(action: str, logger: CliLogger) -> str:
     """Load the digest from guidelines/agent-digest.md. If generate-agent-digest is available,
     verify that the digest is in sync with source guidelines. If out of sync:
     - on 'update': automatically regenerate guidelines/agent-digest.md and log the update.
@@ -314,7 +312,7 @@ def apply_guarded_block(current_content: str, guarded_block: str) -> str:
     return new_content.strip() + "\n"
 
 
-def print_tools(logger: TeeLogger | None = None) -> None:
+def print_tools(logger: CliLogger | None = None) -> None:
     def executable_version(tool: Tool) -> tuple[str, str]:
         executable = resolve_command(tool)
         if executable is None:
@@ -412,7 +410,7 @@ def resolve_command(tool: Tool) -> str | None:
     return None
 
 
-def sync_tool(tool: Tool, guarded_block: str, action: str, logger: TeeLogger) -> bool:
+def sync_tool(tool: Tool, guarded_block: str, action: str, logger: CliLogger) -> bool:
     """Apply (action == "update") or preview (action == "diff") the deterministic guarded-block sync
     for one tool. Returns True on success with no error; for `diff`, also returns False if the tool
     has pending changes, so the overall exit code can signal "needs sync"."""
@@ -560,7 +558,7 @@ def build_skills_catalog(tool: Tool, skills: list[Path]) -> str:
 
 def load_skills_manifest(
     skills_dir: Path,
-    logger: TeeLogger,
+    logger: CliLogger,
     origin: str,
     fallback_names: tuple[str, ...] | None = None,
     warn_if_missing: bool = True,
@@ -622,7 +620,7 @@ def prune_skill_dirs(
     skills_dir: Path,
     skill_names: list[str],
     action: str,
-    logger: TeeLogger,
+    logger: CliLogger,
     prune: bool,
     deprecated: bool = False,
 ) -> tuple[bool, list[str]]:
@@ -669,7 +667,7 @@ def clean_legacy_skills_dir(
     legacy_dir: Path,
     skills: list[Path],
     action: str,
-    logger: TeeLogger,
+    logger: CliLogger,
     prune: bool,
 ) -> bool:
     """Remove the skills this script installed in a directory the tool's skills target moved away from.
@@ -761,7 +759,7 @@ def sync_tool_skills(
     tool: Tool,
     skills: list[Path],
     action: str,
-    logger: TeeLogger,
+    logger: CliLogger,
     prune: bool = True,
 ) -> bool:
     """Sync or diff skills for one tool, pruning stale skills and stale skill files this script owns.
@@ -824,7 +822,7 @@ def sync_tool_skills(
     return all_ok
 
 
-def run_review(tool: Tool, verbose: bool, timeout: int, logger: TeeLogger) -> bool:
+def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bool:
     resolved_command = resolve_command(tool)
     if resolved_command is None:
         logger.log(f"skip: '{tool.command}' not found on PATH or in known locations", origin=tool.name)
@@ -895,12 +893,12 @@ def configure_tool_names(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("tool_names", nargs="*", metavar="TOOL", type=tool_name_argument)
 
 
-def action_list(args: argparse.Namespace, logger: TeeLogger) -> int:
+def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
     print_tools(logger)
     return 0
 
 
-def action_sync(action: str, args: argparse.Namespace, logger: TeeLogger) -> int:
+def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
     """Run the update or diff action across the selected tools."""
     selected = select_tools(args.tool_names)
     # A dry-run update only reports, so it runs the read-only diff path end to end.
@@ -928,7 +926,7 @@ def action_sync(action: str, args: argparse.Namespace, logger: TeeLogger) -> int
     return 0 if ok else 1
 
 
-def action_review(args: argparse.Namespace, logger: TeeLogger) -> int:
+def action_review(args: argparse.Namespace, logger: CliLogger) -> int:
     """Run the review action across the selected tools."""
     ok = True
     for tool in select_tools(args.tool_names):
@@ -942,18 +940,18 @@ class SyncHarness(ToolHarness):
 
     args: argparse.Namespace | None = None
 
-    def create_logger(self, args: argparse.Namespace) -> ToolLogger:
+    def create_logger(self, args: argparse.Namespace) -> StderrRoutingLogger:
         """Record the parsed arguments for the startup banner, then build the logger."""
         self.args = args
         base = super().create_logger(args)
-        return ToolLogger(
+        return StderrRoutingLogger(
             log_file=base.log_file,
             log_level=base.effective_level if base._explicit_level_set else None,
             debug=base.debug_flag,
             verbose=base.verbose,
         )
 
-    def log_startup(self, logger: ToolLogger, action: str, extra: dict | None = None) -> None:
+    def log_startup(self, logger: CliLogger, action: str, extra: dict | None = None) -> None:
         """Emit the standard startup banner including the selected tools and action options."""
         config: dict = {}
         args = self.args
@@ -966,7 +964,7 @@ class SyncHarness(ToolHarness):
                 config["Prune stale skills"] = str(not args.no_prune).lower()
         super().log_startup(logger, action, extra={**config, **(extra or {})})
 
-    def log_completion(self, logger: ToolLogger, action: str, exit_code: int, started_at: float) -> None:
+    def log_completion(self, logger: CliLogger, action: str, exit_code: int, started_at: float) -> None:
         """Emit the completion summary, formatting long review runs in minutes and hours."""
         duration = format_duration(time.monotonic() - started_at)
         status = "succeeded" if exit_code == 0 else "failed"
@@ -983,7 +981,7 @@ class SyncHarness(ToolHarness):
 
         def report_error(message: str) -> None:
             usage = f"Usage: {self.name} {action_name or '<action>'} {suffix}"
-            ToolLogger().error(f"{message}\n{usage}")
+            CliLogger().error(f"{message}\n{usage}")
             sys.exit(2)
 
         parser.error = report_error
@@ -1009,7 +1007,7 @@ class SyncHarness(ToolHarness):
         known = {*self._actions, "help", "version", "-h", "--help", "--version"}
         if raw_args and raw_args[0] not in known:
             usage = f"Usage: {self.name} {{help|version|{'|'.join(self._actions)}}} [TOOL ...] [options]"
-            ToolLogger().error(f"Unknown subcommand: '{raw_args[0]}'\n{usage}")
+            CliLogger().error(f"Unknown subcommand: '{raw_args[0]}'\n{usage}")
             return 2
 
         is_meta = (
@@ -1058,7 +1056,7 @@ class SyncHarness(ToolHarness):
                         base_tools=TOOLS if TOOLS != _INITIAL_TOOLS else None,
                     )
                 except (FileNotFoundError, ValueError) as exc:
-                    ToolLogger().error(str(exc))
+                    CliLogger().error(str(exc))
                     return 2
                 if REPO_ROOT == _INITIAL_REPO_ROOT:
                     REPO_ROOT = cfg.repo_root
@@ -1185,10 +1183,6 @@ def build_harness() -> SyncHarness:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line and return its exit code."""
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     return build_harness().run(argv)
 
 

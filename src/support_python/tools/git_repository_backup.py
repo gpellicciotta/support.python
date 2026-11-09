@@ -25,7 +25,7 @@ import tempfile
 from typing import Any, Callable, Sequence
 
 from support_python.cli import COPYRIGHT, PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
-from support_python.logging import ToolLogger  # noqa: E402
+from support_python.logging import CliLogger  # noqa: E402
 
 TOOL_NAME = "git-repository-backup"
 LEGACY_TOOL_NAME = "backup-git-repos"
@@ -244,7 +244,7 @@ def legacy_config_path() -> Path:
     return Path.home() / ".config" / LEGACY_TOOL_NAME / "config.json"
 
 
-def load_config(path: Path | None, logger: ToolLogger | None = None) -> dict[str, Any]:
+def load_config(path: Path | None, logger: CliLogger | None = None) -> dict[str, Any]:
     """Load the JSON config file; an explicit path must exist, the default path falls back to the legacy path."""
     explicit = path is not None
     if explicit:
@@ -259,7 +259,7 @@ def load_config(path: Path | None, logger: ToolLogger | None = None) -> dict[str
             config_path = default_path
         elif legacy_path.exists():
             config_path = legacy_path
-            warn_logger = logger if logger is not None else ToolLogger()
+            warn_logger = logger if logger is not None else CliLogger()
             warn_logger.warn(
                 f"Reading legacy config {legacy_path}; move it to {default_path}. The legacy path is dropped in v3.0.0."
             )
@@ -367,7 +367,7 @@ def find_seven_zip(explicit: str | None) -> str | None:
     return None
 
 
-def run_git(args: Sequence[str], logger: ToolLogger, check: bool = True) -> str:
+def run_git(args: Sequence[str], logger: CliLogger, check: bool = True) -> str:
     """Run git with the given arguments and return its standard output.
 
     Raises BackupError on failure when check is True; otherwise returns an empty string on failure.
@@ -386,7 +386,7 @@ def run_git(args: Sequence[str], logger: ToolLogger, check: bool = True) -> str:
     return result.stdout
 
 
-def run_seven_zip(seven_zip: str, args: Sequence[str], password: str, cwd: Path, logger: ToolLogger) -> int:
+def run_seven_zip(seven_zip: str, args: Sequence[str], password: str, cwd: Path, logger: CliLogger) -> int:
     """Run 7-Zip feeding the password on standard input and return its exit code."""
     command = [seven_zip, *args]
     logger.debug_msg(f"Executing: {' '.join(command)}")
@@ -405,7 +405,7 @@ def run_seven_zip(seven_zip: str, args: Sequence[str], password: str, cwd: Path,
     return result.returncode
 
 
-def ref_fingerprint(repo: Path, logger: ToolLogger) -> str | None:
+def ref_fingerprint(repo: Path, logger: CliLogger) -> str | None:
     """Return a SHA-256 fingerprint of the backed-up refs in the repo, or None when it has none."""
     output = run_git(["-C", str(repo), "for-each-ref", "--format=%(objectname) %(refname)", *BACKED_UP_REFS], logger)
     if not output.strip():
@@ -413,7 +413,7 @@ def ref_fingerprint(repo: Path, logger: ToolLogger) -> str | None:
     return hashlib.sha256(output.encode("utf-8")).hexdigest()
 
 
-def head_branch_ref(repo: Path, logger: ToolLogger) -> str | None:
+def head_branch_ref(repo: Path, logger: CliLogger) -> str | None:
     """Return the branch ref HEAD points to, or the first branch when HEAD is detached."""
     head = run_git(["-C", str(repo), "symbolic-ref", "-q", "HEAD"], logger, check=False).strip()
     if head:
@@ -427,7 +427,7 @@ def git_path(path: Path) -> str:
     return Path(os.path.abspath(path)).as_posix()
 
 
-def mirror_repo(repo: Path, mirror_dir: Path, dry_run: bool, logger: ToolLogger) -> None:
+def mirror_repo(repo: Path, mirror_dir: Path, dry_run: bool, logger: CliLogger) -> None:
     """Force-push all branches and tags of the repo to its bare mirror, creating it on first use."""
     mirror = mirror_dir / f"{repo.name}.git"
     if dry_run:
@@ -542,7 +542,7 @@ def obtain_password(settings: Settings, confirm: bool, keyring_password: str | N
     return password
 
 
-def verify_password(settings: Settings, seven_zip: str, logger: ToolLogger, keyring_password: str | None) -> str:
+def verify_password(settings: Settings, seven_zip: str, logger: CliLogger, keyring_password: str | None) -> str:
     """Obtain the password and check it against the stored verifier, creating the verifier on first use."""
     archive_dir = settings.archive_dir
     assert archive_dir is not None
@@ -552,7 +552,7 @@ def verify_password(settings: Settings, seven_zip: str, logger: ToolLogger, keyr
     return password
 
 
-def check_password(archive_dir: Path, seven_zip: str, password: str, logger: ToolLogger) -> None:
+def check_password(archive_dir: Path, seven_zip: str, password: str, logger: CliLogger) -> None:
     """Check the password against the stored verifier, creating the verifier when none exists."""
     check = archive_dir / PASSWORD_CHECK_NAME
     first_use = not check.exists()
@@ -570,7 +570,7 @@ def check_password(archive_dir: Path, seven_zip: str, password: str, logger: Too
         logger.info(f"Created password verifier {check}")
 
 
-def run_set_password(settings: Settings, logger: ToolLogger) -> int:
+def run_set_password(settings: Settings, logger: CliLogger) -> int:
     """Verify a prompted password against the archive verifier and store it in the keyring."""
     archive_dir = settings.archive_dir
     service = settings.password_keyring
@@ -601,7 +601,7 @@ def run_set_password(settings: Settings, logger: ToolLogger) -> int:
     return 0
 
 
-def archive_repo(repo: Path, archive_dir: Path, seven_zip: str, password: str, logger: ToolLogger) -> None:
+def archive_repo(repo: Path, archive_dir: Path, seven_zip: str, password: str, logger: CliLogger) -> None:
     """Bundle all refs of the repo and store the bundle as an encrypted archive."""
     name = repo.name
     with tempfile.TemporaryDirectory(prefix=f"{TOOL_NAME}-") as tmp:
@@ -620,7 +620,7 @@ def archive_repo(repo: Path, archive_dir: Path, seven_zip: str, password: str, l
         logger.info(f"Archived {name} to {archive_dir / f'{name}.7z'}")
 
 
-def run_backup(settings: Settings, repos: Sequence[Path], logger: ToolLogger) -> int:
+def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> int:
     """Back up the repos through the enabled layers and return the exit code."""
     seven_zip = None
     keyring_password = None
@@ -703,7 +703,7 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: ToolLogger) ->
     return 1 if failures else 0
 
 
-def is_bare_repo(path: Path, logger: ToolLogger) -> bool:
+def is_bare_repo(path: Path, logger: CliLogger) -> bool:
     """Return True when the directory itself is a bare repo, trusting it like a mirror."""
     trust = ["-c", f"safe.directory={git_path(path)}"]
     output = run_git([*trust, "-C", str(path), "rev-parse", "--is-bare-repository", "--absolute-git-dir"], logger, check=False)
@@ -711,7 +711,7 @@ def is_bare_repo(path: Path, logger: ToolLogger) -> bool:
     return len(lines) == 2 and lines[0] == "true" and Path(lines[1]).resolve() == path.resolve()
 
 
-def detect_source(path: Path, logger: ToolLogger) -> RestoreSource:
+def detect_source(path: Path, logger: CliLogger) -> RestoreSource:
     """Classify a restore source as an archive file or a bare mirror directory."""
     if path.is_file() and path.suffix.lower() == ".7z":
         return RestoreSource("archive", path)
@@ -720,7 +720,7 @@ def detect_source(path: Path, logger: ToolLogger) -> RestoreSource:
     raise UsageError(f"Unsupported restore source {path}; expected a .7z archive file or a bare mirror repo directory.")
 
 
-def find_named_source(name: str, settings: Settings, logger: ToolLogger) -> RestoreSource:
+def find_named_source(name: str, settings: Settings, logger: CliLogger) -> RestoreSource:
     """Look up a backup name in the mirror and archive directories, preferring the mirror."""
     # A colon would let a Windows drive prefix such as D:name escape the backup directories.
     if not name or any(part in name for part in ("/", "\\", "..", ":")):
@@ -786,13 +786,13 @@ def pick_head(refs: dict[str, str], head_commit: str | None) -> str | None:
     return branches[0] if branches else None
 
 
-def list_refs(repo: Path, logger: ToolLogger) -> dict[str, str]:
+def list_refs(repo: Path, logger: CliLogger) -> dict[str, str]:
     """Return the branches and tags of a repo mapped to their object names."""
     output = run_git(["-C", str(repo), "for-each-ref", "--format=%(refname) %(objectname)", *BACKED_UP_REFS], logger)
     return dict(line.split(" ", 1) for line in output.splitlines() if line)
 
 
-def fetch_backup(target: Path, source_url: str, extra: Sequence[str], logger: ToolLogger) -> None:
+def fetch_backup(target: Path, source_url: str, extra: Sequence[str], logger: CliLogger) -> None:
     """Fetch every branch and tag from a mirror or bundle into the target as local refs."""
     refspecs = ["+refs/heads/*:refs/heads/*", "+refs/tags/*:refs/tags/*"]
     run_git(["-C", str(target), "fetch", "-q", "--update-head-ok", *extra, source_url, *refspecs], logger)
@@ -803,7 +803,7 @@ def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\\''") + "'"
 
 
-def restore_from_mirror(mirror: Path, target: Path, logger: ToolLogger) -> str | None:
+def restore_from_mirror(mirror: Path, target: Path, logger: CliLogger) -> str | None:
     """Fetch the mirror into the target and return the branch the mirror's HEAD names."""
     mirror_path = git_path(mirror)
     trust = ["-c", f"safe.directory={mirror_path}"]
@@ -815,7 +815,7 @@ def restore_from_mirror(mirror: Path, target: Path, logger: ToolLogger) -> str |
     return head if head in refs else pick_head(refs, None)
 
 
-def restore_from_archive(archive: Path, target: Path, seven_zip: str, password: str, logger: ToolLogger) -> str | None:
+def restore_from_archive(archive: Path, target: Path, seven_zip: str, password: str, logger: CliLogger) -> str | None:
     """Extract the bundle from the archive, fetch it into the target, and return the branch to check out."""
     # Archives on cloud drives may download on first access, so say what the wait is for.
     logger.info(f"Extracting {archive}")
@@ -841,7 +841,7 @@ def restore_from_archive(archive: Path, target: Path, seven_zip: str, password: 
     return pick_head(refs, heads[0] if heads else None)
 
 
-def run_restore(settings: Settings, args: argparse.Namespace, logger: ToolLogger) -> int:
+def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger) -> int:
     """Restore one repo from a mirror or archive into the target directory and return the exit code."""
     if not args.target:
         raise UsageError("restore needs --target DIR.")
@@ -903,7 +903,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: ToolLogger
     return 0
 
 
-def run_action(action: str, args: argparse.Namespace, logger: ToolLogger) -> int:
+def run_action(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
     """Resolve the settings and run one action; raises UsageError for invalid arguments or configuration."""
     settings = resolve_settings(args, load_config(to_path(args.config) if args.config else None, logger=logger))
     if action == "set-password":
@@ -933,13 +933,13 @@ def run_action(action: str, args: argparse.Namespace, logger: ToolLogger) -> int
     return run_backup(settings, repos, logger)
 
 
-def action_handler(action: str) -> Callable[[argparse.Namespace, ToolLogger], int]:
+def action_handler(action: str) -> Callable[[argparse.Namespace, CliLogger], int]:
     """Return a harness handler running the action, mapping UsageError to exit code 2 and Ctrl+C to 130.
 
     Returning instead of raising lets the harness log the completion summary for interrupted actions too.
     """
 
-    def handle(args: argparse.Namespace, logger: ToolLogger) -> int:
+    def handle(args: argparse.Namespace, logger: CliLogger) -> int:
         try:
             return run_action(action, args, logger)
         except UsageError as exc:
@@ -981,14 +981,14 @@ class BackupHarness(ToolHarness):
         """Return the help screen, which documents option values, config files, and scheduling."""
         return get_long_usage(verbose=verbose)
 
-    def create_logger(self, args: argparse.Namespace) -> ToolLogger:
+    def create_logger(self, args: argparse.Namespace) -> CliLogger:
         """Record the config file and dry-run mode for the startup banner, then build the logger."""
         self.config_file = describe_config(args.config)
         self.dry_run = args.dry_run
         self.json_mode = getattr(args, "format", "text") == "json"
         return super().create_logger(args)
 
-    def log_startup(self, logger: ToolLogger, action: str, extra: dict[str, Any] | None = None) -> None:
+    def log_startup(self, logger: CliLogger, action: str, extra: dict[str, Any] | None = None) -> None:
         """Emit the standard startup banner including the config file and dry-run mode."""
         config = {"Config file": self.config_file, "Dry run": str(self.dry_run).lower(), **(extra or {})}
         if self.json_mode:
@@ -1004,7 +1004,7 @@ class BackupHarness(ToolHarness):
             return
         super().log_startup(logger, action, extra=config)
 
-    def log_completion(self, logger: ToolLogger, action: str, exit_code: int, started_at: float) -> None:
+    def log_completion(self, logger: CliLogger, action: str, exit_code: int, started_at: float) -> None:
         """Emit completion summary upon exit, suppressing stdout when JSON mode succeeds."""
         if self.json_mode and exit_code == 0:
             import time
@@ -1019,7 +1019,7 @@ class BackupHarness(ToolHarness):
         parser = super()._build_parser(action_name)
 
         def report_error(message: str) -> None:
-            ToolLogger().error(f"{message}\nUsage: {self.name} {action_name or '<action>'} [options]")
+            CliLogger().error(f"{message}\nUsage: {self.name} {action_name or '<action>'} [options]")
             sys.exit(2)
 
         parser.error = report_error  # type: ignore[method-assign]
@@ -1036,7 +1036,7 @@ class BackupHarness(ToolHarness):
             else:
                 message = f"Unknown subcommand: '{first}'"
             usage = f"Usage: {self.name} {{help|version|{'|'.join(self._actions)}}} [options]"
-            ToolLogger().error(f"{message}\n{usage}")
+            CliLogger().error(f"{message}\n{usage}")
             return 2
         return super().run(raw_args, extra_startup=extra_startup)
 
@@ -1072,10 +1072,6 @@ def build_harness() -> BackupHarness:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the command line and return its exit code."""
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    if hasattr(sys.stderr, "reconfigure"):
-        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
     return build_harness().run(argv)
 
 

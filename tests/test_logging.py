@@ -174,10 +174,8 @@ class ResolveAndNormalizeLogLevelTests(unittest.TestCase):
 
 class UnifiedTeeAndToolLoggerTests(unittest.TestCase):
     def test_logger_tees_to_file_and_console_with_matching_content(self) -> None:
-        from support_python.logging import TeeLogger, ToolLogger, format_invocation_start, init_cli_logger, log_message
+        from support_python.logging import format_invocation_start, init_cli_logger, log_message
 
-        self.assertIs(ToolLogger, CliLogger)
-        self.assertIs(TeeLogger, CliLogger)
         with TemporaryDirectory() as tmp:
             log_file = Path(tmp) / "tee.log"
             logger = CliLogger(log_file=log_file, log_level="INFO", verbose=True, origin="app")
@@ -241,6 +239,17 @@ class UnifiedTeeAndToolLoggerTests(unittest.TestCase):
             self.assertTrue(file_lines[0].endswith("] bare-line"))
             self.assertIn("**[DEBUG]** file-only-debug", file_lines[2])
             self.assertIn("**[DEBUG]** console-and-file-debug", file_lines[3])
+
+    def test_tool_logger_and_tee_logger_aliases_are_removed(self) -> None:
+        import support_python
+        import support_python.logging as logging_mod
+
+        for prefix in ("Tool", "Tee"):
+            alias = f"{prefix}Logger"
+            self.assertFalse(hasattr(logging_mod, alias), f"support_python.logging still exposes {alias}")
+            self.assertNotIn(alias, logging_mod.__all__)
+            self.assertFalse(hasattr(support_python, alias), f"support_python still exposes {alias}")
+            self.assertNotIn(alias, support_python.__all__)
 
 
 if __name__ == "__main__":

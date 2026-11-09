@@ -12,7 +12,6 @@ from ..durations import parse_date_or_datetime
 from ..logging import CliLogger
 from ..processes import list_processes, safe_kill
 from ..tables import render_output
-from ..terminal import configure_utf8_output
 
 TOOL_NAME = "processes"
 DESCRIPTION = "Safely terminate processes by PID and list running processes with hierarchy, path, and time filters."
@@ -147,13 +146,8 @@ def normalize_argv(argv: Sequence[str]) -> list[str]:
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse command-line arguments and execute the requested ``processes`` subcommand."""
-    configure_utf8_output()
     raw = list(sys.argv[1:] if argv is None else argv)
-    harness = build_harness()
-    if not raw:
-        print(harness.format_help(verbose=False), end="")
-        return 0
-    return harness.run(normalize_argv(raw))
+    return build_harness().run(normalize_argv(raw))
 
 
 __all__ = [
