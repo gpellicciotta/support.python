@@ -13,9 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 2471.6, input: 596568, output: 122704, cache_read: 18388540}
-work_duration: 1195.2
-review_status: pending
+  review: {turns: 2, duration_s: 357.8, input: 20, output: 5608, cache_read: 692278, cache_write: 7148}
+work_duration: 1458.0
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0029: Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback
 
@@ -64,4 +66,14 @@ Fix the stale help examples.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: Most goals are met.
+  - Findings: [review-findings-1.md](T0029-align-agent-files-with-adr-0003-canonical-sync/review-findings-1.md).
+
+- [2026-11-10] **[Verify]**
+  Verified 710 passed in pytest and updated task outcomes. Size note: 565 lines across 7 files includes updating internal unit test calls from update/diff to sync/check across test_agent_files.py.
+  - Files touched: 7.
+  - Lines touched: 565.
+  - Reopenings: 0.
 

@@ -38,7 +38,7 @@ Exit code: `0`
 .................................................................................................................................. [ 78%]
 ........................................................ [ 86%]
 ...............................................................................................              [100%]
-710 passed, 3 skipped, 66 subtests passed in 181.05s (0:03:01)
+710 passed, 3 skipped, 66 subtests passed in 396.15s (0:06:36)
 ```
 
 ### Focused Agent-Files Test Suite (Including Installed CLI Integration)
@@ -47,7 +47,7 @@ Exit code: `0`
 ```text
 .......................................................... [ 59%]
 ........................................                                 [100%]
-98 passed, 14 subtests passed in 5.49s
+98 passed, 14 subtests passed in 17.82s
 ```
 
 ### Installed CLI End-to-End Verification
@@ -58,37 +58,50 @@ Exit code: `0`
   {
     "tool": "claude-code",
     "command": "claude",
-    "status": "available",
     "available": true,
     "executable": "C:\\Users\\giova\\.local\\bin\\claude.EXE",
     "version": "2.1.306 (Claude Code)",
     "instructions_file": "C:\\Users\\giova\\.claude\\CLAUDE.md",
-    "target": "C:\\Users\\giova\\.claude\\CLAUDE.md",
-    "skills_dir": "C:\\Users\\giova\\.claude\\skills",
-    "skills_target": "C:\\Users\\giova\\.claude\\skills"
+    "skills_dir": "C:\\Users\\giova\\.claude\\skills"
   },
-[... 24 lines omitted ...]
+  {
+    "tool": "antigravity",
+    "command": "agy",
+    "available": true,
+    "executable": "C:\\Program Files\\agy\\bin\\agy.EXE",
+    "version": "1.3.3",
+    "instructions_file": "C:\\Users\\giova\\.gemini\\GEMINI.md",
+    "skills_dir": "C:\\Users\\giova\\.gemini\\config\\skills"
+  },
+  {
+    "tool": "codex-cli",
+    "command": "codex",
+    "available": true,
+    "executable": "C:\\Users\\giova\\AppData\\Local\\Programs\\OpenAI\\Codex\\bin\\codex.EXE",
+    "version": "codex-cli 0.164.0",
+    "instructions_file": "C:\\Users\\giova\\.codex\\AGENTS.md",
+    "skills_dir": "C:\\Users\\giova\\.agents\\skills"
   }
 ]
 ```
 
 ### Linting and Formatting Checks
-Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe check src/support_python/tools/agent_files.py src/support_python/tools/agent_files_config.py tests/tools/test_agent_files.py`
+Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe check .`
 Exit code: `0`
 ```text
 All checks passed!
 ```
 
-Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe format --check src/support_python/tools/agent_files.py src/support_python/tools/agent_files_config.py tests/tools/test_agent_files.py`
+Command: `C:\Dev-Projects\support.python\.venv\Scripts\ruff.exe format --check .`
 Exit code: `0`
 ```text
-3 files already formatted
+97 files already formatted
 ```
 
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\lint-markdown.exe check --offline docs/tools/agent-files.md`
 Exit code: `0`
 ```text
-Starting lint-markdown v2.0.10-pre+f0e01fb with configuration:
+Starting lint-markdown v2.0.11-pre+1e518c1 with configuration:
 - Command: check
 - Log file: none
 - Log level: INFO

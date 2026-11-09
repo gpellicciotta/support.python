@@ -27,6 +27,7 @@ agent-files version
 - docs/tools/agent-files.md
 - README.md
 - CHANGELOG.md
+- pyproject.toml
 
 ### Tests
 - Unit: help lists exactly `list`, `sync`, `check`, `review`, `help`, and `version`; `update` and `diff` exit 2.
