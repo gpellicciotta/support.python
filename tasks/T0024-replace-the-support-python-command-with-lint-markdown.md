@@ -5,9 +5,9 @@ session: antigravity-20261109-4e3d15
 needs: []
 branch: task/T0024-replace-the-support-python-command-with-lint-markdown
 worktree: .plan/work/T0024-replace-the-support-python-command-with-lint-markdown
-status: active
+status: completed
 started_at: "2026-11-09T19:56:03Z"
-ended_at: —
+ended_at: "2026-11-09T20:13:44Z"
 review: agent
 preview: none
 protocol: standard
@@ -15,13 +15,15 @@ size_status: approved
 size_estimate: 25 files, 2826 lines
 usage:
   worker: {turns: 6, duration_s: 3591.0, input: 1317030, output: 127478, cache_read: 27142550}
-  review: {turns: 2, duration_s: 381.2, input: 72, output: 20468, cache_read: 1923474, cache_write: 123458}
-work_duration: 2486.7
+  review: {turns: 4, duration_s: 720.0, input: 88, output: 24842, cache_read: 2389072, cache_write: 129108}
+work_duration: 3290.6
 size_approved: 25 files, 2826 lines
 size_approved_by: "@Giovanni Pellicciotta (delegated)"
 size_approved_at: "2026-11-09T19:39:18Z"
-review_status: pending
+review_status: approved
 review_round: 2
+reviewed_by: "@claude"
+completion-commit: 86225345037c66b2f05c339763fdfae997184a73
 ---
 # T0024: Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts
 
@@ -39,7 +41,7 @@ Document per-user and global installation of the tools in `README.md`.
 - [x] **[Implement]** Update pyproject.toml, cli.py, package exports, and the agent-files TOOL_NAME; delete the listed files.
 - [x] **[Verify]**    Reinstall editable, run the full suite, and run each console script's version action.
 - [x] **[Doc]**       Update README.md, CHANGELOG.md, docs/requirements.md, docs/agent-files.md, and docs/markdown-lint.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -102,4 +104,11 @@ Document per-user and global installation of the tools in `README.md`.
 
 - [2026-11-09] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 2 approved by @claude: Approved.
+  - Findings: [review-findings-2.md](T0024-replace-the-support-python-command-with-lint-markdown/review-findings-2.md).
+
+- [2026-11-09] **[Complete]**
+  Task completed successfully.
 

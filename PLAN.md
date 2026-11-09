@@ -9,8 +9,8 @@ An overview of all tasks and their planning.
 - [-] T0021 [reason: Superseded by T0024, which installs lint-markdown as a console script within the v2.0.0 tool restructuring.] Expose the Markdown linter as an installable lint-markdown console script.
 - [-] T0022 [reason: Superseded by T0024 and T0029, which install agent-files and align its verbs and tool name.] Expose the agent-files sync as an installable agent-files console script.
 - [x] T0023 Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre.
-- [ ] T0024 [owner: @gemini] Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts.
-- [ ] T0025 [needs: T0024] Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes.
+- [x] T0024 Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts.
+- [ ] T0025 Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes.
 - [ ] T0026 [needs: T0025] Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module.
 - [ ] T0027 [needs: T0025] Rename backup-git-repos to git-repository-backup, read its legacy config with a warning, and add JSON list output.
 - [ ] T0028 [needs: T0026, T0027] Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
