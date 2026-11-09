@@ -7,7 +7,7 @@ An overview of all tasks and their planning.
 - [ ] T0019 [needs: T0029] Port the dev-guidelines agent digest generator into support_python unchanged with an agent-digest CLI and ported tests.
 - [ ] T0020 [needs: T0019] Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold freshness checks into validate.
 - [-] T0021 [reason: Superseded by T0024, which installs lint-markdown as a console script within the v2.0.0 tool restructuring.] Expose the Markdown linter as an installable lint-markdown console script.
-- [ ] T0022 Expose the agent-files sync as an installable agent-files console script.
+- [-] T0022 [reason: Superseded by T0024 and T0029, which install agent-files and align its verbs and tool name.] Expose the agent-files sync as an installable agent-files console script.
 - [ ] T0023 Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre.
 - [ ] T0024 [needs: T0023] Replace the support-python command with lint-markdown, agent-files, and git-repository-backup console scripts, and drop the wrapper scripts.
 - [ ] T0025 [needs: T0024] Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes.
