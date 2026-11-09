@@ -17,6 +17,8 @@
 - src/support_python/tools/agent_files.py
 - pyproject.toml
 - tests/tools/test_agent_digest.py
+- tests/tools/test_agent_files.py
+- tests/test_console_scripts.py
 - README.md
 - CHANGELOG.md
 

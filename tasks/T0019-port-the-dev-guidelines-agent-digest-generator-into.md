@@ -1,11 +1,12 @@
 ---
 id: T0019
-owner: ~
-needs: ['T0029']
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@gemini"
+session: antigravity-20261110-615440
+needs: []
+branch: task/T0019-port-the-dev-guidelines-agent-digest-generator-into
+worktree: .plan/work/T0019-port-the-dev-guidelines-agent-digest-generator-into
+status: active
+started_at: "2026-11-09T23:24:25Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Take the sources from dev-guidelines commit `38e0de0`, because dev-guidelines de
 Generalization follows in T0020.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the script, its tests, and agent_files digest loading at dev-guidelines commit 38e0de0.
-- [ ] **[Implement]** Copy the script and tests, move real-repo tests onto fixtures, and fix imports.
-- [ ] **[Verify]**    Confirm the ported tests fail only on the missing console script registration.
-- [ ] **[Implement]** Register the agent-digest console script and packaged-module loading in tools.agent_files.
-- [ ] **[Verify]**    Run the full suite and the dev-guidelines integration check at commit 38e0de0.
-- [ ] **[Doc]**       Update CHANGELOG.md and README.md with the agent-digest command.
+- [x] **[Read]**      Read the script, its tests, and agent_files digest loading at dev-guidelines commit 38e0de0.
+- [x] **[Implement]** Copy the script and tests, move real-repo tests onto fixtures, and fix imports.
+- [x] **[Verify]**    Confirm the ported tests fail only on the missing console script registration.
+- [x] **[Implement]** Register the agent-digest console script and packaged-module loading in tools.agent_files.
+- [x] **[Verify]**    Run the full suite and the dev-guidelines integration check at commit 38e0de0.
+- [x] **[Doc]**       Update CHANGELOG.md and README.md with the agent-digest command.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -38,3 +39,25 @@ Generalization follows in T0020.
 
 - [2026-11-09] **[Decide]**
   Retargeted to the v2.0.0 layout: no support-python action and no wrapper script; the tool lives in support_python.tools, per ADR-0003.
+
+- [2026-11-10] **[Read]**
+  Read generate-agent-digest.py, test_generate_agent_digest.py, and agent_files digest loading at dev-guidelines commit 38e0de0.
+
+- [2026-11-10] **[Implement]**
+  Copied generate-agent-digest.py and tests from dev-guidelines 38e0de0 into agent_digest.py and test_agent_digest.py, moved real-repo tests onto fixtures, and updated imports.
+
+- [2026-11-10] **[Verify]**
+  Confirmed ported tests in test_agent_digest.py pass 37 in-process cases and fail only on the 4 end-to-end console script checks.
+
+- [2026-11-10] **[Implement]**
+  Registered the agent-digest console script in pyproject.toml and wired tools.agent_files.get_digest_generator to import support_python.tools.agent_digest.
+
+- [2026-11-10] **[Doc]**
+  Updated README.md and CHANGELOG.md (v2.0.13-pre) with the agent-digest command.
+
+- [2026-11-10] **[Verify]**
+  Verified 753 passed tests (task-118), clean ruff checks, and dev-guidelines 38e0de0 integration check (check, validate, and generate).
+  - Files touched: 6.
+  - Lines touched: 115.
+  - Reopenings: 0.
+
