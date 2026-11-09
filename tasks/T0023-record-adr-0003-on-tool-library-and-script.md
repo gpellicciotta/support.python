@@ -12,12 +12,11 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 4, duration_s: 1034.8, input: 288204, output: 40242, cache_read: 5162610}
+  worker: {turns: 6, duration_s: 1506.4, input: 390478, output: 62030, cache_read: 8904012}
   review: {turns: 2, duration_s: 384.0, input: 64, output: 18684, cache_read: 1743992, cache_write: 112662}
 work_duration: 754.3
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 ---
 # T0023: Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre
 
@@ -77,4 +76,7 @@ Replace the stale pre-1.0 semver note in `CLAUDE.md`.
   - Files touched: 8.
   - Lines touched: 230.
   - Reopenings: 0.
+
+- [2026-11-09] **[Review]**
+  Round 2 requested (mode: agent).
 
