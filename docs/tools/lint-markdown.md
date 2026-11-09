@@ -1,11 +1,11 @@
 # Markdown Linter Rules and Profiles
 
-Automated Markdown style, structure, and link validation implemented in [markdown_lint.py](../src/support_python/markdown_lint.py) with rule classes in [rules.py](../src/support_python/markdown/rules.py), registry in [registry.py](../src/support_python/markdown/registry.py), and loadable profiles in [profiles.py](../src/support_python/markdown/profiles.py).
+Automated Markdown style, structure, and link validation implemented in [lint.py](../../src/support_python/markdown/lint.py) and CLI module [lint_markdown.py](../../src/support_python/tools/lint_markdown.py), with rule classes in [rules.py](../../src/support_python/markdown/rules.py), registry in [registry.py](../../src/support_python/markdown/registry.py), and loadable profiles in [profiles.py](../../src/support_python/markdown/profiles.py).
 
 ---
 
 ## Command-Line Interface
-Run Markdown linting through the `lint-markdown` console script in [markdown_lint.py](../src/support_python/markdown_lint.py):
+Run Markdown linting through the `lint-markdown` console script in [lint_markdown.py](../../src/support_python/tools/lint_markdown.py):
 ```bash
 lint-markdown [check|fix] [PATH ...] [--profile PROFILE] [--config PATH] [--rules RULES] [--offline] [--fix]
 ```
@@ -21,7 +21,7 @@ Supported profile and rule options:
 ---
 
 ## Built-In Profiles
-The profile loader in [profiles.py](../src/support_python/markdown/profiles.py) provides two built-in profiles:
+The profile loader in [profiles.py](../../src/support_python/markdown/profiles.py) provides two built-in profiles:
 - `default` enables generic rules (`MD001` through `MD014` and `MD016` through `MD019`), leaving `MD015` and historical-task exemptions disabled.
 - `dev-guidelines` enables all 19 rules (`MD001` through `MD019`, including `MD015`) and activates `.plan/tasks/` historical-task exemptions.
 - On the CLI, omitting both `--profile` and `.markdown-lint.json` selects `default`.
@@ -54,7 +54,7 @@ When `--config` is omitted, the CLI discovers `.markdown-lint.json` in the targe
 ---
 
 ## Rule Registry
-All 19 `MD001`–`MD019` rule classes inherit from `Rule` in [registry.py](../src/support_python/markdown/registry.py) and register in `DEFAULT_REGISTRY`:
+All 19 `MD001`–`MD019` rule classes inherit from `Rule` in [registry.py](../../src/support_python/markdown/registry.py) and register in `DEFAULT_REGISTRY`:
 - Look up rules by ID or slug via `DEFAULT_REGISTRY.get("MD001")` or `DEFAULT_REGISTRY.get("heading-increment")`.
 - Filter rules in registration order with `DEFAULT_REGISTRY.select(["MD001", "MD017"])`.
 - Run a single rule class standalone via `rule.lint(content, file_path=...)`.

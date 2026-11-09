@@ -1,7 +1,17 @@
-"""Markdown table formatting utilities, lint rule registry, rule classes, and profiles."""
+"""Markdown table formatting utilities, linter engine, rule registry, rule classes, and profiles."""
 
 from __future__ import annotations
 
+from support_python.markdown.lint import (
+    DEFAULT_EXCLUDES,
+    LintIssue,
+    MarkdownLinter,
+    discover_markdown_files,
+    find_git_ignored,
+    find_project_root,
+    parse_rule_codes,
+    should_exclude,
+)
 from support_python.markdown.profiles import (
     ALL_RULE_IDS,
     DEFAULT_CONFIG_FILENAME,
@@ -55,12 +65,14 @@ __all__ = [
     "ALL_RULE_CLASSES",
     "ALL_RULE_IDS",
     "DEFAULT_CONFIG_FILENAME",
+    "DEFAULT_EXCLUDES",
     "DEFAULT_PROFILE",
     "DEFAULT_REGISTRY",
     "DEFAULT_RULES",
     "DEV_GUIDELINES_PROFILE",
     "GENERIC_RULE_IDS",
     "LintContext",
+    "LintIssue",
     "LintProfile",
     "MD001HeadingIncrement",
     "MD002SingleH1",
@@ -81,18 +93,24 @@ __all__ = [
     "MD017AlignedTables",
     "MD018ValidExternalLinks",
     "MD019FileReferencesAsLinks",
+    "MarkdownLinter",
     "PROFILES",
     "RULES_BY_ID",
     "Rule",
     "RuleRegistry",
     "TableAlignmentIssue",
     "check_table_alignment",
+    "discover_markdown_files",
     "find_delimiter_pipes",
+    "find_git_ignored",
+    "find_project_root",
     "format_markdown_table",
     "format_markdown_table_block",
     "get_profile",
     "is_table_delimiter_row",
     "load_profile",
+    "parse_rule_codes",
+    "should_exclude",
     "split_table_row",
     "strip_ansi",
     "visible_width",

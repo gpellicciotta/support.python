@@ -10,7 +10,7 @@ import urllib.parse
 from support_python.markdown.registry import LintContext, Rule, RuleRegistry
 
 if TYPE_CHECKING:
-    from support_python.markdown_lint import LintIssue
+    from support_python.markdown.lint import LintIssue
 
 _RE_HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
 _RE_NUMBERED_HEADING = re.compile(r"^(#{1,6})\s+(?:\d+(?:\.\d+)*[\.\)]?|\d+\s*[-–—])\s+(.*)$")
@@ -345,7 +345,7 @@ class MD017AlignedTables(Rule):
     description = "Markdown table columns must be vertically aligned with padding spaces"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
-        from support_python.markdown_lint import check_table_alignment
+        from support_python.markdown.lint import check_table_alignment
 
         return check_table_alignment(ctx.lines, file_path=ctx.file_path, rule_id=self.rule_id, rule_name=self.name)
 
@@ -375,7 +375,7 @@ class MD019FileReferencesAsLinks(Rule):
     description = "File references in prose must be formatted as markdown links"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
-        from support_python.markdown_lint import MarkdownLinter
+        from support_python.markdown.lint import MarkdownLinter
 
         if ctx.is_historical_task or ctx.in_released_changelog:
             return []

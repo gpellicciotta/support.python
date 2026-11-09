@@ -10,13 +10,15 @@ from unittest.mock import patch
 
 import pytest
 
-from support_python import markdown_lint as lint_markdown
+import support_python
 from support_python.markdown import (
     ALL_RULE_CLASSES,
     DEFAULT_PROFILE,
     DEFAULT_REGISTRY,
     DEV_GUIDELINES_PROFILE,
+    LintIssue,
     LintProfile,
+    MarkdownLinter,
     Rule,
     RuleRegistry,
     TableAlignmentIssue,
@@ -24,17 +26,23 @@ from support_python.markdown import (
     format_markdown_table,
     load_profile,
 )
+from support_python.markdown.lint import LintIssue as EngineLintIssue, MarkdownLinter as EngineMarkdownLinter
 from support_python.markdown.profiles import PROFILES
 from support_python.markdown.registry import LintContext
+from support_python.tools import lint_markdown
 
 
 def test_markdown_package_preserves_table_exports() -> None:
-    """Ensure the support_python.markdown package re-exports existing table helpers."""
+    """Ensure the support_python.markdown package and root re-export table and lint helpers."""
     table = format_markdown_table(["A", "B"], [["1", "2"]])
     assert "| A   | B   |" in table
     assert check_table_alignment(table) == []
     issue = TableAlignmentIssue(line_number=1, column_number=1, message="test")
     assert issue.line_number == 1
+    assert MarkdownLinter is EngineMarkdownLinter
+    assert LintIssue is EngineLintIssue
+    assert support_python.MarkdownLinter is EngineMarkdownLinter
+    assert support_python.LintIssue is EngineLintIssue
 
 
 def test_rule_registry_contains_all_rules_and_validates_selection() -> None:
@@ -42,7 +50,7 @@ def test_rule_registry_contains_all_rules_and_validates_selection() -> None:
     expected_ids = [f"MD{i:03d}" for i in range(1, 20)]
     assert len(ALL_RULE_CLASSES) == 19
     assert DEFAULT_REGISTRY.rule_ids() == expected_ids
-    assert DEFAULT_REGISTRY.as_rules_dict() == lint_markdown.MarkdownLinter.RULES
+    assert DEFAULT_REGISTRY.as_rules_dict() == MarkdownLinter.RULES
 
     rule1 = DEFAULT_REGISTRY.get("MD001")
     assert isinstance(rule1, Rule)
@@ -194,9 +202,9 @@ def test_default_vs_dev_guidelines_profile_behavior_and_t0014_parity(tmp_path: P
     doc = tmp_path / "guide.md"
     doc.write_bytes(b"# Guide\n\n## Section\n\nParagraph after blank line.\n")
 
-    default_linter = lint_markdown.MarkdownLinter(profile="default", offline=True, project_root=tmp_path)
-    dg_linter = lint_markdown.MarkdownLinter(profile="dev-guidelines", offline=True, project_root=tmp_path)
-    legacy_linter = lint_markdown.MarkdownLinter(offline=True, project_root=tmp_path)
+    default_linter = MarkdownLinter(profile="default", offline=True, project_root=tmp_path)
+    dg_linter = MarkdownLinter(profile="dev-guidelines", offline=True, project_root=tmp_path)
+    legacy_linter = MarkdownLinter(offline=True, project_root=tmp_path)
 
     # On guide.md: default ignores MD015, dev-guidelines flags MD015
     assert default_linter.lint_content(doc, doc.read_bytes()) == []

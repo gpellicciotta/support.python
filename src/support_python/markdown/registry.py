@@ -8,7 +8,7 @@ import re
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Sequence
 
 if TYPE_CHECKING:
-    from support_python.markdown_lint import LintIssue
+    from support_python.markdown.lint import LintIssue
 
 
 @dataclass
@@ -56,7 +56,7 @@ class Rule:
         column_number: int = 1,
     ) -> LintIssue:
         """Construct a LintIssue for this rule at the given location."""
-        from support_python.markdown_lint import LintIssue
+        from support_python.markdown.lint import LintIssue
 
         return LintIssue(
             file_path=ctx.file_path,
@@ -81,7 +81,7 @@ class Rule:
         offline: bool = False,
     ) -> list[LintIssue]:
         """Run only this rule against raw Markdown content and return reported issues."""
-        from support_python.markdown_lint import MarkdownLinter
+        from support_python.markdown.lint import MarkdownLinter
 
         raw_bytes = content.encode("utf-8") if isinstance(content, str) else content
         registry = RuleRegistry([self])

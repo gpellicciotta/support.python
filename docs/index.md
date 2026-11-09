@@ -16,7 +16,7 @@ Overview of all documentation for the `support-python` project.
 - [Process helpers and CLI](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI.
 - [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
 - [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
-- [Markdown linter](markdown-lint.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also [README](../README.md#markdown-linter)).
+- [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also [README](../README.md#markdown-linter)).
 - [Agent files sync](tools/agent-files.md): Global agent instructions, skills synchronization, `agent-files.json` schema, and `ToolRegistry` exposed via `agent-files` (see also [README](../README.md#agent-files-sync)).
 - [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
 - [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
