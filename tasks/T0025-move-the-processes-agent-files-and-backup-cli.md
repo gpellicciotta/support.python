@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 2209.2, input: 532622, output: 111262, cache_read: 16184400}
-review_status: pending
+  review: {turns: 2, duration_s: 529.4, input: 72, output: 18578, cache_read: 2058826, cache_write: 119324}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1387.2
 ---
 # T0025: Move the processes, agent-files, and backup CLI modules into the support_python.tools package without behavior changes
 
@@ -60,4 +63,23 @@ Change no behavior: existing tests must pass with only import and path fix-ups.
 
 - [2026-11-09] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-09] **[Review]**
+  Round 1 rejected by @claude: The moves themselves are correct and complete.
+  - Findings: [review-findings-1.md](T0025-move-the-processes-agent-files-and-backup-cli/review-findings-1.md).
+
+- [2026-11-09] **[Decide]**
+  Left src/support_python/__init__.py unchanged because main had no agent-files re-exports and importing support_python.tools.agent_files at package root added import-time filesystem side effects.
+
+- [2026-11-09] **[Implement]**
+  Removed package-root tool imports, updated CLAUDE.md and undeclared docs/requirements.md (recount: 18 files, 122 lines), and noted shared .venv editable install must be reinstalled from main after merge.
+
+- [2026-11-09] **[Verify]**
+  Verified post-rework test suite (695 passed, task-213), ruff check/format, lint-markdown, and CLI integration commands.
+
+- [2026-11-09] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 18.
+  - Lines touched: 122.
+  - Reopenings: 0.
 

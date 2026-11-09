@@ -72,7 +72,9 @@ Installing collected packages: support-python
 Successfully installed support-python-2.0.4rc0
 ```
 
-### Automated Test Suite
+> Note: The editable install above used the main checkout's shared `.venv`; reinstall from the main checkout after merge.
+
+### Automated Test Suite (Post-Rework)
 Command: `C:/Dev-Projects/support.python/.venv/Scripts/python.exe -m pytest -q`
 Exit code: `0`
 
@@ -87,10 +89,10 @@ Exit code: `0`
 ............................................................ [ 80%]
 .............................................................. [ 89%]
 ..........................................................................                               [100%]
-695 passed, 3 skipped, 64 subtests passed in 171.20s (0:02:51)
+695 passed, 3 skipped, 64 subtests passed in 171.06s (0:02:51)
 ```
 
-### CLI Integration Verification
+### CLI Integration Verification (Post-Rework)
 Command: `C:/Dev-Projects/support.python/.venv/Scripts/processes.exe list --format json`
 Exit code: `0`
 
@@ -118,7 +120,7 @@ Command: `C:/Dev-Projects/support.python/.venv/Scripts/agent-files.exe list`
 Exit code: `0`
 
 ```text
-Starting agent-files v2.0.4-pre+8622534 with configuration:
+Starting agent-files v2.0.4-pre+2265507 with configuration:
 - Command: list
 - Log file: none
 - Log level: INFO
@@ -130,17 +132,17 @@ Tool         Command  Status     Executable                                     
 claude-code  claude   available  C:\Users\giova\.local\bin\claude.EXE                              2.1.306 (Claude Code)  C:\Users\giova\.claude\CLAUDE.md  C:\Users\giova\.claude\skills       
 antigravity  agy      available  C:\Program Files\agy\bin\agy.EXE                                  1.3.3                  C:\Users\giova\.gemini\GEMINI.md  C:\Users\giova\.gemini\config\skills
 codex-cli    codex    available  C:\Users\giova\AppData\Local\Programs\OpenAI\Codex\bin\codex.EXE  codex-cli 0.164.0      C:\Users\giova\.codex\AGENTS.md   C:\Users\giova\.agents\skills       
-Finished agent-files list in 0.4s with status: succeeded
+Finished agent-files list in 0.5s with status: succeeded
 ```
 
 Command: `C:/Dev-Projects/support.python/.venv/Scripts/git-repository-backup.exe version`
 Exit code: `0`
 
 ```text
-backup-git-repos v2.0.4-pre+8622534 - Copyright (c) Giovanni Pellicciotta
+backup-git-repos v2.0.4-pre+2265507 - Copyright (c) Giovanni Pellicciotta
 ```
 
-### Linting & Formatting Verification
+### Linting & Formatting Verification (Post-Rework)
 Command: `C:/Dev-Projects/support.python/.venv/Scripts/ruff.exe check .`
 Exit code: `0`
 
@@ -159,7 +161,7 @@ Command: `C:/Dev-Projects/support.python/.venv/Scripts/python.exe -m support_pyt
 Exit code: `0`
 
 ```text
-Starting lint-markdown v2.0.4-pre+8622534 with configuration:
+Starting lint-markdown v2.0.4-pre+2265507 with configuration:
 - Command: check
 - Log file: none
 - Log level: INFO

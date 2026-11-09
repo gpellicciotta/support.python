@@ -3,7 +3,7 @@ task: T0025
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-09T20:32:41Z
+reviewed_at: 2026-11-09T20:37:10Z
 reviewed_commit: "2265507"
 base_commit: "8622534"
 branch: task/T0025-move-the-processes-agent-files-and-backup-cli
