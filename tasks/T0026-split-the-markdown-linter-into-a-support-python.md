@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3183.0, input: 761564, output: 185354, cache_read: 16610146}
+review_status: pending
+review_round: 1
 ---
 # T0026: Split the Markdown linter into a support_python.markdown.lint engine and a support_python.tools.lint_markdown CLI module
 
@@ -56,4 +60,7 @@ Repoint the `lint-markdown` console script, imports, tests, and docs, changing n
 
 - [2026-11-09] **[Verify]**
   Verified editable install, full pytest suite (698 passed, task-116), ruff checks, and pre/post-split lint-markdown output (recount: 16 files, 1226 lines).
+
+- [2026-11-09] **[Review]**
+  Round 1 requested (mode: agent).
 
