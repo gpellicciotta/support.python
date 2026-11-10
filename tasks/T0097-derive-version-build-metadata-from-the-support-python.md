@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 2561.8, input: 1509646, output: 191684, cache_read: 29324806}
+  worker: {turns: 4, duration_s: 3181.2, input: 2248104, output: 238964, cache_read: 46461386}
   review: {turns: 2, duration_s: 617.8, input: 52, output: 11932, cache_read: 1080768, cache_write: 70490}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 work_duration: 1613.2
 ---
 # T0097: Derive version build metadata from the support.python checkout, not an enclosing repository
@@ -60,4 +59,7 @@ Completion check: a test installing into a venv inside a foreign Git repository 
 
 - [2026-11-10] **[Verify]**
   Verified 36 tests passing including consumer and source checkout unit tests.
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
