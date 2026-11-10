@@ -221,7 +221,7 @@ def test_is_process_alive_current_dead_and_expected_start() -> None:
     stale_start = start_dt - timedelta(seconds=60)
     assert is_process_alive(current_pid, expected_start=stale_start, slack_seconds=2.0) is False
 
-    aware_stale = datetime.now(timezone.utc) - timedelta(seconds=60)
+    aware_stale = start_dt.astimezone(timezone.utc) - timedelta(seconds=60)
     assert is_process_alive(current_pid, expected_start=aware_stale, slack_seconds=2.0) is False
 
 

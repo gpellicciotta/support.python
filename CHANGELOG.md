@@ -12,7 +12,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.36-pre
+## v2.0.37-pre
 - Docs: Restructured [README.md](README.md) into bootstrap, build, install, command-line tool, and library sections linking each tool page and tutorial, grouped [index.md](docs/index.md) by tools and tutorials, and refreshed the [devops.md](docs/devops.md) scripts table.
 - Docs: Moved the README Git, locking, process, file, Markdown, duration, and rate limiter sections into five [docs/tutorials](docs/tutorials/) pages, and added a Markdown linter library example to [markdown.md](docs/tutorials/markdown.md).
 - Docs: Moved the README CLI, logging, script utility, REST client, view capture, SQL anonymizer, and model sections into five [docs/tutorials](docs/tutorials/) pages, starting at [cli-harness-and-logging.md](docs/tutorials/cli-harness-and-logging.md).
