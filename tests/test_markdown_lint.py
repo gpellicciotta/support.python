@@ -599,6 +599,45 @@ class TestRuleMD018ValidExternalLinks(unittest.TestCase):
             self.assertEqual(md018[0].line_number, 3)
             self.assertIn("failed validation", md018[0].message)
 
+    def test_external_url_head_404_retries_get_success(self) -> None:
+        import urllib.error
+        from unittest.mock import MagicMock
+
+        content = b"# Links\n\nSee [Web Awesome](https://webawesome.com).\n"
+
+        def fake_urlopen(req: urllib.request.Request, timeout: float = 5.0) -> MagicMock:
+            if req.get_method() == "HEAD":
+                raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+            if req.get_method() == "GET":
+                resp = MagicMock()
+                resp.status = 200
+                resp.__enter__.return_value = resp
+                resp.__exit__.return_value = False
+                return resp
+            raise AssertionError(f"Unexpected method: {req.get_method()}")
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen) as mock_open:
+            issues = self.linter.lint_content(Path("test.md"), content)
+            md018 = [i for i in issues if i.rule_id == "MD018"]
+            self.assertEqual(md018, [])
+            self.assertEqual(mock_open.call_count, 2)
+
+    def test_external_url_head_404_retries_get_failure(self) -> None:
+        import urllib.error
+
+        content = b"# Links\n\nSee [Bad](https://broken-service-link.org/404).\n"
+
+        def fake_urlopen(req: urllib.request.Request, timeout: float = 5.0) -> None:
+            raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen) as mock_open:
+            issues = self.linter.lint_content(Path("test.md"), content)
+            md018 = [i for i in issues if i.rule_id == "MD018"]
+            self.assertEqual(len(md018), 1)
+            self.assertEqual(md018[0].line_number, 3)
+            self.assertIn("failed validation: HTTP 404", md018[0].message)
+            self.assertEqual(mock_open.call_count, 2)
+
     def test_offline_mode_skips_external_validation(self) -> None:
         linter = MarkdownLinter(offline=True)
         content = b"# Links\n\nSee [Broken](https://unreachable-host-example.com/bad).\n"

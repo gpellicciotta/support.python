@@ -267,6 +267,28 @@ class TestCLIAndMain(unittest.TestCase):
             (Path(tmp_dir) / "doc.md").write_bytes(b"# Title\n\nSee [Fake](https://invalid-host-test.org/404).\n")
             self.assertEqual(run_main(["check", "--offline", tmp_dir])[0], 0)
 
+    def test_check_retries_get_when_head_returns_404(self) -> None:
+        import urllib.error
+        from unittest.mock import MagicMock
+
+        def fake_urlopen(req: urllib.request.Request, timeout: float = 5.0) -> MagicMock:
+            if req.get_method() == "HEAD":
+                raise urllib.error.HTTPError(req.full_url, 404, "Not Found", {}, None)
+            if req.get_method() == "GET":
+                resp = MagicMock()
+                resp.status = 200
+                resp.__enter__.return_value = resp
+                resp.__exit__.return_value = False
+                return resp
+            raise AssertionError(f"Unexpected method: {req.get_method()}")
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            (Path(tmp_dir) / "doc.md").write_bytes(b"# Title\n\nSee [Web Awesome](https://webawesome.com).\n")
+            with patch("urllib.request.urlopen", side_effect=fake_urlopen) as mock_open:
+                code, out, _ = run_main(["check", "--rules", "MD018", tmp_dir])
+                self.assertEqual(code, 0)
+                self.assertEqual(mock_open.call_count, 2)
+
     def test_timeout_flag_in_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             (Path(tmp_dir) / "clean.md").write_bytes(b"# Title\n\n- Bullet item\n")

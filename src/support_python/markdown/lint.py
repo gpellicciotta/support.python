@@ -542,36 +542,34 @@ class MarkdownLinter:
         if check_url.endswith(".git") and "github.com" in netloc:
             check_url = check_url[:-4]
 
-        status: Optional[str] = None
-        try:
-            req = urllib.request.Request(check_url, headers=headers, method="HEAD")
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                if resp.status >= 400:
-                    status = f"HTTP {resp.status}"
-        except urllib.error.HTTPError as e:
-            if e.code in (401, 403, 405):
-                try:
-                    req_get = urllib.request.Request(check_url, headers=headers, method="GET")
-                    with urllib.request.urlopen(req_get, timeout=self.timeout) as resp:
-                        if resp.status >= 400:
-                            status = f"HTTP {resp.status}"
-                except urllib.error.HTTPError as e2:
-                    status = f"HTTP {e2.code}"
-                except Exception as e2:
-                    status = str(e2)
-            else:
-                status = f"HTTP {e.code}"
-        except Exception:
-            # Fallback to GET on timeout or connection errors
+        def _get() -> Optional[str]:
             try:
                 req_get = urllib.request.Request(check_url, headers=headers, method="GET")
                 with urllib.request.urlopen(req_get, timeout=self.timeout) as resp:
                     if resp.status >= 400:
-                        status = f"HTTP {resp.status}"
-            except urllib.error.HTTPError as e2:
-                status = f"HTTP {e2.code}"
-            except Exception as e2:
-                status = str(e2)
+                        return f"HTTP {resp.status}"
+                    return None
+            except urllib.error.HTTPError as e:
+                return f"HTTP {e.code}"
+            except Exception as e:
+                return str(e)
+
+        status: Optional[str] = None
+        try:
+            req = urllib.request.Request(check_url, headers=headers, method="HEAD")
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                if resp.status in (401, 403, 404, 405):
+                    status = _get()
+                elif resp.status >= 400:
+                    status = f"HTTP {resp.status}"
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403, 404, 405):
+                status = _get()
+            else:
+                status = f"HTTP {e.code}"
+        except Exception:
+            # Fallback to GET on timeout or connection errors
+            status = _get()
 
         self._url_cache[url] = status
         return status
