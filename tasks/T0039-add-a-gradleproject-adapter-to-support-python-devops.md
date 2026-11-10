@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 787.4, input: 136, output: 49656, cache_read: 4459302, cache_write: 144140}
+work_duration: 406.1
 ---
 # T0039: Add a GradleProject adapter to support_python.devops for gradlew-based lint, test, build, check, clean, and release
 
@@ -58,4 +61,8 @@ Allow delegating `release` to a Gradle task instead of `ReleasePipeline`.
 - [2026-11-10] **[Doc]**
   Documented GradleProject's task mapping, overrides, assets, and release delegation in README.md and CHANGELOG.md.
   - lint-markdown reports no new issues on the edited lines.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF018.
 
