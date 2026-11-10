@@ -22,6 +22,27 @@ Repository scripts keep pinning the library in their own `scripts/requirements.t
 support-python @ git+https://github.com/gpellicciotta/support.python.git@v2.0.0
 ```
 
+Install that file into a project-local `.venv`, not into a shared interpreter.
+v1.x and v2.0.0 pins conflict in one interpreter: upgrading one project breaks every sibling still on v1.x.
+Let the bootstrap script create `.venv` and install `scripts/requirements.txt` there.
+Start each script that imports `support_python` with a stdlib prelude that reruns it in that venv:
+```python
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+VENV_DIR = REPO_ROOT / ".venv"
+VENV_PYTHON = VENV_DIR / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+
+if __name__ == "__main__" and VENV_PYTHON.is_file() and Path(sys.prefix).resolve() != VENV_DIR.resolve():
+    sys.exit(subprocess.run([str(VENV_PYTHON), str(Path(__file__).resolve()), *sys.argv[1:]], check=False).returncode)
+
+from support_python.devops import DevopsCli  # noqa: E402
+```
+
+CI jobs can keep installing `scripts/requirements.txt` into the interpreter that `setup-python` provides.
+
 ---
 
 ## Commands
@@ -134,6 +155,14 @@ Removed names and their replacements:
 | `configure_utf8_output()` in tool `main` | Drop the call; `ToolHarness.run` configures UTF-8 streams |
 
 `run_capture_cli` log lines no longer carry a `cli_name` origin.
+
+Kept names changed behavior; update tests that assert exact output:
+- `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.
+- `format_log_message` and `CliLogger` stamp UTC times and keep blank lines inside multi-line messages.
+- `CliLogger.log_start` opens with `Starting {{name}} v{{version}} with configuration:`, as `ToolHarness` does.
+- `ToolHarness` runs its fallback action only when the first argument is not an option.
+  A v1.x `tool --url x` call now exits `2`; name the action, as in `tool run --url x`.
+
 `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` import from `support_python.markdown` or the package root.
 
 A v1.x `build_action_parser` script becomes a `ToolHarness`:
