@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import importlib.util
 import json
 import os
 import re
@@ -80,17 +79,17 @@ _INITIAL_SKILLS_DIR = SKILLS_DIR
 
 def _resolve_repo_root() -> Path:
     """Return REPO_ROOT if overridden by a caller, or resolve from the current working directory."""
-    return REPO_ROOT if REPO_ROOT != _INITIAL_REPO_ROOT else find_project_root()
+    return REPO_ROOT if REPO_ROOT is not _INITIAL_REPO_ROOT else find_project_root()
 
 
 def _resolve_digest_path() -> Path:
     """Return DIGEST_PATH if overridden by a caller, or resolve under the active repository root."""
-    return DIGEST_PATH if DIGEST_PATH != _INITIAL_DIGEST_PATH else _resolve_repo_root() / "guidelines" / "agent-digest.md"
+    return DIGEST_PATH if DIGEST_PATH is not _INITIAL_DIGEST_PATH else _resolve_repo_root() / "guidelines" / "agent-digest.md"
 
 
 def _resolve_skills_dir() -> Path:
     """Return SKILLS_DIR if overridden by a caller, or resolve under the active repository root."""
-    return SKILLS_DIR if SKILLS_DIR != _INITIAL_SKILLS_DIR else _resolve_repo_root() / "skills"
+    return SKILLS_DIR if SKILLS_DIR is not _INITIAL_SKILLS_DIR else _resolve_repo_root() / "skills"
 
 
 DEFAULT_TIMEOUT_SECONDS = 900
@@ -222,18 +221,10 @@ _INITIAL_TOOLS: list[Tool] = list(TOOLS)
 
 
 def get_digest_generator():
-    """Dynamically load generate-agent-digest.py if present."""
-    try:
-        generator_path = _resolve_repo_root() / "scripts" / "generate-agent-digest.py"
-        if generator_path.is_file():
-            spec = importlib.util.spec_from_file_location("generate_agent_digest", generator_path)
-            if spec and spec.loader:
-                mod = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(mod)
-                return mod
-    except Exception:
-        pass
-    return None
+    """Return the packaged support_python.tools.agent_digest module."""
+    from support_python.tools import agent_digest
+
+    return agent_digest
 
 
 def load_digest() -> str:
@@ -244,18 +235,23 @@ def load_digest() -> str:
 
 
 def ensure_digest(action: str, logger: CliLogger) -> str:
-    """Load the digest from guidelines/agent-digest.md. If generate-agent-digest is available,
+    """Load the digest from guidelines/agent-digest.md. If agent-digest is available,
     verify that the digest is in sync with source guidelines. If out of sync:
     - on 'sync': automatically regenerate guidelines/agent-digest.md and log the update.
     - on 'check': log a warning that the digest file on disk is out of date.
     Returns the loaded digest string (or empty string if unavailable)."""
     is_write = action == "sync"
     is_check = action == "check"
+    repo_root = _resolve_repo_root()
     digest_path = _resolve_digest_path()
     skills_dir = _resolve_skills_dir()
     generator = get_digest_generator()
     if generator is not None:
+        has_repo_root = hasattr(generator, "REPO_ROOT")
+        prev_repo_root = getattr(generator, "REPO_ROOT", None)
         try:
+            if has_repo_root:
+                generator.REPO_ROOT = Path(repo_root)
             expected = generator.build_digest()
             current = digest_path.read_text(encoding="utf-8") if digest_path.is_file() else ""
             if is_write and hasattr(generator, "build_skills"):
@@ -279,12 +275,15 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
                     return expected.strip()
                 elif is_check:
                     logger.log(
-                        f"{digest_path.name} is out of date compared to source guidelines (run 'generate-agent-digest' or 'agent-files sync' to synchronize)",
+                        f"{digest_path.name} is out of date compared to source guidelines (run 'agent-digest' or 'agent-files sync' to synchronize)",
                         level="WARN",
                         origin=TOOL_NAME,
                     )
         except Exception as error:
             logger.log(f"Failed to check digest sources: {error}", level="DEBUG", origin=TOOL_NAME)
+        finally:
+            if has_repo_root:
+                generator.REPO_ROOT = prev_repo_root
 
     return load_digest()
 

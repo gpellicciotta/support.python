@@ -13,11 +13,12 @@ import pytest
 
 import support_python
 from support_python import cli
-from support_python.tools import agent_files, git_repository_backup, lint_markdown, processes
+from support_python.tools import agent_digest, agent_files, git_repository_backup, lint_markdown, processes
 
 EXPECTED_SCRIPTS = {
     "processes": "support_python.tools.processes:main",
     "agent-files": "support_python.tools.agent_files:main",
+    "agent-digest": "support_python.tools.agent_digest:main",
     "lint-markdown": "support_python.tools.lint_markdown:main",
     "git-repository-backup": "support_python.tools.git_repository_backup:main",
 }
@@ -84,6 +85,7 @@ def test_each_tool_harness_version_banner() -> None:
     expected_banners = [
         (processes.build_harness(), "processes v"),
         (agent_files.build_harness(), "agent-files v"),
+        (agent_digest.build_harness(), "agent-digest v"),
         (lint_markdown.build_harness(), "lint-markdown v"),
         (git_repository_backup.build_harness(), "git-repository-backup v"),
     ]
@@ -96,6 +98,7 @@ def test_each_tool_harness_version_banner() -> None:
     [
         ("processes", "processes v"),
         ("agent-files", "agent-files v"),
+        ("agent-digest", "agent-digest v"),
         ("lint-markdown", "lint-markdown v"),
         ("git-repository-backup", "git-repository-backup v"),
     ],

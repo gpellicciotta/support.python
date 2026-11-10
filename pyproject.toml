@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "support-python"
-version = "2.0.12-pre"
+version = "2.0.14-pre"
 description = "General-purpose Python support library and CLI"
 readme = "README.md"
 license = "MIT"
@@ -30,6 +30,7 @@ Repository = "https://github.com/gpellicciotta/support.python"
 [project.scripts]
 processes = "support_python.tools.processes:main"
 agent-files = "support_python.tools.agent_files:main"
+agent-digest = "support_python.tools.agent_digest:main"
 lint-markdown = "support_python.tools.lint_markdown:main"
 git-repository-backup = "support_python.tools.git_repository_backup:main"
 

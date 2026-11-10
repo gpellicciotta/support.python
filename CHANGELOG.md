@@ -12,13 +12,14 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.12-pre
+## v2.0.14-pre
+- CLI: Ported the agent digest generator into [agent_digest.py](src/support_python/tools/agent_digest.py) with the `agent-digest` console script and packaged loading in [agent_files.py](src/support_python/tools/agent_files.py).
 - CLI: **[breaking]** Made `sync` and `check` canonical in `agent-files` (removing `update` and `diff`), added `--format text|json`, and defaulted config to `.agent-files.json` ([agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py)).
 - CLI: **[breaking]** Configured UTF-8 streams in `ToolHarness.run` and removed `ToolLogger` and `TeeLogger` aliases in favor of `CliLogger` ([cli.py](src/support_python/cli.py), [logging.py](src/support_python/logging.py)).
 - CLI: **[breaking]** Renamed `backup-git-repos` to `git-repository-backup` in [git_repository_backup.py](src/support_python/tools/git_repository_backup.py) ([git-repository-backup.md](docs/tools/git-repository-backup.md)), with legacy config fallback and `list --format text|json`.
 - CLI: **[breaking]** Split `support_python.markdown_lint` into [lint.py](src/support_python/markdown/lint.py) (import from `support_python.markdown`) and [lint_markdown.py](src/support_python/tools/lint_markdown.py) (CLI in `support_python.tools.lint_markdown`).
 - CLI: **[breaking]** Moved `cli_processes`, `agent_files`, `agent_files_config`, and `backup` into `support_python.tools` ([processes.py](src/support_python/tools/processes.py), [agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py), [git_repository_backup.py](src/support_python/tools/git_repository_backup.py)).
-- CLI: **[breaking]** Replaced `support-python` and wrapper scripts with `processes`, `agent-files`, `lint-markdown`, and `git-repository-backup` console scripts in [pyproject.toml](pyproject.toml).
+- CLI: **[breaking]** Replaced `support-python` and wrapper scripts with `processes`, `agent-files`, `agent-digest`, `lint-markdown`, and `git-repository-backup` console scripts in [pyproject.toml](pyproject.toml).
 - DevEx: **[breaking]** Split `support_python.devops` into [steps.py](src/support_python/devops/steps.py) and [services.py](src/support_python/devops/services.py) with [devops/__init__.py](src/support_python/devops/__init__.py) re-exports; mock patch targets moved from `support_python.devops.<name>` to `support_python.devops.steps.<name>` or `support_python.devops.services.<name>` (e.g. `support_python.devops.services.is_port_in_use`, `support_python.devops.services.signal.signal`).
 - Docs: Recorded [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) on standalone CLI tools, uniform CLI conventions, and reusable `support_python.devops`.
 

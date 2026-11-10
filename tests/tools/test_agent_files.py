@@ -1263,6 +1263,8 @@ class HiddenTargetFileTests(unittest.TestCase):
 
 class RepoRootResolutionTests(unittest.TestCase):
     def test_resolves_repo_root_digest_skills_and_generator_from_working_directory(self) -> None:
+        from support_python.tools import agent_digest
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir).resolve()
             (repo_root / ".git").mkdir()
@@ -1272,12 +1274,6 @@ class RepoRootResolutionTests(unittest.TestCase):
             skill_file = repo_root / "skills" / "sample-skill" / "SKILL.md"
             skill_file.parent.mkdir(parents=True)
             skill_file.write_text("---\nname: sample-skill\n---\n", encoding="utf-8")
-            generator_file = repo_root / "scripts" / "generate-agent-digest.py"
-            generator_file.parent.mkdir(parents=True)
-            generator_file.write_text(
-                "def build_digest():\n    return 'Dynamic repo digest.\\n'\n",
-                encoding="utf-8",
-            )
             nested_dir = repo_root / "nested" / "sub"
             nested_dir.mkdir(parents=True)
 
@@ -1289,10 +1285,59 @@ class RepoRootResolutionTests(unittest.TestCase):
                 self.assertEqual(sync_mod.load_digest(), "Dynamic repo digest.")
                 skills = sync_mod.get_available_skills()
                 self.assertEqual([s.name for s in skills], ["sample-skill"])
+                self.assertFalse((repo_root / "scripts" / "generate-agent-digest.py").exists())
                 generator = sync_mod.get_digest_generator()
-                self.assertIsNotNone(generator)
-                assert generator is not None
-                self.assertEqual(generator.build_digest().strip(), "Dynamic repo digest.")
+                self.assertIs(generator, agent_digest)
+                self.assertEqual(generator._resolve_repo_root(), repo_root)
+            finally:
+                os.chdir(original_cwd)
+
+    def test_check_and_sync_repo_root_regenerate_digest_from_unrelated_cwd(self) -> None:
+        fixture_root = Path(__file__).resolve().parents[1] / "fixtures" / "agent_digest"
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            copy_dir = root / "guidelines-copy"
+            shutil.copytree(fixture_root, copy_dir)
+            (copy_dir / ".git").mkdir()
+
+            digest_file = copy_dir / "guidelines" / "agent-digest.md"
+            skill_file = copy_dir / "skills" / "python-guidelines" / "SKILL.md"
+            expected_digest = digest_file.read_text(encoding="utf-8")
+            expected_skill = skill_file.read_text(encoding="utf-8")
+            digest_file.write_text("Stale digest content.\n", encoding="utf-8")
+            skill_file.write_text("Stale skill content.\n", encoding="utf-8")
+
+            cwd_repo = root / "unrelated-repo"
+            (cwd_repo / ".git").mkdir(parents=True)
+
+            target_md = root / "targets" / "CLAUDE.md"
+            target_skills = root / "targets" / "skills"
+            fake_tool = sync_mod.Tool(
+                "fake-tool",
+                "nonexistent-fake-cmd-xyz",
+                target_md,
+                lambda p, t, to: [],
+                skills_dir=target_skills,
+                native_skill_discovery=True,
+            )
+
+            original_cwd = Path.cwd()
+            os.chdir(cwd_repo)
+            try:
+                with mock.patch.object(sync_mod, "TOOLS", [fake_tool]):
+                    _, check_out, check_err = _run_main(["check", "--repo-root", str(copy_dir)])
+                    self.assertIn(
+                        "agent-digest.md is out of date compared to source guidelines (run 'agent-digest' or 'agent-files sync' to synchronize)",
+                        check_out + check_err,
+                    )
+                    self.assertEqual(digest_file.read_text(encoding="utf-8"), "Stale digest content.\n")
+
+                    sync_code, sync_out, sync_err = _run_main(["sync", "--repo-root", str(copy_dir)])
+                    self.assertEqual(sync_code, 0, sync_out + sync_err)
+                    self.assertIn("Regenerated agent-digest.md from source guidelines", sync_out + sync_err)
+                    self.assertEqual(digest_file.read_text(encoding="utf-8"), expected_digest)
+                    self.assertEqual(skill_file.read_text(encoding="utf-8"), expected_skill)
+                    self.assertEqual([p.relative_to(cwd_repo) for p in cwd_repo.rglob("*")], [Path(".git")])
             finally:
                 os.chdir(original_cwd)
 

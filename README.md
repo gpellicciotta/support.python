@@ -31,7 +31,7 @@ On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
 `.github/workflows/python-package.yml`.
 
 ## Installing the command-line tools
-Installing the `support-python` package installs all standalone command-line tools (`processes`, `agent-files`, `lint-markdown`, and `git-repository-backup`) together:
+Installing the `support-python` package installs all standalone command-line tools (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, and `git-repository-backup`) together:
 
 ```bash
 pipx install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
@@ -46,6 +46,7 @@ From a local checkout, install into the active environment and invoke each comma
 python -m pip install .
 processes list --cwd .
 agent-files list
+agent-digest check
 lint-markdown check [paths] [--offline]
 git-repository-backup list --root ~/projects
 ```
@@ -528,6 +529,14 @@ agent-files list [--format text|json] [--config PATH]
 agent-files sync [TOOL...] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME] [--dry-run] [--no-prune]
 agent-files check [TOOL...] [--format text|json] [--config PATH] [--repo-root PATH] [--digest PATH] [--skills-dir PATH] [--marker NAME] [--marker-begin TEXT] [--marker-end TEXT] [--manifest-source NAME] [--legacy-skill NAME]
 agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECONDS]
+```
+
+## Agent digest generator
+[agent_digest.py](src/support_python/tools/agent_digest.py) generates `guidelines/agent-digest.md` and derived `skills/<name>/SKILL.md` files from repository guidelines and validates directive word and byte budgets, exposed on the CLI as `agent-digest`:
+```bash
+agent-digest generate [--max-bytes BYTES]
+agent-digest check [--max-bytes BYTES]
+agent-digest validate [--max-bytes BYTES]
 ```
 
 ## Git repository backup
