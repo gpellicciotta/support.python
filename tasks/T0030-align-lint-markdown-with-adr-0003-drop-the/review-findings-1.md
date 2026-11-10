@@ -3,7 +3,7 @@ task: T0030
 round: 1
 verdict: rejected
 reviewer: "@claude"
-reviewed_at: 2026-11-10T01:03:19Z
+reviewed_at: 2026-11-10T01:06:24Z
 reviewed_commit: "53fda80"
 base_commit: "19230d3"
 branch: task/T0030-align-lint-markdown-with-adr-0003-drop-the

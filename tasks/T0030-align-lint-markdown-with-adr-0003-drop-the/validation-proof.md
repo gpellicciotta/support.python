@@ -17,6 +17,16 @@ FAILED tests/test_markdown_profiles.py::test_config_filename_constants_and_load_
 9 failed, 36 passed in 4.76s
 ```
 
+### Rework Red-Phase Proof (Round 1 Findings D1 and D2)
+Command: `C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest tests/tools/test_lint_markdown.py::TestCLIAndMain::test_check_format_json_error_reports_to_stderr_and_keeps_stdout_clean tests/tools/test_lint_markdown.py::TestCLIAndMain::test_cli_config_discovery_new_name_legacy_warning_and_both_present -q` (exit code 1)
+```text
+[... 46 lines omitted ...]
+=========================== short test summary info ===========================
+FAILED tests/tools/test_lint_markdown.py::TestCLIAndMain::test_check_format_json_error_reports_to_stderr_and_keeps_stdout_clean
+FAILED tests/tools/test_lint_markdown.py::TestCLIAndMain::test_cli_config_discovery_new_name_legacy_warning_and_both_present
+2 failed in 1.18s
+```
+
 ### Full Test Suite (Green Phase)
 Command: `C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest -q` (exit code 0)
 ```text
@@ -30,8 +40,8 @@ Command: `C:\Dev-Projects\support.python\.venv\Scripts\python.exe -m pytest -q` 
 ............................................................. [ 81%]
 .................................................... [ 88%]
 ................................................ [ 95%]
-....................................                                     [100%]
-744 passed, 3 skipped, 81 subtests passed in 190.26s (0:03:10)
+.....................................                                    [100%]
+745 passed, 3 skipped, 81 subtests passed in 192.28s (0:03:12)
 ```
 
 ### CLI Integration Verification

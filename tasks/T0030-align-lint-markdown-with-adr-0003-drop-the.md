@@ -13,10 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1355.8, input: 503910, output: 65250, cache_read: 12716666}
-  review: {turns: 4, duration_s: 1128.2, input: 52, output: 12750, cache_read: 1220160, cache_write: 98182}
-review_status: pending
+  review: {turns: 6, duration_s: 1489.8, input: 72, output: 20368, cache_read: 1882774, cache_write: 107102}
+review_status: rejected
 review_round: 1
-work_duration: 1262.1
+work_duration: 1465.0
+reviewed_by: "@claude"
 ---
 # T0030: Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json
 
@@ -62,4 +63,17 @@ Keep exit codes 0 for clean, 1 for violations or failure, and 2 for invalid argu
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude: Most goals are met, and the change is tidy and well tested.
+  - Findings: [review-findings-1.md](T0030-align-lint-markdown-with-adr-0003-drop-the/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Addressed review round 1 findings: preserved stderr in JSON mode, removed manual json_mode toggles, and resolved config per directory.
+
+- [2026-11-10] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 8.
+  - Lines touched: 366.
+  - Reopenings: 0.
 
