@@ -46,4 +46,4 @@ See [README.md](README.md) for usage, [index.md](docs/index.md) for all document
 - Never run [reset-history.py](scripts/reset-history.py) or the outbound steps of [migrate-namespace.py](scripts/migrate-namespace.py); they rewrite history and remotes.
 - Never run `python scripts/devops.py release` without `--dry-run` unless the user asks for a release.
 - Never add a runtime dependency without the user's approval.
-- Never let tests read or write real user state, such as `~/.claude/` or the repository's own `.plan/`.
+- Never let tests read or write real user state, such as `~/.claude/` or the repository's own `.plan/`. A conftest guard fails the test run on leaks.

@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.10-pre
+## v2.0.11-pre
+- DevEx: Added a conftest session fixture redirecting user environment variables and failing tests that write real state ([conftest.py](tests/conftest.py)).
 - CLI: Fixed `agent-digest generate` failing on Python 3.9, which rejects the `newline` argument of `Path.write_text` ([agent_digest.py](src/support_python/tools/agent_digest.py)).
 - Build: Ran the Python 3.9 CI job on `ubuntu-24.04`, since `setup-python` has no 3.9 for `ubuntu-latest` ([python-package.yml](.github/workflows/python-package.yml)).
 - CLI: Fixed `lint-markdown` `MD014` skipping root-relative links such as `/docs/guide.md` on Linux and macOS ([rules.py](src/support_python/markdown/rules.py)).
