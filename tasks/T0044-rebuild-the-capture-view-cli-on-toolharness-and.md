@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 928.4, input: 212, output: 50900, cache_read: 9421398, cache_write: 209810}
+  worker: {turns: 4, duration_s: 1567.6, input: 292, output: 73866, cache_read: 14586906, cache_write: 253320}
   review: {turns: 2, duration_s: 451.6, input: 68, output: 19514, cache_read: 1943372, cache_write: 122996}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude-2"
+review_status: pending
+review_round: 2
 work_duration: 708.3
 ---
 # T0044: Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version
@@ -81,4 +80,7 @@ Leave `scripts/_cli_common.py` as the stdlib-only copy that `bootstrap-dev-envir
   - Files touched: 9.
   - Lines touched: 641.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
