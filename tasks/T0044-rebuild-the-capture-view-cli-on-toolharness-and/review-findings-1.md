@@ -3,7 +3,7 @@ task: T0044
 round: 1
 verdict: rejected
 reviewer: "@claude-2"
-reviewed_at: 2026-11-10T04:30:20Z
+reviewed_at: 2026-11-10T04:34:10Z
 reviewed_commit: "6eb9e9b"
 base_commit: "62c26fd"
 branch: task/T0044-rebuild-the-capture-view-cli-on-toolharness-and

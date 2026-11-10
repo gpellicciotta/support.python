@@ -80,3 +80,38 @@ Usage:
 ```
 
 `list` and `--version` through the same shim both exited 0.
+
+## Review Round 1 Rework
+
+### Red phase (leading global options before an action)
+Command: `PYTHONPATH=src ../../../.venv/Scripts/python -m pytest -q tests/test_capture.py -k leading` (exit 1)
+
+```text
+SUBFAILED(argv=['--verbose', 'list']) tests/test_capture.py::CaptureCliTests::test_cli_leading_global_option_keeps_list_action
+SUBFAILED(argv=['--log-level', 'DEBUG', 'list']) tests/test_capture.py::CaptureCliTests::test_cli_leading_global_option_keeps_list_action
+SUBFAILED(argv=['--port', '8000', 'list']) tests/test_capture.py::CaptureCliTests::test_cli_leading_global_option_keeps_list_action
+FAILED tests/test_capture.py::CaptureCliTests::test_cli_leading_global_option_keeps_tour_action
+FAILED tests/test_capture.py::CaptureCliTests::test_cli_leading_log_file_keeps_list_action
+FAILED tests/test_capture.py::CaptureCliTests::test_cli_leading_option_before_version_and_help
+6 failed, 2 passed, 32 deselected, 2 subtests passed in 2.05s
+```
+
+The `--mobile sign-in` and `--mode tour sign-in` cases passed before the fix, as expected.
+`--port 8000 list` now dispatches to `list`, which rejects `--port` with exit 2; the test asserts that.
+
+### Green phase
+Command: `ruff check . && ruff format --check . ; PYTHONPATH=src python -m pytest -q` (exit 0)
+
+```text
+All checks passed!
+143 files already formatted
+1041 passed, 3 skipped, 133 subtests passed in 146.29s (0:02:26)
+```
+
+Command: `PYTHONPATH=src python auth-migration-check.py ../../../../auth/scripts/capture-view.py --verbose list | grep -c "Registered View Presets"` (exit 0)
+
+```text
+1
+```
+
+The same shim with `--verbose help` exited 0, printing `capture-view v2.0.27-pre+ef0c67f - Copyright (c) Giovanni Pellicciotta` first.
