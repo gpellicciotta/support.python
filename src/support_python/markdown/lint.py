@@ -649,6 +649,7 @@ class MarkdownLinter:
             is_changelog=is_changelog,
             in_released_changelog=in_released_changelog,
             is_historical_task=is_historical_task,
+            is_task_file=".plan" in file_path.parts and "tasks" in file_path.parts,
             local_heading_slugs=local_heading_slugs,
             linter=self,
         )

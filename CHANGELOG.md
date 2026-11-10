@@ -15,6 +15,7 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v2.0.51-pre
+- CLI: Made `lint-markdown` `MD019` skip plan task files and ask for code spans for bare paths to missing files.
 - CLI: Wrote help placeholders as `{{path}}` and `{{pid}}` in `agent-digest`, `agent-files`, and `processes`, replacing `<PATH>` and sample paths.
 - CLI: **[breaking]** Made the `lint-markdown` `default` profile enable `MD015`, so `check` follows the Markdown guidelines without `--profile`.
 - CLI: Fixed log files stamping entries in local time; `CliLogger` and `format_log_message` now write UTC ([logging.py](src/support_python/logging.py)).

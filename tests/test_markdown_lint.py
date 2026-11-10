@@ -655,6 +655,51 @@ class TestRuleMD019FileReferencesAsLinks(unittest.TestCase):
         self.assertEqual(md019[0].line_number, 3)
         self.assertIn("Bare file path", md019[0].message)
 
+    def test_bare_missing_file_path_asks_for_code_span(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            (proj_root / ".git").mkdir()
+            content = b"# Guide\n\nThe old src/support_python/backup.py module is gone.\n"
+            issues = self.linter.lint_content(proj_root / "doc.md", content)
+            md019 = [i for i in issues if i.rule_id == "MD019"]
+            self.assertEqual(len(md019), 1)
+            self.assertIn("code span", md019[0].message)
+
+    def test_bare_existing_file_path_asks_for_link(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            (proj_root / ".git").mkdir()
+            (proj_root / "src").mkdir()
+            (proj_root / "src" / "app.py").write_text("# app\n", encoding="utf-8")
+            content = b"# Guide\n\nRun src/app.py directly.\n"
+            issues = self.linter.lint_content(proj_root / "doc.md", content)
+            md019 = [i for i in issues if i.rule_id == "MD019"]
+            self.assertEqual(len(md019), 1)
+            self.assertIn("markdown link", md019[0].message)
+
+    def test_backticked_missing_file_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            (proj_root / ".git").mkdir()
+            content = b"# Guide\n\nThe old `src/support_python/backup.py` module is gone.\n"
+            issues = self.linter.lint_content(proj_root / "doc.md", content)
+            self.assertEqual([i for i in issues if i.rule_id == "MD019"], [])
+
+    def test_task_files_are_exempt_from_md019(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            (proj_root / ".git").mkdir()
+            (proj_root / "src").mkdir()
+            (proj_root / "src" / "app.py").write_text("# app\n", encoding="utf-8")
+            task_dir = proj_root / ".plan" / "tasks"
+            spec = task_dir / "T0200-active-task" / "technical-spec.md"
+            spec.parent.mkdir(parents=True)
+            task_content = b"---\nid: T0200\nstatus: ready\n---\n# T0200: Active\n\n## Goals\nChange src/app.py and `src/app.py`.\n"
+            for path, content in ((task_dir / "T0200-active-task.md", task_content), (spec, b"### Declared Files\n- src/app.py\n")):
+                for linter in (self.linter, MarkdownLinter(profile="default")):
+                    issues = linter.lint_content(path, content)
+                    self.assertEqual([i for i in issues if i.rule_id == "MD019"], [], f"{path.name} {linter.profile}")
+
     def test_backticked_repo_file_flags_md019(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             proj_root = Path(tmp_dir).resolve()

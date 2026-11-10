@@ -374,15 +374,28 @@ class MD018ValidExternalLinks(Rule):
 
 
 class MD019FileReferencesAsLinks(Rule):
-    """Rule MD019: File references in prose must be formatted as markdown links."""
+    """Rule MD019: File references in prose must be formatted as markdown links.
+
+    Paths to existing repository files must be links; paths to missing files must be code spans.
+    Plan task files are exempt, because their ``Declared Files`` sections list bare paths by design.
+    """
 
     rule_id, name, scope = "MD019", "file-references-as-links", "prose"
     description = "File references in prose must be formatted as markdown links"
 
+    @staticmethod
+    def _exists_in_repo(ctx: LintContext, val: str) -> bool:
+        """Return whether ``val`` names an existing file inside the project, from its root or the linted file."""
+        repo_f = (ctx.project_root / val).resolve()
+        local_f = (ctx.actual_file_path.parent / val).resolve()
+        return (repo_f.is_relative_to(ctx.project_root) and repo_f.exists()) or (
+            local_f.is_relative_to(ctx.project_root) and local_f.exists()
+        )
+
     def check(self, ctx: LintContext) -> list[LintIssue]:
         from support_python.markdown.lint import MarkdownLinter
 
-        if ctx.is_historical_task or ctx.in_released_changelog:
+        if ctx.is_historical_task or ctx.in_released_changelog or ctx.is_task_file:
             return []
         lower_uq = ctx.unquoted_line.lower()
         if "avoid " in lower_uq or "anti-pattern" in lower_uq or "e.g. " in lower_uq:
@@ -398,13 +411,11 @@ class MD019FileReferencesAsLinks(Rule):
                 and val.lower() not in MarkdownLinter.GENERIC_FILES
             ):
                 col = ctx.line.find(val) + 1
-                issues.append(
-                    self.issue(
-                        ctx,
-                        f"Bare file path '{val}' found in prose; format as markdown link [filename](path)",
-                        column_number=col if col > 0 else 1,
-                    )
-                )
+                if self._exists_in_repo(ctx, val):
+                    msg = f"Bare file path '{val}' found in prose; format as markdown link [filename](path)"
+                else:
+                    msg = f"Bare file path '{val}' names no existing file; format it as a code span"
+                issues.append(self.issue(ctx, msg, column_number=col if col > 0 else 1))
         for m in re.finditer(r"`([^`]+)`", no_links):
             val = m.group(1).strip()
             if (
@@ -417,11 +428,7 @@ class MD019FileReferencesAsLinks(Rule):
                 continue
             name = val.replace("\\", "/").split("/")[-1]
             if "." in name and name.rsplit(".", 1)[1].lower() in MarkdownLinter.FILE_EXTENSIONS:
-                repo_f = (ctx.project_root / val).resolve()
-                local_f = (ctx.actual_file_path.parent / val).resolve()
-                if (repo_f.is_relative_to(ctx.project_root) and repo_f.exists()) or (
-                    local_f.is_relative_to(ctx.project_root) and local_f.exists()
-                ):
+                if self._exists_in_repo(ctx, val):
                     col = ctx.line.find(f"`{val}`") + 1
                     issues.append(
                         self.issue(

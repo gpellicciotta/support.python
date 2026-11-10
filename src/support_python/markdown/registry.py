@@ -23,6 +23,7 @@ class LintContext:
     is_changelog: bool = False
     in_released_changelog: bool = False
     is_historical_task: bool = False
+    is_task_file: bool = False
     local_heading_slugs: set[str] = field(default_factory=set)
     linter: Any = None
     line_number: int = 1
