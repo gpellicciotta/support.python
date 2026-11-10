@@ -9,7 +9,9 @@ plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers, the t
 :class:`GradleProject`, and :class:`NodeProject` in :mod:`support_python.devops.projects` adapt a
 repository's build, and :class:`DevopsCli` in :mod:`support_python.devops.cli` exposes them as the
 standard ``devops`` actions. :class:`DeployStep`, :class:`DeployContext`, and :class:`DeployPipeline` in
-:mod:`support_python.devops.deploy` back its optional ``deploy`` action.
+:mod:`support_python.devops.deploy` back its optional ``deploy`` action, and :class:`ServiceActions` in
+:mod:`support_python.devops.service_actions` backs its opt-in ``docker``, ``db``, ``server``, ``mail``, and
+``client`` action groups.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from .release import (
     release_version,
     write_version,
 )
+from .service_actions import ServiceActions
 from .services import (
     CloudSqlProxyManager,
     LocalDockerManager,
@@ -87,4 +90,5 @@ __all__ = [
     "DeployStep",
     "DeployContext",
     "DeployPipeline",
+    "ServiceActions",
 ]

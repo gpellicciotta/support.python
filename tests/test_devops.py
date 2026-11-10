@@ -78,6 +78,7 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "DeployStep",
             "DeployContext",
             "DeployPipeline",
+            "ServiceActions",
         ]
         self.assertCountEqual(devops_pkg.__all__, expected_all)
 

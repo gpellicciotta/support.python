@@ -416,6 +416,12 @@ class LocalMySqlManager:
             raise ValueError("No MySQL root password: pass db_root_password or set MYSQL_ROOT_PASSWORD in the MySQL env file.")
         return self.db_root_password
 
+    @staticmethod
+    def is_valid_target(target: str) -> bool:
+        """Return whether :meth:`load_snapshot` accepts ``target``: ``local``, ``testdb``, or a ``<name>_test`` alias."""
+        target_lower = target.lower()
+        return target_lower in ("local", "testdb") or (target_lower.endswith("_test") and len(target_lower) > len("_test"))
+
     def is_docker_available(self) -> bool:
         """Check if the Docker engine is running.
 
@@ -670,7 +676,8 @@ class LocalMySqlManager:
 
         Args:
             snapshot_path: Local path to the SQL snapshot dump file.
-            target: Target database environment, either ``"local"`` or ``"testdb"``. Defaults to ``"local"``.
+            target: ``"local"``, ``"testdb"``, or a ``<name>_test`` alias naming the Cloud SQL test database.
+                ``"testdb"`` loads into ``<db_name>_test``. Defaults to ``"local"``.
             testdb_env_file: Optional path to test database environment properties file.
             proxy_port: TCP port where Cloud SQL Auth Proxy is listening. Defaults to 3606.
             expected_test_db: Expected test database name for safety validation.
@@ -716,7 +723,7 @@ class LocalMySqlManager:
                 self.logger.error(f"Error loading snapshot: {e}")
                 return False
 
-        elif target_lower in ("testdb", "auth_test", "counters_test"):
+        elif self.is_valid_target(target_lower):
             env_file = Path(testdb_env_file) if testdb_env_file else None
             if not env_file and self.env_dir:
                 candidate = self.env_dir / f"{self.db_name}-testdb-devserver.env"
@@ -735,7 +742,7 @@ class LocalMySqlManager:
             if db_pass.startswith("plain:"):
                 db_pass = db_pass[len("plain:") :]
 
-            target_db_name = expected_test_db or f"{self.db_name}_test"
+            target_db_name = expected_test_db or (target_lower if target_lower != "testdb" else f"{self.db_name}_test")
             if target_db_name not in jdbc_url and db_user != target_db_name:
                 self.logger.error(f"Target safety validation failed! Expected target '{target_db_name}', got: {jdbc_url}")
                 return False
@@ -778,7 +785,7 @@ class LocalMySqlManager:
                 self.logger.error(f"Error loading snapshot into Cloud SQL: {e}")
                 return False
         else:
-            self.logger.error(f"Invalid target '{target}'. Allowed targets are 'local' and 'testdb'.")
+            self.logger.error(f"Invalid target '{target}'. Allowed targets are 'local', 'testdb', and '<name>_test'.")
             return False
 
     def snapshot_and_anonymize(
@@ -800,7 +807,7 @@ class LocalMySqlManager:
             source: Source of database data, either ``"cloudsql"`` or ``"local"``. Defaults to ``"cloudsql"``.
             input_file: Optional existing SQL dump file path to anonymize instead of live database.
             output_file: Optional destination path for the anonymized SQL snapshot file.
-            load_target: Optional target environment to immediately import the snapshot into (``"local"`` or ``"testdb"``).
+            load_target: Optional :meth:`load_snapshot` target to immediately import the snapshot into.
             confirm_production: If True, skips interactive confirmation prompt when dumping from production Cloud SQL.
             custom_password: Optional plaintext password to hash into credentials table rows.
             app_name: Application schema profile (e.g. ``"auth"``, ``"counters"``). Defaults to database name.
@@ -1446,12 +1453,30 @@ class LocalVerifier:
         self.logger.info(f"Static Asset Serving: OK ({len(check_assets)} assets verified)")
         return True
 
+    def run_all_checks(self) -> bool:
+        """Run the local verification checks against the running server; override it to add application checks.
+
+        Returns:
+            True if the server listens on :attr:`port` and the health, static index, and static asset checks pass.
+        """
+        self.logger.info(f"Running automated verification against {self.base_url}...")
+        if not is_port_in_use(self.port):
+            self.logger.error(f"Server is not running on {self.base_url}; start it first.")
+            return False
+        results = [self.verify_health_status(), self.verify_static_index(), self.verify_static_assets()]
+        if all(results):
+            self.logger.info("All local verification checks passed.")
+            return True
+        self.logger.error(f"Verification failed: {results.count(False)} of {len(results)} checks failed.")
+        return False
+
     def verify_deployment(
         self,
         url: str,
         expected_version: Optional[str] = None,
         attempts: int = 10,
         retry_delay: float = 3.0,
+        timeout: float = 5.0,
     ) -> bool:
         """Verify remote service health and version match with retry polling.
 
@@ -1460,6 +1485,7 @@ class LocalVerifier:
             expected_version: Optional expected version string to validate against returned version.
             attempts: Maximum number of polling attempts before failing. Defaults to 10.
             retry_delay: Delay in seconds between polling attempts. Defaults to 3.0.
+            timeout: Per-request timeout in seconds. Defaults to 5.0.
 
         Returns:
             True if deployment responds with healthy status and matching version, False on failure.
@@ -1470,7 +1496,7 @@ class LocalVerifier:
         for attempt in range(1, attempts + 1):
             try:
                 req = urllib.request.Request(status_url, headers={"Accept": "application/json"})
-                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
                     if resp.status == 200:
                         data = json.loads(resp.read().decode("utf-8"))
                         status_val = data.get("status")

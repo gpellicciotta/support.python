@@ -400,6 +400,52 @@ cli.set_deploy(
 sys.exit(cli.run())
 ```
 
+`add_services(...)` adds opt-in action groups backed by the `support_python.devops.services` managers.
+A group appears only when its manager is passed; its first argument selects the sub-action:
+
+| Group    | Manager keywords | Sub-actions (default first)                                     |
+| :------- | :--------------- | :-------------------------------------------------------------- |
+| `docker` | `docker`         | `status`, `start`                                               |
+| `db`     | `mysql`, `proxy` | `status`, `start`, `stop`, `snapshot`, `load-snapshot`, `proxy` |
+| `server` | `server`         | `status`, `start`, `stop`                                       |
+| `mail`   | `mail`           | `test-emails`                                                   |
+| `client` | `verifier`       | `verify`, `verify-deployment`                                   |
+
+Options follow the auth, counters.server, and todos.server scripts they replace:
+- `db snapshot`: `--source`, `--input-file`, `--output-file`, `--load-target`, `--confirm-production-access`, `--custom-password`.
+- `db load-snapshot`: a `PATH` right after the sub-action or `--snapshot-path`, plus `--target`.
+- `db proxy`: `--address`, `--port`, `--instance`, and `--credentials-file`, overriding the manager's settings.
+- `server start`: `--background`/`-d`, `--build`/`--force-build`, `--memory-db`, `--verify`, and `--testdb`.
+- `mail test-emails`: a `RECIPIENT` or `--to`, plus `--app-name`, `--env-file`, and `--build`/`--force-build`.
+- `client verify-deployment`: `--url`, `--expected-version`, `--attempts`, `--retry-delay`, and `--timeout`.
+
+- `db proxy` needs `proxy`; the other `db` sub-actions need `mysql`.
+- `db_targets` (default `("local", "testdb")`) sets the `--load-target` and `--target` choices.
+- Each target is `local`, `testdb` (loads into `<db_name>_test`), or a `<name>_test` alias loading into that database.
+- Any other `db_targets` entry raises `ValueError`.
+- `server start` starts MySQL first unless `--memory-db` or `--testdb` is given, or no `mysql` manager was passed.
+- `testdb_env_file` enables `server start --testdb`, which runs the server with that environment file.
+- `server start --verify` and `client verify` call `LocalVerifier.run_all_checks()`; override it for app checks.
+- `service_url` sets the default `--url`; without it, `client verify-deployment` requires `--url`.
+- An unknown sub-action, a misplaced positional argument, or a missing snapshot path, recipient, or URL exits 2.
+
+```python
+cli = DevopsCli(GradleProject(REPO_ROOT))
+server = LocalServerManager(port=8080, repo_root=REPO_ROOT, app_name="Todos")
+cli.add_services(
+    docker=LocalDockerManager(),
+    mysql=LocalMySqlManager(container_name="todos-mysql", repo_root=REPO_ROOT),
+    proxy=CloudSqlProxyManager(instance="project:region:instance"),
+    server=server,
+    mail=LocalMailManager(server_manager=server),
+    verifier=LocalVerifier(port=8080),
+    db_targets=("local", "testdb", "todos_test"),
+    service_url="https://todos.example.com",
+    testdb_env_file=REPO_ROOT / "config" / "todos-testdb-devserver.env",
+)
+sys.exit(cli.run())  # e.g. `devops db start`, `devops server start --memory-db`
+```
+
 ## View Capture Engine and Static Server
 
 `support_python.capture` provides browser screenshot automation (`ViewCaptureEngine`) and visual UI tour

@@ -2,7 +2,8 @@
 
 :class:`DevopsCli` exposes the operations of a :class:`~support_python.devops.projects.Project` as the
 actions lint, format, test, build, check, clean, versions, and release, plus help and version.
-:meth:`DevopsCli.set_deploy` adds a ``deploy`` action. A consumer's ``scripts/devops.py`` stays thin:
+:meth:`DevopsCli.set_deploy` adds a ``deploy`` action, and :meth:`DevopsCli.add_services` adds the opt-in
+``docker``, ``db``, ``server``, ``mail``, and ``client`` action groups. A consumer's ``scripts/devops.py`` stays thin:
 ``sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())``.
 """
 
@@ -17,6 +18,15 @@ from ..logging import CliLogger
 from .deploy import DeployContext, DeployPipeline, DeployStep
 from .projects import Project
 from .release import ReleasePipeline, capture_command, changelog_top_version, read_version
+from .service_actions import ServiceActions
+from .services import (
+    CloudSqlProxyManager,
+    LocalDockerManager,
+    LocalMailManager,
+    LocalMySqlManager,
+    LocalServerManager,
+    LocalVerifier,
+)
 
 #: Default description shown in the help screen.
 DEFAULT_DESCRIPTION = "Runs the lint, format, test, build, check, clean, versions, and release operations of this project."
@@ -114,6 +124,48 @@ class DevopsCli:
         example = f"{self.harness.name} deploy --dry-run"
         if example not in self.harness.examples:
             self.harness.examples.append(example)
+
+    def add_services(
+        self,
+        *,
+        docker: Optional[LocalDockerManager] = None,
+        mysql: Optional[LocalMySqlManager] = None,
+        proxy: Optional[CloudSqlProxyManager] = None,
+        server: Optional[LocalServerManager] = None,
+        mail: Optional[LocalMailManager] = None,
+        verifier: Optional[LocalVerifier] = None,
+        db_targets: Sequence[str] = ("local", "testdb"),
+        service_url: Optional[str] = None,
+        testdb_env_file: Optional[Path] = None,
+    ) -> None:
+        """Register the service action groups whose managers are supplied, such as ``devops db start``.
+
+        Args:
+            docker: Enables ``docker status|start``.
+            mysql: Enables ``db status|start|stop|snapshot|load-snapshot``; ``server start`` also starts it.
+            proxy: Enables ``db proxy``; its options override the manager's settings per run.
+            server: Enables ``server status|start|stop``.
+            mail: Enables ``mail test-emails``.
+            verifier: Enables ``client verify|verify-deployment`` and ``server start --verify``.
+            db_targets: Choices of ``db snapshot --load-target`` and ``db load-snapshot --target``: ``local``,
+                ``testdb``, or ``<name>_test`` aliases, which load into the named Cloud SQL test database.
+            service_url: Default ``--url`` of ``client verify-deployment``; without it, ``--url`` is required.
+            testdb_env_file: Enables ``server start --testdb``, which runs the server with this environment file.
+
+        Raises:
+            ValueError: A ``db_targets`` entry is not ``local``, ``testdb``, or ``<name>_test``.
+        """
+        ServiceActions(
+            docker=docker,
+            mysql=mysql,
+            proxy=proxy,
+            server=server,
+            mail=mail,
+            verifier=verifier,
+            db_targets=db_targets,
+            service_url=service_url,
+            testdb_env_file=testdb_env_file,
+        ).register(self.harness)
 
     def run(self, argv: Optional[Sequence[str]] = None) -> int:
         """Run the command line in ``argv`` (default ``sys.argv[1:]``) and return its exit code."""
