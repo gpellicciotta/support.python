@@ -1401,3 +1401,14 @@ class TestRestoreIntegration(BackupTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SnakeCaseConfigKeyTests(unittest.TestCase):
+    def test_snake_case_keys_are_accepted(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = Path(tmp) / "config.json"
+            cfg.write_text('{"mirror_dir": "m", "seven_zip": "7z", "password_env": "PW"}', encoding="utf-8")
+            data = backup_git_repos.load_config(cfg)
+        self.assertEqual(data, {"mirror-dir": "m", "seven-zip": "7z", "password-env": "PW"})

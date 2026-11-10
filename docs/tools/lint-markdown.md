@@ -39,13 +39,14 @@ The profile loader in [profiles.py](../../src/support_python/markdown/profiles.p
 ---
 
 ## JSON Configuration Schema
+Configuration keys accept dashes or underscores interchangeably; this document shows the preferred kebab-case spelling.
 When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the target path or project root (falling back to legacy `.markdown-lint.json` with a deprecation warning until `v3.0.0`), or falls back to `default` when absent.
 ```json
 {
   "profile": "dev-guidelines",
   "enable": ["MD015"],
   "disable": ["MD018"],
-  "historical_task_exemptions": true,
+  "historical-task-exemptions": true,
   "excludes": ["archive/*"],
   "plugins": ["rules/no_todo.py"]
 }
@@ -54,10 +55,10 @@ When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the targe
 | Field                        | Type                      | Default          | Purpose                                               |
 | :--------------------------- | :------------------------ | :--------------- | :---------------------------------------------------- |
 | `profile`                    | `string`                  | `"default"`      | Base profile (`"default"` or `"dev-guidelines"`)      |
-| `rules` / `enabled_rules`    | `array<string> \| object` | Profile rules    | Explicit rule ID list or `{ "MD0xx": bool }` map      |
-| `enable` / `enable_rules`    | `array<string>`           | `[]`             | Additional `MD0xx` rule IDs enabled on the profile    |
-| `disable` / `disable_rules`  | `array<string>`           | `[]`             | `MD0xx` rule IDs removed from the profile             |
-| `historical_task_exemptions` | `boolean`                 | Profile setting  | Exempt completed or pre-cutoff `.plan/tasks/` files   |
+| `rules` / `enabled-rules`    | `array<string> \| object` | Profile rules    | Explicit rule ID list or `{ "MD0xx": bool }` map      |
+| `enable` / `enable-rules`    | `array<string>`           | `[]`             | Additional `MD0xx` rule IDs enabled on the profile    |
+| `disable` / `disable-rules`  | `array<string>`           | `[]`             | `MD0xx` rule IDs removed from the profile             |
+| `historical-task-exemptions` | `boolean`                 | Profile setting  | Exempt completed or pre-cutoff `.plan/tasks/` files   |
 | `excludes` / `exclude`       | `array<string>`           | `[]`             | Additional glob patterns excluded during discovery    |
 | `plugins`                    | `array<string>`           | `[]`             | Rule plugin files or modules loaded before the rules  |
 

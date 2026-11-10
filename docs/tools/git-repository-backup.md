@@ -52,6 +52,8 @@ Config resolution checks locations in priority order:
 
 The startup banner marks the file it read as `(default)`, `(old location)`, or `(legacy)`, or shows `(default, absent)`.
 
+Config keys accept dashes or underscores interchangeably; kebab-case is preferred.
+
 ```json
 {
   "roots": ["~/projects"],

@@ -278,3 +278,29 @@ def test_config_filename_constants_and_load_profile_fallback(tmp_path: Path) -> 
     new_file.write_text(json.dumps({"profile": "dev-guidelines"}), encoding="utf-8")
     prof_both = load_profile(tmp_path)
     assert prof_both == DEV_GUIDELINES_PROFILE
+
+
+def test_kebab_case_profile_keys_match_snake_case_twin(tmp_path) -> None:
+    import json
+
+    snake = tmp_path / "snake.json"
+    snake.write_text(
+        json.dumps({"disabled_rules": ["MD018"], "historical_task_exemptions": False, "excludes": ["x"]}), encoding="utf-8"
+    )
+    kebab = tmp_path / "kebab.json"
+    kebab.write_text(
+        json.dumps({"disabled-rules": ["MD018"], "historical-task-exemptions": False, "excludes": ["x"]}), encoding="utf-8"
+    )
+    assert load_profile(kebab) == load_profile(snake)
+    assert "MD018" not in load_profile(kebab).enabled_rules
+    assert load_profile(kebab).historical_task_exemptions is False
+
+
+def test_profile_with_both_key_spellings_prefers_kebab_case(tmp_path) -> None:
+    import json
+
+    cfg = tmp_path / "both.json"
+    cfg.write_text(json.dumps({"disable_rules": ["MD018"], "disable-rules": ["MD019"]}), encoding="utf-8")
+    enabled = load_profile(cfg).enabled_rules
+    assert "MD019" not in enabled
+    assert "MD018" in enabled

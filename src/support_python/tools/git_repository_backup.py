@@ -25,6 +25,7 @@ import tempfile
 from typing import Any, Callable, Sequence
 
 from support_python.cli import COPYRIGHT, PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
+from support_python.config import normalize_config_keys  # noqa: E402
 from support_python.env import user_config_path  # noqa: E402
 from support_python.logging import CliLogger  # noqa: E402
 
@@ -299,6 +300,7 @@ def load_config(path: Path | None, logger: CliLogger | None = None) -> dict[str,
         raise UsageError(f"Cannot read config file {config_path}: {exc}") from exc
     if not isinstance(data, dict):
         raise UsageError(f"Config file {config_path} must contain a JSON object.")
+    data = normalize_config_keys(data, style="kebab", source=config_path, logger=logger)
     unknown = sorted(set(data) - set(CONFIG_KEYS))
     if unknown:
         raise UsageError(f"Unknown config keys in {config_path}: {', '.join(unknown)}")

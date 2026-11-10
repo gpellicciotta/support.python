@@ -1768,3 +1768,49 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AgentFilesKebabConfigTests(unittest.TestCase):
+    def _load(self, data: dict) -> object:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_file = Path(tmp_dir).resolve() / ".agent-files.json"
+            cfg_file.write_text(json.dumps(data), encoding="utf-8")
+            cfg = cfg_mod.load_agent_files_config(cfg_file)
+            return (
+                cfg.digest_path.name,
+                cfg.skills_dir.name,
+                cfg.marker_begin,
+                cfg.manifest_name,
+                cfg.legacy_skill_names,
+                sorted(t.name for t in cfg.tools),
+            )
+
+    def test_kebab_case_keys_match_snake_case_twin(self) -> None:
+        snake = {
+            "digest_path": "d.md",
+            "skills_dir": "s",
+            "marker": "m",
+            "marker_begin": "<!-- b -->",
+            "marker_end": "<!-- e -->",
+            "manifest_source": "src",
+            "manifest_name": ".mn.json",
+            "legacy_skill_names": ["a"],
+            "replace_tools": True,
+            "tools": {"x": {"command": "x", "target_file": "t.md", "native_skill_discovery": True, "fallback_paths": []}},
+        }
+        kebab = {
+            "digest-path": "d.md",
+            "skills-dir": "s",
+            "marker": "m",
+            "marker-begin": "<!-- b -->",
+            "marker-end": "<!-- e -->",
+            "manifest-source": "src",
+            "manifest-name": ".mn.json",
+            "legacy-skill-names": ["a"],
+            "replace-tools": True,
+            "tools": {"x": {"command": "x", "target-file": "t.md", "native-skill-discovery": True, "fallback-paths": []}},
+        }
+        self.assertEqual(self._load(kebab), self._load(snake))
+        self.assertEqual(self._load(kebab)[:2], ("d.md", "s"))

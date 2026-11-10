@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
+from support_python.config import normalize_config_keys
+
 DEFAULT_CONFIG_FILENAME = ".agent-files.json"
 LEGACY_CONFIG_FILENAME = "agent-files.json"
 DEFAULT_DIGEST_RELPATH = "agent-digest.md"
@@ -148,6 +150,8 @@ def build_tool_from_dict(data: dict[str, Any], default_legacy_skills: tuple[str,
     """Validate and construct a Tool instance from a JSON dictionary definition."""
     from support_python.tools.agent_files import Tool
 
+    if isinstance(data, dict):
+        data = normalize_config_keys(data)
     if not isinstance(data, dict) or (set(data.keys()) - _ALLOWED_TOOL_KEYS):
         raise ValueError("invalid tool definition object or unknown keys")
     for req in ("name", "command", "target_file"):
@@ -197,6 +201,8 @@ def _read_and_validate_json(path: Path) -> dict[str, Any]:
         parsed = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
+    if isinstance(parsed, dict):
+        parsed = normalize_config_keys(parsed, source=path)
     if not isinstance(parsed, dict) or (set(parsed.keys()) - _ALLOWED_CONFIG_KEYS):
         raise ValueError(f"Invalid configuration schema in {path}")
     return parsed

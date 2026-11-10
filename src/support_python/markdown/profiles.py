@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from support_python.config import normalize_config_keys
 from support_python.markdown.registry import RuleRegistry
 from support_python.markdown.rules import DEFAULT_REGISTRY
 
@@ -159,6 +160,8 @@ def load_profile(
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Invalid JSON in {target}: {exc}") from exc
 
+    if isinstance(raw, dict):
+        raw = normalize_config_keys(raw, source=target)
     if not isinstance(raw, dict) or (set(raw.keys()) - _ALLOWED_PROFILE_KEYS):
         unknown = sorted(set(raw.keys()) - _ALLOWED_PROFILE_KEYS) if isinstance(raw, dict) else []
         raise ValueError(f"Invalid profile schema in {target}: unknown keys {unknown}")
