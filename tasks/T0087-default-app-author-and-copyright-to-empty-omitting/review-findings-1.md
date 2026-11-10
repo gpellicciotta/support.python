@@ -3,7 +3,7 @@ task: T0087
 round: 1
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-10T22:24:04Z
+reviewed_at: 2026-11-10T22:30:25Z
 reviewed_commit: "c38134d"
 base_commit: "efef06e"
 branch: task/T0087-default-app-author-and-copyright-to-empty-omitting
