@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1451.8, input: 16, output: 4970, cache_read: 1275320, cache_write: 6332}
+review_status: pending
+review_round: 1
 ---
 # T0042: Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers
 
@@ -71,4 +75,7 @@ Match the command shapes and options of ../auth/scripts/devops.py, so consumers 
   - Files touched: 8.
   - Lines touched: 894.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
