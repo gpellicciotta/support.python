@@ -25,6 +25,7 @@ import tempfile
 from typing import Any, Callable, Sequence
 
 from support_python.cli import COPYRIGHT, PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
+from support_python.env import user_config_path  # noqa: E402
 from support_python.logging import CliLogger  # noqa: E402
 
 TOOL_NAME = "git-repository-backup"
@@ -115,7 +116,7 @@ Actions:
 Options:
   -h, --help             show help message and exit
   --version              show version information and exit
-  --config PATH          JSON config file (default: ~/.config/git-repository-backup/config.json if present)
+  --config PATH          JSON config file (default: the user config file, if present; see help --verbose)
   --root PATH            directory to scan for repos; repeatable, replaces config roots
   --depth N              maximum scan depth below each root (default: {DEFAULT_DEPTH})
   --mirror-dir PATH      directory holding one bare mirror repo per project
@@ -208,6 +209,11 @@ Config File Format:
       "password-keyring": "{{{{keyring-service}}}}"
     }}
   Set at most one of "password-env" and "password-keyring".
+  Without --config, the first existing file of these is read:
+    $XDG_CONFIG_HOME/git-repository-backup/config.json, when XDG_CONFIG_HOME is an absolute path;
+    otherwise %APPDATA%/git-repository-backup/config.json on Windows or ~/.config/git-repository-backup/config.json;
+    then the old ~/.config/git-repository-backup/config.json and the legacy ~/.config/backup-git-repos/config.json,
+    each with a deprecation warning until v3.0.0.
 
 Restoring:
   From the configured mirror or archive directory:
@@ -235,8 +241,30 @@ Examples:
 
 
 def default_config_path() -> Path:
-    """Return the default config file location in the user's home directory."""
+    """Return the default user config file location, per the configuration guidelines (see ``user_config_path``)."""
+    return user_config_path(TOOL_NAME)
+
+
+def old_config_path() -> Path:
+    """Return the config file location used before the configuration guidelines, read until v3.0.0."""
     return Path.home() / ".config" / TOOL_NAME / "config.json"
+
+
+def find_default_config() -> tuple[Path | None, str]:
+    """Return the first existing default config file and its kind: ``default``, ``old location``, or ``legacy``.
+
+    Returns ``(None, "")`` when no default config file exists.
+    """
+    default_path = default_config_path()
+    if default_path.exists():
+        return default_path, "default"
+    old_path = old_config_path()
+    if old_path != default_path and old_path.exists():
+        return old_path, "old location"
+    legacy_path = legacy_config_path()
+    if legacy_path.exists():
+        return legacy_path, "legacy"
+    return None, ""
 
 
 def legacy_config_path() -> Path:
@@ -253,18 +281,18 @@ def load_config(path: Path | None, logger: CliLogger | None = None) -> dict[str,
         if not config_path.exists():
             raise UsageError(f"Config file not found: {config_path}")
     else:
-        default_path = default_config_path()
-        legacy_path = legacy_config_path()
-        if default_path.exists():
-            config_path = default_path
-        elif legacy_path.exists():
-            config_path = legacy_path
-            warn_logger = logger if logger is not None else CliLogger()
-            warn_logger.warn(
-                f"Reading legacy config {legacy_path}; move it to {default_path}. The legacy path is dropped in v3.0.0."
-            )
-        else:
+        found, kind = find_default_config()
+        if found is None:
             return {}
+        config_path = found
+        default_path = default_config_path()
+        warn_logger = logger if logger is not None else CliLogger()
+        if kind == "old location":
+            warn_logger.warn(
+                f"Reading config {found} from its old location; move it to {default_path}. The old location is dropped in v3.0.0."
+            )
+        elif kind == "legacy":
+            warn_logger.warn(f"Reading legacy config {found}; move it to {default_path}. The legacy path is dropped in v3.0.0.")
     try:
         data = json.loads(config_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -956,13 +984,10 @@ def describe_config(value: str | None) -> str:
     """Return the config file for the startup banner, marking the default location and its absence."""
     if value:
         return str(to_path(value))
-    path = default_config_path()
-    if path.exists():
-        return f"{path} (default)"
-    legacy = legacy_config_path()
-    if legacy.exists():
-        return f"{legacy} (legacy)"
-    return f"{path} (default, absent)"
+    found, kind = find_default_config()
+    if found is None:
+        return f"{default_config_path()} (default, absent)"
+    return f"{found} ({kind})"
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:

@@ -12,8 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.44-pre
+## v2.0.45-pre
 - CLI: Added `skill.references` to `agent-digest` front-matter: `generate` copies each listed file into its skill (rewriting Markdown links), and `check` reports `missing-reference`, `missing-skill-file`, `stale-skill-file`, and `unlisted-file` issues, with per-file statuses under `skills[].files` in JSON; listed files are no longer digest or skill sources, and files under a skill directory that are not listed now fail as `unlisted-file` instead of `orphan-file` ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
+- CLI: Made `git-repository-backup` find its user config through `user_config_path`, so Windows now reads `%APPDATA%/git-repository-backup/config.json` and `XDG_CONFIG_HOME` applies everywhere; the old `~/.config/git-repository-backup/config.json` is still read with a deprecation warning until v3.0.0 ([git_repository_backup.py](src/support_python/tools/git_repository_backup.py)).
 - Library: Added `user_config_dir` and `user_config_path`, which resolve a tool's user configuration file through an absolute `XDG_CONFIG_HOME`, then `%APPDATA%` on Windows, then `~/.config` ([env.py](src/support_python/env.py)).
 - Library: Made `parse_datetime` accept 1 to 6 fractional second digits and `+HH:MM`/`-HH:MM` offsets (converted to UTC), added `format_datetime(..., millis=True)`, and added `parse_date`/`format_date` for `YYYY-MM-DD` values; parsing now rejects non-zero-padded fields, lowercase `t`/`z`, and non-ASCII digits that `strptime` accepted ([dates.py](src/support_python/dates.py)).
 - CLI: Made `--debug` imply `--verbose` in `ToolHarness`, so handlers reading `args.verbose` and `help --debug` behave as with `--verbose`; `--log-level` still sets the threshold ([cli.py](src/support_python/cli.py)).

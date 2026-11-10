@@ -88,8 +88,9 @@ Each tool reads its legacy path with a deprecation warning until `v3.0.0`; renam
 | :--------------------------------------- | :-------------------------------------------- |
 | `.markdown-lint.json`                    | `.lint-markdown.json`                         |
 | `agent-files.json`                       | `.agent-files.json`                           |
-| `~/.config/backup-git-repos/config.json` | `~/.config/git-repository-backup/config.json` |
+| `~/.config/backup-git-repos/config.json` | `git-repository-backup` user config file      |
 
+The `git-repository-backup` user config file location is listed in [git-repository-backup.md](tools/git-repository-backup.md#configuration-discovery-and-schema).
 `--config PATH` still overrides discovery on every tool that reads configuration.
 
 ---

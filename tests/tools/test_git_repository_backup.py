@@ -85,6 +85,18 @@ class BackupTestCase(unittest.TestCase):
         self.root.mkdir()
         self.mirrors = self.tmp / "mirrors"
         self.archives = self.tmp / "archives"
+        self.home = self.tmp / "home"
+        self.xdg = self.tmp / "xdg"
+        # Keep config discovery away from the real profile; git subprocesses also read $XDG_CONFIG_HOME/git/config.
+        for patcher in (
+            mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.xdg)}),
+            mock.patch.object(Path, "home", return_value=self.home),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        self.new_cfg = self.xdg / "git-repository-backup" / "config.json"
+        self.old_cfg = self.home / ".config" / "git-repository-backup" / "config.json"
+        self.legacy_cfg = self.home / ".config" / "backup-git-repos" / "config.json"
 
     def tearDown(self) -> None:
         self._tmp.cleanup()
@@ -255,12 +267,9 @@ class TestHarnessCli(BackupTestCase):
         self.assertIn(f"alpha  {self.root / 'alpha'}", lines)
 
     def test_startup_banner_names_default_config_file(self) -> None:
-        home = self.tmp / "home"
-        expected = home / ".config" / "git-repository-backup" / "config.json"
-        with mock.patch.object(Path, "home", return_value=home):
-            code, out, _ = self.run_raw("list", "--root", str(self.root), "--dry-run", "--verbose")
+        code, out, _ = self.run_raw("list", "--root", str(self.root), "--dry-run", "--verbose")
         self.assertEqual(code, 0)
-        self.assertIn(f"- Config file: {expected} (default, absent)", out.splitlines())
+        self.assertIn(f"- Config file: {self.new_cfg} (default, absent)", out.splitlines())
         self.assertIn("- Dry run: true", out.splitlines())
 
     def test_backup_emits_completion_summary_with_duration(self) -> None:
@@ -346,40 +355,87 @@ class TestConfig(BackupTestCase):
         self.assertIn("beta", out)
         self.assertNotIn("alpha", out)
 
-    def test_config_resolution_new_legacy_and_absent(self) -> None:
-        home = self.tmp / "home"
-        new_cfg = home / ".config" / "git-repository-backup" / "config.json"
-        legacy_cfg = home / ".config" / "backup-git-repos" / "config.json"
-        root_new = self.tmp / "root_new"
-        root_legacy = self.tmp / "root_legacy"
-        make_repo(root_new / "new_repo")
-        make_repo(root_legacy / "legacy_repo")
+    def write_config(self, path: Path, root: Path) -> None:
+        """Write a config file at path whose only root is root."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"roots": [str(root)]}), encoding="utf-8")
 
-        with mock.patch.object(Path, "home", return_value=home):
-            # 1. Neither exists -> command-line options only, no warning
-            code, out, err = self.run_raw("list", "--root", str(root_new))
-            self.assertEqual(code, 0, err)
-            self.assertEqual(err, "")
-            self.assertIn("new_repo", out)
+    def test_default_config_path_follows_user_config_path(self) -> None:
+        self.assertEqual(backup_git_repos.default_config_path(), self.new_cfg)
+        self.assertEqual(backup_git_repos.old_config_path(), self.old_cfg)
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": "", "APPDATA": str(self.tmp / "roaming")}):
+            expected = (
+                self.tmp / "roaming" / "git-repository-backup" / "config.json" if sys.platform.startswith("win") else self.old_cfg
+            )
+            self.assertEqual(backup_git_repos.default_config_path(), expected)
 
-            # 2. Only legacy exists -> uses legacy and emits warning on stderr
-            legacy_cfg.parent.mkdir(parents=True, exist_ok=True)
-            legacy_cfg.write_text(json.dumps({"roots": [str(root_legacy)]}), encoding="utf-8")
+    def test_config_resolution_new_old_legacy_and_absent(self) -> None:
+        roots = {name: self.tmp / f"root_{name}" for name in ("cli", "new", "old", "legacy")}
+        for name, root in roots.items():
+            make_repo(root / f"{name}_repo")
+        old_warn = (
+            f"Reading config {self.old_cfg} from its old location; move it to {self.new_cfg}. "
+            "The old location is dropped in v3.0.0."
+        )
+        legacy_warn = f"Reading legacy config {self.legacy_cfg}; move it to {self.new_cfg}. The legacy path is dropped in v3.0.0."
+
+        # 1. No file exists -> command-line options only, no warning
+        code, out, err = self.run_raw("list", "--root", str(roots["cli"]))
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("cli_repo", out)
+
+        # 2. Only the legacy file exists -> legacy file with its warning
+        self.write_config(self.legacy_cfg, roots["legacy"])
+        code, out, err = self.run_raw("list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("legacy_repo", out)
+        self.assertIn(legacy_warn, err)
+        self.assertEqual(err.count("**[WARN]**"), 1)
+
+        # 3. Only the old ~/.config file exists -> old file with one warning naming both paths
+        self.legacy_cfg.unlink()
+        self.write_config(self.old_cfg, roots["old"])
+        code, out, err = self.run_raw("list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("old_repo", out)
+        self.assertIn(old_warn, err)
+        self.assertEqual(err.count("**[WARN]**"), 1)
+
+        # 3b. The legacy file exists too -> the old file still wins
+        self.write_config(self.legacy_cfg, roots["legacy"])
+        code, out, err = self.run_raw("list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("old_repo", out)
+        self.assertNotIn("legacy_repo", out)
+        self.assertIn(old_warn, err)
+        self.assertEqual(err.count("**[WARN]**"), 1)
+
+        # 4. The new file exists -> new file wins without a warning
+        self.write_config(self.new_cfg, roots["new"])
+        code, out, err = self.run_raw("list")
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("new_repo", out)
+        self.assertNotIn("old_repo", out)
+
+    def test_old_location_equal_to_new_location_reads_it_without_warning(self) -> None:
+        make_repo(self.root / "alpha")
+        with mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.home / ".config")}):
+            self.assertEqual(backup_git_repos.default_config_path(), self.old_cfg)
+            self.write_config(self.old_cfg, self.root)
             code, out, err = self.run_raw("list")
-            self.assertEqual(code, 0, err)
-            self.assertIn("legacy_repo", out)
-            expected_warn = f"Reading legacy config {legacy_cfg}; move it to {new_cfg}. The legacy path is dropped in v3.0.0."
-            self.assertIn(expected_warn, err)
-            self.assertEqual(err.count("Reading legacy config"), 1)
+            self.assertEqual((code, err), (0, ""))
+            self.assertIn("alpha", out)
+            self.assertEqual(backup_git_repos.describe_config(None), f"{self.old_cfg} (default)")
 
-            # 3. Both exist -> new config wins without warning
-            new_cfg.parent.mkdir(parents=True, exist_ok=True)
-            new_cfg.write_text(json.dumps({"roots": [str(root_new)]}), encoding="utf-8")
-            code, out, err = self.run_raw("list")
-            self.assertEqual(code, 0, err)
-            self.assertEqual(err, "")
-            self.assertIn("new_repo", out)
-            self.assertNotIn("legacy_repo", out)
+    def test_describe_config_marks_each_location(self) -> None:
+        self.assertEqual(backup_git_repos.describe_config(None), f"{self.new_cfg} (default, absent)")
+        self.write_config(self.legacy_cfg, self.root)
+        self.assertEqual(backup_git_repos.describe_config(None), f"{self.legacy_cfg} (legacy)")
+        self.write_config(self.old_cfg, self.root)
+        self.assertEqual(backup_git_repos.describe_config(None), f"{self.old_cfg} (old location)")
+        self.write_config(self.new_cfg, self.root)
+        self.assertEqual(backup_git_repos.describe_config(None), f"{self.new_cfg} (default)")
+        self.assertEqual(backup_git_repos.describe_config(str(self.config)), str(self.config))
 
     def test_list_format_json_and_text(self) -> None:
         alpha = make_repo(self.root / "alpha")
@@ -1291,9 +1347,9 @@ class TestRestoreIntegration(BackupTestCase):
 
     def test_installed_cli_legacy_config_and_json_list(self) -> None:
         alpha = make_repo(self.root / "alpha")
-        home = self.tmp / "home"
+        home = self.home
         legacy_cfg = home / ".config" / "backup-git-repos" / "config.json"
-        new_cfg = home / ".config" / "git-repository-backup" / "config.json"
+        new_cfg = self.xdg / "git-repository-backup" / "config.json"
         legacy_cfg.parent.mkdir(parents=True, exist_ok=True)
         legacy_cfg.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
         cli_bin = Path(sys.executable).parent / (
@@ -1304,6 +1360,7 @@ class TestRestoreIntegration(BackupTestCase):
             **os.environ,
             "HOME": str(home),
             "USERPROFILE": str(home),
+            "XDG_CONFIG_HOME": str(self.xdg),
             "PYTHONPATH": str(SRC_DIR),
         }
         result = subprocess.run(
@@ -1318,6 +1375,28 @@ class TestRestoreIntegration(BackupTestCase):
         self.assertEqual(json.loads(result.stdout), [{"name": "alpha", "path": str(alpha)}])
         expected_warn = f"Reading legacy config {legacy_cfg}; move it to {new_cfg}. The legacy path is dropped in v3.0.0."
         self.assertIn(expected_warn, result.stderr)
+
+    def test_installed_cli_reads_xdg_config_home_config(self) -> None:
+        make_repo(self.root / "alpha")
+        new_cfg = self.xdg / "git-repository-backup" / "config.json"
+        new_cfg.parent.mkdir(parents=True, exist_ok=True)
+        new_cfg.write_text(json.dumps({"roots": [str(self.root)]}), encoding="utf-8")
+        cli_bin = Path(sys.executable).parent / (
+            "git-repository-backup.exe" if sys.platform == "win32" else "git-repository-backup"
+        )
+        cmd = [str(cli_bin)] if cli_bin.exists() else [sys.executable, "-m", "support_python.tools.git_repository_backup"]
+        env = {
+            **os.environ,
+            "HOME": str(self.tmp / "home"),
+            "USERPROFILE": str(self.tmp / "home"),
+            "XDG_CONFIG_HOME": str(self.xdg),
+            "PYTHONPATH": str(SRC_DIR),
+        }
+        result = subprocess.run([*cmd, "list", "--verbose"], env=env, capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"- Config file: {new_cfg} (default)", result.stdout.splitlines())
+        self.assertIn("alpha", result.stdout)
+        self.assertEqual(result.stderr, "")
 
 
 if __name__ == "__main__":

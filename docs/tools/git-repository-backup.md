@@ -41,10 +41,16 @@ Exit codes:
 
 ## Configuration Discovery and Schema
 Config resolution checks locations in priority order:
-- Explicit `--config PATH` (must exist).
-- `~/.config/git-repository-backup/config.json` when present.
+- Explicit `--config PATH` (must exist), which replaces the discovery below.
+- The user config file, when present, from [user_config_path](../../src/support_python/env.py):
+  `$XDG_CONFIG_HOME/git-repository-backup/config.json` when `XDG_CONFIG_HOME` is an absolute path,
+  else `%APPDATA%/git-repository-backup/config.json` on Windows or `~/.config/git-repository-backup/config.json` elsewhere.
+- The old `~/.config/git-repository-backup/config.json`, when it differs from the user config file and is present.
+  It emits a `WARN` notice on `stderr` (support ends in `v3.0.0`).
 - Legacy `~/.config/backup-git-repos/config.json` when present, emitting a `WARN` notice on `stderr` (support ends in `v3.0.0`).
-- Command-line flags only when neither default file exists.
+- Command-line flags only when no default file exists.
+
+The startup banner marks the file it read as `(default)`, `(old location)`, or `(legacy)`, or shows `(default, absent)`.
 
 ```json
 {
