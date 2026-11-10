@@ -4,7 +4,7 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
-- [~] T0102 [owner: @claude-code] Replace Path.write_text newline arguments in agent-digest, which Python 3.9 rejects, and guard src against them.
+- [x] T0102 Replace Path.write_text newline arguments in agent-digest, which Python 3.9 rejects, and guard src against them.
 - [x] T0101 Run the Python 3.9 CI job on ubuntu-24.04, since setup-python has no 3.9 for the ubuntu-latest image.
 - [x] T0100 Make MD014 resolve root-relative links against the project root on POSIX, where they now count as absolute and are skipped.
 - [x] T0099 Make ToolHarness run its fallback action when the command line starts with an option, moving run_capture_cli's reordering into the harness.
