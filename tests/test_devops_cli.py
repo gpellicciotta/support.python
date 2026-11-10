@@ -275,6 +275,28 @@ class HarnessTests(DevopsCliTestCase):
         self.assertEqual(code, 0)
         self.assertIn("run lint, test, and build, stopping at the first failure", out)
 
+    def test_default_description_names_deploy_after_set_deploy(self) -> None:
+        cli = self.cli(venv=False)
+        cli.set_deploy([])
+        self.assertIn("versions, release, and deploy operations of this project.", cli.harness.description)
+
+    def test_default_description_names_enabled_service_groups(self) -> None:
+        from support_python.devops.services import LocalDockerManager, LocalMailManager, LocalServerManager
+
+        cli = self.cli(venv=False)
+        server = LocalServerManager(port=8080, repo_root=self.root)
+        cli.add_services(docker=LocalDockerManager(), server=server, mail=LocalMailManager(server_manager=server))
+        self.assertIn("It also manages the docker, server, and mail services.", cli.harness.description)
+
+    def test_custom_description_stays_after_set_deploy_and_add_services(self) -> None:
+        from support_python.devops.services import LocalDockerManager
+
+        make_repo(self.root, venv=False)
+        cli = DevopsCli(PythonProject(self.root, runner=self.runner), description="Custom ops.")
+        cli.set_deploy([])
+        cli.add_services(docker=LocalDockerManager())
+        self.assertEqual(cli.harness.description, "Custom ops.")
+
     def test_custom_name_and_description(self) -> None:
         make_repo(self.root, venv=False)
         cli = DevopsCli(PythonProject(self.root, runner=self.runner), name="ops", description="Custom ops.")

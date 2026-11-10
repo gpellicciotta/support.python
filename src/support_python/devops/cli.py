@@ -28,8 +28,10 @@ from .services import (
     LocalVerifier,
 )
 
-#: Default description shown in the help screen.
+#: Default description shown in the help screen; ``set_deploy`` and ``add_services`` extend it.
 DEFAULT_DESCRIPTION = "Runs the lint, format, test, build, check, clean, versions, and release operations of this project."
+
+_DEPLOY_DESCRIPTION = "Runs the lint, format, test, build, check, clean, versions, release, and deploy operations of this project."
 
 #: Exit codes of the standard actions.
 EXIT_CODES: dict[int, str] = {
@@ -49,6 +51,9 @@ class DevopsCli:
 
     def __init__(self, project: Project, *, name: str = "devops", description: Optional[str] = None) -> None:
         self.project = project
+        self._default_description = description is None
+        self._deploy_enabled = False
+        self._service_groups: list[str] = []
         try:
             version = read_version(project.root)
         except (FileNotFoundError, ValueError):
@@ -118,6 +123,8 @@ class DevopsCli:
         example = f"{self.harness.name} deploy --dry-run"
         if example not in self.harness.examples:
             self.harness.examples.append(example)
+        self._deploy_enabled = True
+        self._refresh_description()
 
     def add_services(
         self,
@@ -149,6 +156,7 @@ class DevopsCli:
         Raises:
             ValueError: A ``db_targets`` entry is not ``local``, ``testdb``, or ``<name>_test``.
         """
+        before = set(self.harness._actions)
         ServiceActions(
             docker=docker,
             mysql=mysql,
@@ -160,6 +168,22 @@ class DevopsCli:
             service_url=service_url,
             testdb_env_file=testdb_env_file,
         ).register(self.harness)
+        self._service_groups += [name for name in self.harness._actions if name not in before]
+        self._refresh_description()
+
+    def _refresh_description(self) -> None:
+        """Rebuild the default description so it names ``deploy`` and the registered service groups."""
+        if not self._default_description:
+            return
+        text = _DEPLOY_DESCRIPTION if self._deploy_enabled else DEFAULT_DESCRIPTION
+        groups = self._service_groups
+        if groups:
+            if len(groups) <= 2:
+                listed = " and ".join(groups)
+            else:
+                listed = f"{', '.join(groups[:-1])}, and {groups[-1]}"
+            text += f" It also manages the {listed} services."
+        self.harness.description = text
 
     def run(self, argv: Optional[Sequence[str]] = None) -> int:
         """Run the command line in ``argv`` (default ``sys.argv[1:]``) and return its exit code."""
