@@ -372,6 +372,37 @@ class CaptureCliTests(unittest.TestCase):
         self.assertEqual(harness.fallback_action, "capture")
         self.assertEqual(list(harness._actions), ["capture", "tour", "list"])
 
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_app_options_reach_the_capture_handler(self, mock_run_capture: MagicMock) -> None:
+        def add_theme(parser) -> None:
+            parser.add_argument("--theme", choices=["light", "dark"], help="theme to capture")
+
+        def apply_theme(args) -> None:
+            if args.theme:
+                args.mode = f"{args.mode}&theme={args.theme}" if args.mode else f"theme={args.theme}"
+
+        self.config.capture_options = add_theme
+        self.config.prepare_capture = apply_theme
+        for argv, mode in (
+            (["capture", "account", "--theme", "dark"], "theme=dark"),
+            (["--theme", "light", "account"], "theme=light"),
+        ):
+            with self.subTest(argv=argv):
+                code, _ = self._run(argv)
+                self.assertEqual(code, 0)
+                self.assertEqual(mock_run_capture.call_args.kwargs["mode"], mode)
+                self.assertEqual(mock_run_capture.call_args.kwargs["target"], "account")
+        code, output = self._run(["help", "capture"])
+        self.assertEqual(code, 0)
+        self.assertIn("--theme", output)
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_rejects_app_options_without_the_hook(self, mock_run_capture: MagicMock) -> None:
+        with patch("sys.stderr", io.StringIO()):
+            code, _ = self._run(["capture", "account", "--theme", "dark"])
+        self.assertEqual(code, 2)
+        mock_run_capture.assert_not_called()
+
     def test_cli_version_action_uses_harness_banner(self) -> None:
         for argv in (["version"], ["--version"]):
             with self.subTest(argv=argv):

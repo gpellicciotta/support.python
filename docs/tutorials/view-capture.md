@@ -35,3 +35,18 @@ config = CaptureAppConfig(
 if __name__ == "__main__":
     sys.exit(run_capture_cli(config))
 ```
+
+Add app-specific `capture` options with `capture_options`, and apply them in `prepare_capture` before the capture runs:
+```python
+def add_theme(parser):
+    parser.add_argument("--theme", choices=["light", "dark"], help="theme to capture")
+
+
+def apply_theme(args):
+    if args.theme:
+        args.mode = f"{args.mode}&theme={args.theme}" if args.mode else f"theme={args.theme}"
+
+
+config.capture_options = add_theme
+config.prepare_capture = apply_theme
+```

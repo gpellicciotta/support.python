@@ -249,6 +249,9 @@ class CaptureAppConfig:
         target_environment: Description of target environment URL. Defaults to ``"http://127.0.0.1"``.
         author: Copyright author attribution string. Defaults to :data:`APP_AUTHOR`.
         resolve_mode_path: Optional custom hook function resolving mode-specific URLs.
+        capture_options: Optional hook adding app-specific options to the ``capture`` action's parser.
+        prepare_capture: Optional hook that receives the parsed ``capture`` arguments before the capture runs.
+            It may rewrite the standard fields, such as ``mode``, from the app-specific options.
     """
 
     app_name: str
@@ -267,6 +270,8 @@ class CaptureAppConfig:
     target_environment: str = "http://127.0.0.1"
     author: str = APP_AUTHOR
     resolve_mode_path: Optional[Callable[[str, str, str], str]] = None
+    capture_options: Optional[Callable[[argparse.ArgumentParser], None]] = None
+    prepare_capture: Optional[Callable[[argparse.Namespace], None]] = None
 
 
 class ViewCaptureEngine:
@@ -855,6 +860,8 @@ def build_capture_harness(config: CaptureAppConfig) -> ToolHarness:
         return 0 if ok else 1
 
     def handle_capture(args: argparse.Namespace, logger: CliLogger) -> int:
+        if config.prepare_capture is not None:
+            config.prepare_capture(args)
         if args.tour:
             return handle_tour(args, logger)
         ok = run_capture(
@@ -874,6 +881,11 @@ def build_capture_harness(config: CaptureAppConfig) -> ToolHarness:
             logger=logger,
         )
         return 0 if ok else 1
+
+    def configure_capture(parser: argparse.ArgumentParser) -> None:
+        _add_capture_arguments(parser)
+        if config.capture_options is not None:
+            config.capture_options(parser)
 
     def handle_list(args: argparse.Namespace) -> int:
         print(harness.format_version())
@@ -906,7 +918,7 @@ def build_capture_harness(config: CaptureAppConfig) -> ToolHarness:
             "--all captures every registered preset; --tour runs the full visual UI tour instead."
         ),
         usage_suffix="[TARGET] [options]",
-        configure_parser=_add_capture_arguments,
+        configure_parser=configure_capture,
     )
     harness.add_action(
         "tour",
