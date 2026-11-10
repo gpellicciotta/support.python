@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1268.0, input: 196, output: 64112, cache_read: 9135242, cache_write: 214916}
-review_status: pending
+  review: {turns: 2, duration_s: 426.2, input: 56, output: 15348, cache_read: 1455358, cache_write: 104324}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude-2"
+work_duration: 865.9
 ---
 # T0038: Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them
 
@@ -61,4 +64,27 @@ Rebuild this repository's `scripts/devops.py` on `DevopsCli(PythonProject(...))`
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude-2: Most of the work is solid and matches the spec.
+  - Findings: [review-findings-1.md](T0038-add-devopscli-and-pythonproject-to-support-python-devops/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Rework round 1: added a post-freeze ReleasePipeline build hook; release attaches frozen-version assets, not the -pre check build.
+  - Undeclared: release.py, test_devops_release_pipeline.py.
+  - Docs: Automated and Manual Release sections.
+
+- [2026-11-10] **[Verify]**
+  Full suite passed; release dry run plans build before tag; frozen build yields 2.0.22 assets.
+  - pytest: 895 passed, 3 skipped.
+  - Proof in validation-proof.md, Review Round 1 Rework.
+
+- [2026-11-10] **[Decide]**
+  Size note: rework raised the diff to 11 files and 883 lines, still under the large line.
+
+- [2026-11-10] **[Verify]**
+  Recorded task outcomes after review round 1 rework.
+  - Files touched: 11.
+  - Lines touched: 883.
+  - Reopenings: 0.
 
