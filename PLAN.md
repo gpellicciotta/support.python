@@ -17,7 +17,7 @@ An overview of all tasks and their planning.
 - [x] T0029 Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
 - [x] T0030 Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
 - [x] T0031 Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.
-- [ ] T0032 Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
+- [x] T0032 Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
 - [ ] T0033 Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
 - [x] T0034 Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged.
 - [ ] T0035 Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins.
@@ -28,7 +28,7 @@ An overview of all tasks and their planning.
 - [ ] T0040 [needs: T0039] Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release.
 - [ ] T0041 [needs: T0038] Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
 - [ ] T0042 [needs: T0041] Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers.
-- [ ] T0043 [needs: T0032, T0033, T0037, T0040, T0042, T0044] Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
+- [ ] T0043 [needs: T0033, T0037, T0040, T0042, T0044] Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
 - [ ] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 
 ---

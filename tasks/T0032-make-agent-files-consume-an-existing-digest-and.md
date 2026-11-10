@@ -5,17 +5,20 @@ session: claude-20261110-4207e1
 needs: []
 branch: task/T0032-make-agent-files-consume-an-existing-digest-and
 worktree: .plan/work/T0032-make-agent-files-consume-an-existing-digest-and
-status: active
+status: completed
 started_at: "2026-11-10T01:28:46Z"
-ended_at: —
+ended_at: "2026-11-10T01:41:45Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 1141.6, input: 204, output: 66570, cache_read: 11229760, cache_write: 273704}
-work_duration: 557.4
-review_status: pending
+  review: {turns: 2, duration_s: 329.8, input: 52, output: 12298, cache_read: 1418222, cache_write: 113566}
+work_duration: 778.9
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: 3db050a77e7bea61816c7ede1113da5eb42f6d7f
 ---
 # T0032: Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself
 
@@ -32,7 +35,7 @@ Keep explicit `--digest`, `--skills-dir`, and config keys working.
 - [x] **[Implement]** Remove generator use and dev-guidelines path constants, and apply the new defaults.
 - [x] **[Verify]**    Run the full suite and the installed integration scenario from the technical spec.
 - [x] **[Doc]**       Update docs/tools/agent-files.md, README.md, and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -69,4 +72,11 @@ Keep explicit `--digest`, `--skills-dir`, and config keys working.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 approved by @claude-2: The work meets every goal; approved.
+  - Findings: [review-findings-1.md](T0032-make-agent-files-consume-an-existing-digest-and/review-findings-1.md).
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 
