@@ -7,7 +7,7 @@ The dev-guidelines [Configuration Guidelines](https://github.com/gpellicciotta/d
 No shared helper exists; `git-repository-backup` hard-codes `~/.config/{{tool-name}}/config.json` on every platform.
 
 ### API
-Add to [env.py](../../../src/support_python/env.py), re-exported from the package root:
+Add to [env.py](../../../../src/support_python/env.py), re-exported from the package root:
 ```python
 def user_config_dir(tool_name: str, *, environ: Mapping[str, str] | None = None, platform: str | None = None) -> Path
 def user_config_path(

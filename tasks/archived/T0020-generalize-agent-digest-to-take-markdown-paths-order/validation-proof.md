@@ -5,7 +5,7 @@ Verification evidence for `T0020` confirming generalized `agent-digest` CLI beha
 ---
 
 ## TDD Red Phase Against Base Module (`2e7ca39`)
-Running the delivered [test_agent_digest.py](../../../tests/tools/test_agent_digest.py) suite against the pre-change `agent_digest.py` at base commit `2e7ca39` (`python -m pytest -o pythonpath={{primary-checkout}}/src tests/tools/test_agent_digest.py -q --tb=no`) fails on all 26 new assertions and subtests (earlier proof listed draft identifiers before test consolidation):
+Running the delivered [test_agent_digest.py](../../../../tests/tools/test_agent_digest.py) suite against the pre-change `agent_digest.py` at base commit `2e7ca39` (`python -m pytest -o pythonpath={{primary-checkout}}/src tests/tools/test_agent_digest.py -q --tb=no`) fails on all 26 new assertions and subtests (earlier proof listed draft identifiers before test consolidation):
 ```text
 .FF.F..FFFFFFF..FFF..F.F..                                [100%]
 =========================== short test summary info ===========================

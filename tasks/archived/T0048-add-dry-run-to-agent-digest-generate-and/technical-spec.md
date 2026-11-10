@@ -1,5 +1,5 @@
 ### Requirement
-[ADR-0003](../../../docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) requires `--dry-run` on every writing action.
+[ADR-0003](../../../../docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) requires `--dry-run` on every writing action.
 It also requires `--format text|json` on every `list` and `check` action, with one JSON document on stdout in `json` mode.
 `agent-digest generate` lacks `--dry-run`, and `agent-digest check` lacks `--format`.
 

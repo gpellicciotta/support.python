@@ -16,7 +16,7 @@ usage:
   review: {turns: 4, duration_s: 953.8, input: 184, output: 41332, cache_read: 6072936, cache_write: 234170}
 review_status: approved
 review_round: 2
-work_duration: 1197.3
+work_duration: 1232.9
 reviewed_by: "@claude-2"
 completion-commit: 70afcd5059706d53516c56d76eed8aa5e3fa2fe2
 ---
