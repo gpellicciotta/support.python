@@ -26,9 +26,11 @@ Overview of all documentation for the `support-python` project.
 
 ## Guidelines
 This project follows the cross-project [dev-guidelines](https://github.com/gpellicciotta/dev-guidelines), in particular:
-- [general guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/general-guidelines.md),
-- [Python guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/python-guidelines.md), and
-- [coordinating work guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/coordinating-work-guidelines.md).
+- [General Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/general-guidelines.md)
+- [Python Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/python-guidelines.md)
+- [CLI Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/cli-guidelines.md)
+- [Configuration Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/configuration-guidelines.md)
+- [Plan Task Usage Guidelines](https://github.com/gpellicciotta/plan/blob/main/src/plan/skills/plan-task-usage-guidelines/SKILL.md)
 
 ---
 

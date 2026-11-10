@@ -7,7 +7,7 @@
 Accepted
 
 ## Context
-As the repository's guidelines expanded to cover languages, testing, operations, database migrations, and planning workflows, [agent-digest.md](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/agent-digest.md) grew to 42,077 bytes.
+As the repository's guidelines expanded to cover languages, testing, operations, database migrations, and planning workflows, `agent-digest.md` grew to 42,077 bytes.
 When injected into agent instruction files (`~/.gemini/GEMINI.md`, `~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`), this exceeded prompt injection size limits across multiple AI coding tools:
 - Gemini CLI and Antigravity enforce an injection cap of approximately 24 KiB, causing silent truncation of 19,056 bytes from `<RULE[user_global]>`.
 - Claude Code produces warning diagnostics when project instruction files exceed 40 KiB.
@@ -18,7 +18,7 @@ Conversely, AI agents require token-dense, imperative directives and progressive
 
 ## Decision
 1. **Size Budget for Core Digest**:
-   Enforce a hard size budget of 20 KiB (`20,480` bytes) on [agent-digest.md](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/agent-digest.md), validated in CI and checked by `agent-digest validate` (originally dev-guidelines' `generate-agent-digest.py validate`).
+   Enforce a hard size budget of 20 KiB (`20,480` bytes) on `agent-digest.md`, validated in CI and checked by `agent-digest validate` (originally dev-guidelines' `generate-agent-digest.py validate`).
 2. **Mechanical Skill Derivation (1:1)**:
    Derive agent skills mechanically from human guideline documents using YAML frontmatter in `guidelines/<name>.md`:
    ```yaml
@@ -41,7 +41,7 @@ Conversely, AI agents require token-dense, imperative directives and progressive
    - Absolute `http` and `https` links remain unchanged.
 
 5. **Separation of Invariants vs. On-Demand Skills**:
-   The core agent digest ([agent-digest.md](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/agent-digest.md)) retains only universal behavioral invariants: truthfulness, approval gates, command transparency, verbosity limits, and universal path/language standards.
+   The core agent digest (`agent-digest.md`) retains only universal behavioral invariants: truthfulness, approval gates, command transparency, verbosity limits, and universal path/language standards.
    All domain-specific topics are extracted into dedicated guideline files and corresponding on-demand skills:
    - Language skills: `javascript-guidelines`, `python-guidelines`, `java-guidelines`, `markdown-guidelines`
    - Operational skills: `process-management-guidelines`, `testing-guidelines`, `cli-guidelines`, `logging-guidelines`, `database-guidelines`, `project-setup-guidelines`, `plan-task-usage-guidelines`, `change-management-guidelines`

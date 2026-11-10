@@ -217,7 +217,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Task worktrees (coordinating-work-guidelines.md)
+# Task worktrees created by plan
 work/
 
 # Log files
