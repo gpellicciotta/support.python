@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1403.8, input: 1335996, output: 137160, cache_read: 40275918}
+  worker: {turns: 4, duration_s: 1576.4, input: 1457370, output: 147534, cache_read: 47090842}
 work_duration: 716.1
+review_status: pending
+review_round: 1
 ---
 # T0072: Let DevopsCli run the slow test suite through test --slow, and run both suites in check and release
 
@@ -65,4 +67,7 @@ Let adapters without a slow suite skip it with an `INFO` message instead of fail
   Documented test --slow in devops.md, devops-scripts.md, and CHANGELOG.md.
   - Documented CLI options and adapter behaviors.
   - Added CHANGELOG entry under v2.0.19-pre.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
