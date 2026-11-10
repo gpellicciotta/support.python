@@ -9,6 +9,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.slow
+
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 GIT_ENV = ["-c", "user.name=Test", "-c", "user.email=test@example.com"]
 GIT_IDENTITY = {

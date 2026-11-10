@@ -13,6 +13,8 @@ from unittest import mock
 from support_python.devops import NodeProject
 from support_python.devops.cli import DevopsCli
 
+import pytest
+
 CHANGELOG = """# Versioned Changes
 
 ---
@@ -219,6 +221,7 @@ class NodeReleaseTests(NodeTestCase):
         self.assertIn("2.0.1-pre", out + err)
 
 
+@pytest.mark.slow
 @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node.js with npm is not installed")
 class NodeNpmIntegrationTests(unittest.TestCase):
     """Runs the real npm through the real step runner."""

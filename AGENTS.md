@@ -12,7 +12,7 @@ See [README.md](README.md) for usage, [index.md](docs/index.md) for all document
 
 ## Commands
 - Bootstrap a fresh checkout: `python scripts/bootstrap-dev-environment.py`
-- Run the tests: `python scripts/devops.py test` (a selection: `python scripts/devops.py test tests/test_cli.py`)
+- Run the tests: `python scripts/devops.py test` (selection: `python scripts/devops.py test tests/test_cli.py`; slow: `python -m pytest -m slow --timeout=120`)
 - Run all checks (lint, tests, build): `python scripts/devops.py check`
 - Reformat sources: `python scripts/devops.py format`
 - Lint Markdown: `.venv/Scripts/lint-markdown check --offline` (`.venv/bin/` outside Windows)

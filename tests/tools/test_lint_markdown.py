@@ -13,6 +13,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from support_python.cli import ToolHarness, get_full_version
 from support_python.logging import CliLogger, format_severity_indicator
 from support_python.markdown.lint import MarkdownLinter
@@ -426,12 +428,14 @@ class TestHarnessIntegration(unittest.TestCase):
         self.assertIsInstance(harness, ToolHarness)
         self.assertEqual(harness.name, "lint-markdown")
 
+    @pytest.mark.slow
     def test_package_root_does_not_load_cli_tool_module(self) -> None:
         cmd = [sys.executable, "-c", "import sys, support_python; assert 'support_python.tools.lint_markdown' not in sys.modules"]
         result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
 
 
+@pytest.mark.slow
 class TestEndToEnd(unittest.TestCase):
     def _run_script(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

@@ -12,6 +12,10 @@ from typing import Optional, Sequence
 from support_python.devops import ReleasePipeline, confirm_typed, run_step_command
 from support_python.logging import CliLogger
 
+import pytest
+
+pytestmark = pytest.mark.slow
+
 TODAY = date(2026, 11, 10)
 
 CHANGELOG = """# Versioned Changes

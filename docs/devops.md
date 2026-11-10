@@ -75,7 +75,8 @@ python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
 python scripts/devops.py help [--verbose] | version
 ```
 - `lint` runs `ruff check .` and `ruff format --check .`; `format` runs `ruff format .`.
-- `test` runs `pytest -q`; `build` removes `dist/` and runs `python -m build -o dist`.
+- `test` runs `pytest -q` (fast suite); slow tests run with `pytest -m slow --timeout=120`.
+- `build` removes `dist/` and runs `python -m build -o dist`.
 - `check` runs lint, test, and build, stopping at the first failure.
 - `clean` removes `dist/`, `build/`, and `src/*.egg-info`; it needs no venv.
 - `versions` compares `pyproject.toml` with the top `CHANGELOG.md` heading and exits 1 on drift.
@@ -131,5 +132,5 @@ Projects building their devops script on it pin the same tag in their `scripts/r
 ## Continuous Integration
 [python-package.yml](../.github/workflows/python-package.yml) runs on every push and pull request, on Python 3.9 and the latest 3.x.
 The 3.9 job runs on `ubuntu-24.04`, because `setup-python` has no 3.9 build for the `ubuntu-latest` image.
-It installs the `dev` extra, runs `ruff check` and `ruff format --check`, runs `pytest`, and builds the distributions.
+It installs the `dev` extra, runs `ruff check` and `ruff format --check`, runs fast and slow tests, and builds the distributions.
 [publish.yml](../.github/workflows/publish.yml) runs on a published GitHub release and attaches the wheel and sdist.

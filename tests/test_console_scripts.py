@@ -15,6 +15,8 @@ import support_python
 from support_python import cli
 from support_python.tools import agent_digest, agent_files, git_repository_backup, lint_markdown, processes
 
+pytestmark = pytest.mark.slow
+
 EXPECTED_SCRIPTS = {
     "processes": "support_python.tools.processes:main",
     "agent-files": "support_python.tools.agent_files:main",

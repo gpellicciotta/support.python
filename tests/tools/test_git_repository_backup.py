@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
+import pytest
+
 from support_python.tools import git_repository_backup as backup_git_repos
 
 SRC_DIR = Path(__file__).resolve().parents[2] / "src"
@@ -499,6 +501,7 @@ class TestDiscovery(BackupTestCase):
         self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), before)
 
 
+@pytest.mark.slow
 class TestMirror(BackupTestCase):
     def test_creates_bare_mirror_with_all_refs(self) -> None:
         alpha = make_repo(self.root / "alpha", commits=2, tag="v1")
@@ -538,6 +541,7 @@ class TestMirror(BackupTestCase):
         self.assertFalse(self.archives.exists())
 
 
+@pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestArchive(BackupTestCase):
     def archive_mtime(self, name: str) -> int:
@@ -584,6 +588,7 @@ class TestArchive(BackupTestCase):
         self.assertTrue((self.archives / "alpha.7z").exists())
 
 
+@pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestIntegration(BackupTestCase):
     def test_end_to_end_backup_and_restore(self) -> None:
@@ -635,6 +640,7 @@ class TestIntegration(BackupTestCase):
                 self.assertEqual(refs_of(bundle_clone), refs_of(repo))
 
 
+@pytest.mark.slow
 class TestReviewRound1(BackupTestCase):
     """Regression tests for the findings of review round 1."""
 
@@ -695,6 +701,7 @@ class TestReviewRound1(BackupTestCase):
         self.assertEqual(sorted(p.name for p in self.tmp.iterdir() if p.name.endswith(".partial")), [])
 
 
+@pytest.mark.slow
 class TestForeignOwnedMirror(BackupTestCase):
     """Regression tests for mirrors on network shares owned by another account."""
 
@@ -935,6 +942,7 @@ class TestMissingKeyringPackage(KeyringTestCase):
         self.assertTrue((self.archives / "alpha.7z").exists())
 
 
+@pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestKeyringIntegration(KeyringTestCase):
     def test_set_password_then_unattended_backup(self) -> None:
@@ -986,6 +994,7 @@ class RestoreTestCase(KeyringTestCase):
         self.assertEqual((self.target / "file.txt").read_text(encoding="utf-8"), source_file)
 
 
+@pytest.mark.slow
 class TestActionCompletionSummaries(RestoreTestCase):
     """Restore and set-password report their runtime duration and final status on exit."""
 
@@ -1056,6 +1065,7 @@ class TestActionCompletionSummaries(RestoreTestCase):
         self.assertEqual((out + err).count("Finished git-repository-backup"), 1)
 
 
+@pytest.mark.slow
 class TestRestoreMirror(RestoreTestCase):
     def test_restore_from_mirror_recreates_all_refs(self) -> None:
         self.backup("--no-archive")
@@ -1234,6 +1244,7 @@ class TestRestoreMirror(RestoreTestCase):
         self.assertNotIn("then git clone", details)
 
 
+@pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestRestoreArchive(RestoreTestCase):
     def test_restore_from_archive_with_password_env(self) -> None:
@@ -1313,6 +1324,7 @@ class TestRestoreArchive(RestoreTestCase):
         self.assert_restored()
 
 
+@pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestRestoreIntegration(BackupTestCase):
     def test_backup_then_restore_from_both_layers(self) -> None:
@@ -1376,6 +1388,7 @@ class TestRestoreIntegration(BackupTestCase):
         expected_warn = f"Reading legacy config {legacy_cfg}; move it to {new_cfg}. The legacy path is dropped in v3.0.0."
         self.assertIn(expected_warn, result.stderr)
 
+    @pytest.mark.slow
     def test_installed_cli_reads_xdg_config_home_config(self) -> None:
         make_repo(self.root / "alpha")
         new_cfg = self.xdg / "git-repository-backup" / "config.json"

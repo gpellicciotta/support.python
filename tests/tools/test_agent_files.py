@@ -20,6 +20,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from support_python.logging import CliLogger
 from support_python.tools import agent_files as sync_mod
 
@@ -605,6 +607,7 @@ class DefaultLogFileTests(unittest.TestCase):
             self.assertFalse((sync_mod.REPO_ROOT / "agent-files.log").exists())
 
 
+@pytest.mark.slow
 class EntryPointTests(unittest.TestCase):
     def test_bare_script_invocation_prints_full_help(self) -> None:
         result = subprocess.run(
@@ -625,6 +628,7 @@ class NoDigestGenerationTests(unittest.TestCase):
         self.assertFalse(hasattr(sync_mod, "get_digest_generator"))
         self.assertFalse(hasattr(sync_mod, "ensure_digest"))
 
+    @pytest.mark.slow
     def test_sync_and_check_never_import_agent_digest_or_rewrite_digest(self) -> None:
         script = (
             "import json, sys\n"
@@ -1934,6 +1938,7 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
                 self.assertEqual(sync_mod.main(["sync", "cursor-agent", "--dry-run", "--config", str(cfg_file)]), 0)
             self.assertIn("already up to date", dry_out.getvalue())
 
+    @pytest.mark.slow
     def test_installed_agent_files_sync_and_check_integration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()

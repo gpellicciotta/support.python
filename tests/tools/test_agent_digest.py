@@ -18,6 +18,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import pytest
+
 from support_python.logging import CliLogger
 from support_python.tools import agent_digest as generate_agent_digest
 
@@ -645,6 +647,7 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
             self.assertIn("sample-guidelines/SKILL.md is up to date", out)
 
 
+@pytest.mark.slow
 class TestGenerateAgentDigestEndToEnd(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

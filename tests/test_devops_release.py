@@ -7,6 +7,8 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from support_python.devops import (
     VERSION_FILES,
     changelog_top_version,
@@ -210,6 +212,7 @@ class GithubRepoTests(unittest.TestCase):
             parse_github_repo("https://gitlab.com/owner/name.git")
 
 
+@pytest.mark.slow
 class RepositoryIntegrationTests(unittest.TestCase):
     def test_version_matches_changelog_top_heading(self) -> None:
         changelog = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

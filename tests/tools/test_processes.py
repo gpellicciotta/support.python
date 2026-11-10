@@ -36,6 +36,7 @@ def run_cli(argv: list[str]) -> tuple[int, str, str]:
     return code, out.getvalue(), err.getvalue()
 
 
+@pytest.mark.slow
 def test_old_cli_module_paths_no_longer_import() -> None:
     import importlib
 
@@ -190,6 +191,7 @@ def test_processes_list_text_format_matches_former_table_output() -> None:
     assert build_harness()._build_parser("list").parse_args([]).format == "text"
 
 
+@pytest.mark.slow
 def test_processes_kill_dry_run_integration() -> None:
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     processes_bin = str(Path(sys.executable).parent / ("processes.exe" if sys.platform == "win32" else "processes"))
@@ -210,6 +212,7 @@ def test_processes_kill_dry_run_integration() -> None:
             child.wait(timeout=10)
 
 
+@pytest.mark.slow
 def test_processes_list_and_kill_integration(tmp_path: Path) -> None:
     work_dir = tmp_path / "child_cwd"
     work_dir.mkdir()

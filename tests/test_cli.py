@@ -7,6 +7,8 @@ import io
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 import support_python
 import support_python.cli
 
@@ -376,6 +378,7 @@ class ToolHarnessUnitTests(unittest.TestCase):
             self.assertTrue(harness.format_help().startswith("custom-tool v1.0.0 - Copyright (c) Someone\n\nCustom description."))
 
 
+@pytest.mark.slow
 class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
     def test_demo_cli_subprocess_end_to_end(self) -> None:
         import os
@@ -689,6 +692,7 @@ class ToolHarnessJsonOutputTests(unittest.TestCase):
         self.assertEqual(offending, [])
 
 
+@pytest.mark.slow
 class ToolVersionReportingTests(unittest.TestCase):
     """Verify that every tool reports the installed support-python version instead of cwd's project version."""
 

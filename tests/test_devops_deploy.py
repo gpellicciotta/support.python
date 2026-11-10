@@ -14,6 +14,10 @@ from support_python.devops import EXIT_COMMAND_NOT_FOUND, DeployContext, DeployS
 from support_python.devops.steps import run_step_command
 from support_python.logging import CliLogger
 
+import pytest
+
+pytestmark = pytest.mark.slow
+
 CHANGELOG = """# Versioned Changes
 
 ---
