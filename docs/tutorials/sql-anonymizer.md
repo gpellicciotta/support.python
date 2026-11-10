@@ -6,7 +6,6 @@ Built-in table profiles cover the `auth` and `counters` applications.
 `anonymize_sql_string` and `anonymize_sql_stream` are re-exported from `support_python`.
 
 ## Example
-
 ```python
 from support_python import anonymize_sql_stream, anonymize_sql_string
 

@@ -252,7 +252,7 @@ def test_rules_action_lists_builtin_and_plugin_rules_as_text(tmp_path: Path, mon
     x001 = next(line for line in lines if line.startswith("X001 "))
     assert x001.split()[1:] == ["no-todo", "prose", "no", "yes", "rules/no_todo.py"]
     md015 = next(line for line in lines if line.startswith("MD015 "))
-    assert md015.split()[4] == "no"
+    assert md015.split()[4] == "yes"
 
 
 def test_rules_action_emits_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

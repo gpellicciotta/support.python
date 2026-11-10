@@ -7,7 +7,6 @@ These modules keep shared files consistent across concurrent readers, writers, a
 Their symbols are re-exported from `support_python` and also available through `support_python.files` and `support_python.locking`.
 
 ## Atomic text files
-
 ```python
 from pathlib import Path
 from support_python import atomic_replace, atomic_write_text, read_text_retrying
@@ -23,7 +22,6 @@ content = read_text_retrying(path, errors="strict")
 - `read_text_retrying(path, max_retries=10, base_delay=0.005, errors="replace")` reads UTF-8 text while retrying transient `PermissionError` locks during concurrent renames.
 
 ## Locks
-
 ```python
 from support_python import LockTimeoutError, create_lock
 

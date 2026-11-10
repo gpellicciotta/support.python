@@ -10,7 +10,6 @@ See also:
 - [Migrating to v2.0.0](docs/migration-v2.md)
 
 ## Bootstrap
-
 ```bash
 # Cross-platform (Windows/Linux/macOS): creates a venv, installs editable + dev extras, lints, tests, and builds
 python scripts/bootstrap-dev-environment.py
@@ -19,7 +18,6 @@ python scripts/bootstrap-dev-environment.py
 See [devops.md](docs/devops.md) for the full development and release workflow, including the repository maintenance scripts.
 
 ## Build
-
 ```bash
 python -m pip install --upgrade build
 python -m build

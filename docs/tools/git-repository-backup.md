@@ -65,12 +65,12 @@ Config keys accept dashes or underscores interchangeably; kebab-case is preferre
 }
 ```
 
-| Field              | Type            | Default         | Purpose                                                 |
-| :----------------- | :-------------- | :-------------- | :------------------------------------------------------ |
-| `roots`            | `array<string>` | `[]`            | Root directories scanned for Git repositories           |
-| `mirror-dir`       | `string`        | `null`          | Target directory for bare mirror repositories           |
-| `archive-dir`      | `string`        | `null`          | Target directory for encrypted `.7z` bundle archives    |
-| `depth`            | `integer`       | `2`             | Maximum directory recursion depth below each root       |
-| `seven-zip`        | `string`        | Auto-detected   | Path or command name for the 7-Zip executable           |
-| `password-env`     | `string`        | `null`          | Environment variable holding the archive password       |
-| `password-keyring` | `string`        | `null`          | OS keyring service name holding the archive password    |
+| Field              | Type            | Default       | Purpose                                              |
+| :----------------- | :-------------- | :------------ | :--------------------------------------------------- |
+| `roots`            | `array<string>` | `[]`          | Root directories scanned for Git repositories        |
+| `mirror-dir`       | `string`        | `null`        | Target directory for bare mirror repositories        |
+| `archive-dir`      | `string`        | `null`        | Target directory for encrypted `.7z` bundle archives |
+| `depth`            | `integer`       | `2`           | Maximum directory recursion depth below each root    |
+| `seven-zip`        | `string`        | Auto-detected | Path or command name for the 7-Zip executable        |
+| `password-env`     | `string`        | `null`        | Environment variable holding the archive password    |
+| `password-keyring` | `string`        | `null`        | OS keyring service name holding the archive password |

@@ -153,7 +153,7 @@ def test_profile_loading_default_dev_guidelines_missing_file_and_unknown_rule(tm
     """Verify load_profile handles default, dev-guidelines, missing files, and unknown rule IDs."""
     assert "default" in PROFILES
     assert "dev-guidelines" in PROFILES
-    assert "MD015" not in DEFAULT_PROFILE.enabled_rules
+    assert "MD015" in DEFAULT_PROFILE.enabled_rules
     assert not DEFAULT_PROFILE.historical_task_exemptions
     assert "MD015" in DEV_GUIDELINES_PROFILE.enabled_rules
     assert DEV_GUIDELINES_PROFILE.historical_task_exemptions
@@ -177,11 +177,11 @@ def test_profile_loading_default_dev_guidelines_missing_file_and_unknown_rule(tm
     assert "MD018" not in custom.enabled_rules
     assert not custom.historical_task_exemptions
 
-    # Config without a profile key uses default profile as base (MD015 stays off)
+    # Config without a profile key uses default profile as base (MD015 stays on)
     cfg_file.write_text(json.dumps({"disable": ["MD018"]}), encoding="utf-8")
     no_prof_key = load_profile(cfg_file)
     assert no_prof_key.name == "default"
-    assert "MD015" not in no_prof_key.enabled_rules
+    assert "MD015" in no_prof_key.enabled_rules
     assert "MD018" not in no_prof_key.enabled_rules
     assert not no_prof_key.historical_task_exemptions
 
@@ -212,14 +212,14 @@ def test_default_vs_dev_guidelines_profile_behavior_and_t0014_parity(tmp_path: P
     dg_linter = MarkdownLinter(profile="dev-guidelines", offline=True, project_root=tmp_path)
     legacy_linter = MarkdownLinter(offline=True, project_root=tmp_path)
 
-    # On guide.md: default ignores MD015, dev-guidelines flags MD015
-    assert default_linter.lint_content(doc, doc.read_bytes()) == []
+    # On guide.md: both default and dev-guidelines flag MD015, as the Markdown guidelines require
+    assert [i.rule_id for i in default_linter.lint_content(doc, doc.read_bytes())] == ["MD015"]
     dg_doc_issues = dg_linter.lint_content(doc, doc.read_bytes())
     assert [i.rule_id for i in dg_doc_issues] == ["MD015"]
 
-    # On historical task: default flags MD014, dev-guidelines exempts historical task
+    # On historical task: default flags MD015 and MD014, dev-guidelines exempts historical task
     default_task_issues = default_linter.lint_content(hist_task, hist_task.read_bytes())
-    assert [i.rule_id for i in default_task_issues] == ["MD014"]
+    assert [i.rule_id for i in default_task_issues] == ["MD015", "MD014"]
     assert dg_linter.lint_content(hist_task, hist_task.read_bytes()) == []
 
     # Parity between dev-guidelines profile and T0014 default MarkdownLinter
@@ -227,28 +227,28 @@ def test_default_vs_dev_guidelines_profile_behavior_and_t0014_parity(tmp_path: P
         raw = target.read_bytes()
         assert dg_linter.lint_content(target, raw) == legacy_linter.lint_content(target, raw)
 
-    # CLI with no config and no --profile uses default profile (does not report MD015 on guide.md)
+    # CLI with no config and no --profile uses default profile (reports MD015 on guide.md)
     out_none, err_none = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out_none), contextlib.redirect_stderr(err_none):
         code_none = lint_markdown.main(["check", "--offline", str(doc)])
-    assert code_none == 0
-    assert "MD015" not in out_none.getvalue()
+    assert code_none == 1
+    assert "MD015" in out_none.getvalue()
 
     # CLI with --profile default agrees with no-config behavior
     out_def, err_def = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out_def), contextlib.redirect_stderr(err_def):
         code_def = lint_markdown.main(["check", "--profile", "default", "--offline", str(doc)])
-    assert code_def == 0
-    assert "MD015" not in out_def.getvalue()
+    assert code_def == 1
+    assert "MD015" in out_def.getvalue()
 
-    # CLI with .markdown-lint.json lacking a profile key also uses default profile (MD015 stays off)
+    # CLI with .markdown-lint.json lacking a profile key also uses default profile (MD015 stays on)
     cfg_path = tmp_path / ".markdown-lint.json"
     cfg_path.write_text(json.dumps({"disable": ["MD018"]}), encoding="utf-8")
     out_cfg_def, err_cfg_def = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out_cfg_def), contextlib.redirect_stderr(err_cfg_def):
         code_cfg_def = lint_markdown.main(["check", "--offline", str(doc)])
-    assert code_cfg_def == 0
-    assert "MD015" not in out_cfg_def.getvalue()
+    assert code_cfg_def == 1
+    assert "MD015" in out_cfg_def.getvalue()
 
     # End-to-end CLI parity with legacy .markdown-lint.json set to dev-guidelines
     cfg_path.write_text(json.dumps({"profile": "dev-guidelines"}), encoding="utf-8")

@@ -135,7 +135,6 @@ skill:
 ---
 
 ## Exit Codes
-
 | Exit Code | Meaning                                                               |
 | :-------- | :-------------------------------------------------------------------- |
 | `0`       | Digest and skills generated or verified within all configured budgets |

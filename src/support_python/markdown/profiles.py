@@ -15,6 +15,7 @@ DEFAULT_CONFIG_FILENAME = ".lint-markdown.json"
 LEGACY_CONFIG_FILENAME = ".markdown-lint.json"
 
 ALL_RULE_IDS: frozenset[str] = frozenset(DEFAULT_REGISTRY.rule_ids())
+#: Every rule except ``MD015``; no built-in profile uses this set any more.
 GENERIC_RULE_IDS: frozenset[str] = frozenset(rid for rid in ALL_RULE_IDS if rid != "MD015")
 
 _ALLOWED_PROFILE_KEYS = frozenset(
@@ -48,7 +49,7 @@ class LintProfile:
 
 DEFAULT_PROFILE = LintProfile(
     name="default",
-    enabled_rules=GENERIC_RULE_IDS,
+    enabled_rules=ALL_RULE_IDS,
     historical_task_exemptions=False,
 )
 

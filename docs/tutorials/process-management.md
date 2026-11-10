@@ -5,7 +5,6 @@ All helpers use only the Python standard library and `ctypes`.
 The `processes` command-line tool in [tools/processes.py](../../src/support_python/tools/processes.py) builds on them; see [processes.md](../tools/processes.md) for its actions and examples.
 
 ## Example
-
 ```python
 import os
 from support_python.processes import (

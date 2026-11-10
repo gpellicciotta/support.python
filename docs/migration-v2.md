@@ -84,11 +84,11 @@ agent-files sync --digest guidelines/agent-digest.md --skills-dir skills
 ## Configuration Files
 Each tool reads its legacy path with a deprecation warning until `v3.0.0`; rename the file now.
 
-| v1.x path                                | v2.0.0 path                                   |
-| :--------------------------------------- | :-------------------------------------------- |
-| `.markdown-lint.json`                    | `.lint-markdown.json`                         |
-| `agent-files.json`                       | `.agent-files.json`                           |
-| `~/.config/backup-git-repos/config.json` | `git-repository-backup` user config file      |
+| v1.x path                                | v2.0.0 path                              |
+| :--------------------------------------- | :--------------------------------------- |
+| `.markdown-lint.json`                    | `.lint-markdown.json`                    |
+| `agent-files.json`                       | `.agent-files.json`                      |
+| `~/.config/backup-git-repos/config.json` | `git-repository-backup` user config file |
 
 The `git-repository-backup` user config file location is listed in [git-repository-backup.md](tools/git-repository-backup.md#configuration-discovery-and-schema).
 Configuration keys in every tool accept kebab-case and snake_case spellings, so existing files keep working; docs use kebab-case.

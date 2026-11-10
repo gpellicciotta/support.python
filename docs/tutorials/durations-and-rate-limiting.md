@@ -8,7 +8,6 @@ These modules parse and format durations and timestamps, and limit how often tas
 Their symbols are re-exported from `support_python` and also available through `support_python.durations` and `support_python.ratelimit`.
 
 ## Durations and timestamps
-
 ```python
 from support_python import (
     format_duration,

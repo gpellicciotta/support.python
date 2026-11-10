@@ -5,7 +5,6 @@ Practical guidance on building, testing, developing, and releasing `support-pyth
 ---
 
 ## Prerequisites and Environment
-
 - **Python**: 3.9 or later (see [pyproject.toml](../pyproject.toml)'s `requires-python`).
 - **Git**: Git 2.30+ supporting worktrees (`git worktree`).
 - **PowerShell / Bash**: not required — [bootstrap-dev-environment.py](../scripts/bootstrap-dev-environment.py) is cross-platform.
@@ -92,7 +91,6 @@ All task work follows the `plan-task-usage-guidelines` skill from
 ---
 
 ## Release Process
-
 Ongoing work accumulates under the top `CHANGELOG.md` heading while it carries a `-pre` SemVer suffix (e.g.
 `## v0.1.1-pre`), which must always match `version` in `pyproject.toml` (the single source of truth) exactly,
 `-pre` included. Escalate that heading/version together the moment a change lands that needs it.
@@ -149,7 +147,6 @@ Tag pushes are an outbound action and need explicit approval.
 ---
 
 ## Continuous Integration
-
 The GitHub Actions workflow in [python-package.yml](../.github/workflows/python-package.yml) triggers on push and pull requests,
 executing: dependency install (with the `dev` extra), `ruff check`/`ruff format --check`, `pytest`, and
 `python -m build`. [publish.yml](../.github/workflows/publish.yml) triggers on GitHub Release, building and attaching

@@ -5,7 +5,6 @@ Its symbols are re-exported from `support_python` and also available through `su
 Git must be installed and available on `PATH`; no Python dependencies are required.
 
 ## Repository queries
-
 ```python
 from support_python import get_repo_root, has_remote, is_git_clean
 

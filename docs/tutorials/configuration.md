@@ -6,7 +6,6 @@ Declare a tool's settings once, then resolve them and add the standard `config` 
 It uses only the standard library; its symbols are re-exported from `support_python`.
 
 ## Declaring settings
-
 ```python
 from support_python import Setting, SettingsSchema
 
@@ -27,7 +26,6 @@ SCHEMA = SettingsSchema(
 - `tiers` limits the supported files; `project_dir`, `project_file`, `system_path`, `environ`, and `platform` override discovery.
 
 ## Resolving settings
-
 ```python
 from support_python import resolve_settings
 
@@ -48,7 +46,6 @@ Precedence, highest first:
 - `config_path` replaces file discovery and counts as the `project` source.
 
 ## The config command group
-
 ```python
 from support_python import ToolHarness, add_config_actions
 

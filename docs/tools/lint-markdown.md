@@ -30,11 +30,11 @@ Supported actions, profile, and rule options:
 
 ## Built-In Profiles
 The profile loader in [profiles.py](../../src/support_python/markdown/profiles.py) provides two built-in profiles:
-- `default` enables generic rules (`MD001` through `MD014` and `MD016` through `MD019`), leaving `MD015` and historical-task exemptions disabled.
-- `dev-guidelines` enables all 19 rules (`MD001` through `MD019`, including `MD015`) and activates `.plan/tasks/` historical-task exemptions.
+- `default` enables all 19 rules (`MD001` through `MD019`), matching the Markdown guidelines, without historical-task exemptions.
+- `dev-guidelines` enables the same 19 rules and activates `.plan/tasks/` historical-task exemptions.
 - On the CLI, omitting both `--profile` and `.lint-markdown.json` selects `default`.
 - A `.lint-markdown.json` file that omits the `"profile"` key also uses `default` as its base profile.
-- Direct `MarkdownLinter()` calls with `profile=None` enable all 19 rules and historical-task exemptions; pass `profile="default"` for the generic profile.
+- Direct `MarkdownLinter()` calls with `profile=None` enable all 19 rules and historical-task exemptions; pass `profile="default"` to drop the exemptions.
 
 ---
 
@@ -52,15 +52,15 @@ When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the targe
 }
 ```
 
-| Field                        | Type                      | Default          | Purpose                                               |
-| :--------------------------- | :------------------------ | :--------------- | :---------------------------------------------------- |
-| `profile`                    | `string`                  | `"default"`      | Base profile (`"default"` or `"dev-guidelines"`)      |
-| `rules` / `enabled-rules`    | `array<string> \| object` | Profile rules    | Explicit rule ID list or `{ "MD0xx": bool }` map      |
-| `enable` / `enable-rules`    | `array<string>`           | `[]`             | Additional `MD0xx` rule IDs enabled on the profile    |
-| `disable` / `disable-rules`  | `array<string>`           | `[]`             | `MD0xx` rule IDs removed from the profile             |
-| `historical-task-exemptions` | `boolean`                 | Profile setting  | Exempt completed or pre-cutoff `.plan/tasks/` files   |
-| `excludes` / `exclude`       | `array<string>`           | `[]`             | Additional glob patterns excluded during discovery    |
-| `plugins`                    | `array<string>`           | `[]`             | Rule plugin files or modules loaded before the rules  |
+| Field                        | Type                      | Default         | Purpose                                              |
+| :--------------------------- | :------------------------ | :-------------- | :--------------------------------------------------- |
+| `profile`                    | `string`                  | `"default"`     | Base profile (`"default"` or `"dev-guidelines"`)     |
+| `rules` / `enabled-rules`    | `array<string> \| object` | Profile rules   | Explicit rule ID list or `{ "MD0xx": bool }` map     |
+| `enable` / `enable-rules`    | `array<string>`           | `[]`            | Additional `MD0xx` rule IDs enabled on the profile   |
+| `disable` / `disable-rules`  | `array<string>`           | `[]`            | `MD0xx` rule IDs removed from the profile            |
+| `historical-task-exemptions` | `boolean`                 | Profile setting | Exempt completed or pre-cutoff `.plan/tasks/` files  |
+| `excludes` / `exclude`       | `array<string>`           | `[]`            | Additional glob patterns excluded during discovery   |
+| `plugins`                    | `array<string>`           | `[]`            | Rule plugin files or modules loaded before the rules |
 
 ---
 

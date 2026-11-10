@@ -9,7 +9,6 @@
 The `lint-markdown` command-line tool builds on the linter; see [lint-markdown.md](../tools/lint-markdown.md) for its actions, profiles, configuration, and rule plugins.
 
 ## Table helpers
-
 ```python
 from support_python import (
     check_table_alignment,

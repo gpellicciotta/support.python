@@ -9,7 +9,6 @@ Focused modules for developing CLI tools and ops scripts, all re-exported from `
 - [crypto.py](../../src/support_python/crypto.py): `get_standard_password_hash` and `decrypt_property_value` for credentials and properties.
 
 ## Example
-
 ```python
 from support_python import (
     configure_utf8_output,
