@@ -5,18 +5,20 @@ session: claude-20261110-61f972
 needs: []
 branch: task/T0044-rebuild-the-capture-view-cli-on-toolharness-and
 worktree: .plan/work/T0044-rebuild-the-capture-view-cli-on-toolharness-and
-status: active
+status: completed
 started_at: "2026-11-10T04:22:23Z"
-ended_at: —
+ended_at: "2026-11-10T04:43:53Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 1567.6, input: 292, output: 73866, cache_read: 14586906, cache_write: 253320}
-  review: {turns: 2, duration_s: 451.6, input: 68, output: 19514, cache_read: 1943372, cache_write: 122996}
-review_status: pending
+  review: {turns: 4, duration_s: 913.0, input: 120, output: 32602, cache_read: 3204498, cache_write: 212702}
+review_status: approved
 review_round: 2
-work_duration: 708.3
+work_duration: 1290.1
+reviewed_by: "@claude-2"
+completion-commit: 65b24466c3748ad859b0b483131ddf37db905ae8
 ---
 # T0044: Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version
 
@@ -33,7 +35,7 @@ Leave `scripts/_cli_common.py` as the stdlib-only copy that `bootstrap-dev-envir
 - [x] **[Implement]** Rebuild the capture CLI on ToolHarness and delete the four helpers and their exports.
 - [x] **[Verify]**    Run the full suite and the capture CLI integration check from the technical spec.
 - [x] **[Doc]**       Update README.md and CHANGELOG.md, listing the removed helpers as breaking changes.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -83,4 +85,11 @@ Leave `scripts/_cli_common.py` as the stdlib-only copy that `bootstrap-dev-envir
 
 - [2026-11-10] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 2 approved by @claude-2: Round 1's blocking defect is fixed, so the verdict is approved.
+  - Findings: [review-findings-2.md](T0044-rebuild-the-capture-view-cli-on-toolharness-and/review-findings-2.md).
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 

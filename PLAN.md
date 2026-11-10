@@ -28,10 +28,11 @@ An overview of all tasks and their planning.
 - [x] T0040 Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release.
 - [x] T0041 Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
 - [x] T0042 Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers.
-- [ ] T0043 [needs: T0044] Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
-- [ ] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
+- [ ] T0043 Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
+- [x] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 
 ---
 
 ## Backlog
+- [ ] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2.
 - [ ] T0045 Keep ToolHarness help option columns separated when an option name exceeds 23 characters.
