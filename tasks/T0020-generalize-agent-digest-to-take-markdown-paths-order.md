@@ -12,12 +12,11 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 4, duration_s: 2920.4, input: 795370, output: 176008, cache_read: 12058534}
+  worker: {turns: 6, duration_s: 3532.4, input: 923598, output: 203052, cache_read: 16627998}
   review: {turns: 2, duration_s: 481.6, input: 68, output: 23106, cache_read: 2073640, cache_write: 138180}
 work_duration: 1744.5
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude"
+review_status: pending
+review_round: 2
 ---
 # T0020: Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check
 
@@ -94,4 +93,7 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 
 - [2026-11-10] **[Verify]**
   Verified test_agent_digest.py (26 passed, 15 subtests), ruff check/format, lint-markdown on docs/tools/agent-digest.md, and zero-diff generate on dev-guidelines.
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
