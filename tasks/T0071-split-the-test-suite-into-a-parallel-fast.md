@@ -1,11 +1,12 @@
 ---
 id: T0071
-owner: ~
+owner: "@gemini"
+session: antigravity-20261111-d45aa9
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0071-split-the-test-suite-into-a-parallel-fast
+worktree: .plan/work/T0071-split-the-test-suite-into-a-parallel-fast
+status: active
+started_at: "2026-11-10T23:05:37Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,15 +22,51 @@ Make every remaining test safe under `-n auto`, fixing shared state that paralle
 Run both suites in CI, and keep the fast suite under 2 minutes.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the testing and Python guidelines, then record `pytest --durations=0` output as the baseline.
-- [ ] **[Implement]** Add the dev extras, `slow` marker, and `addopts` to pyproject.toml.
-- [ ] **[Verify]**    Run the default suite and record which tests fail or time out under `-n auto`.
-- [ ] **[Implement]** Mark slow tests with `@pytest.mark.slow` and fix tests that share state.
-- [ ] **[Implement]** Add a slow-suite step running `pytest -m slow --timeout=120` to python-package.yml.
-- [ ] **[Verify]**    Run both suites, recording timings and verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document both suites in devops.md and AGENTS.md, and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the testing and Python guidelines, then record `pytest --durations=0` output as the baseline.
+- [x] **[Implement]** Add the dev extras, `slow` marker, and `addopts` to pyproject.toml.
+- [x] **[Verify]**    Run the default suite and record which tests fail or time out under `-n auto`.
+- [x] **[Implement]** Mark slow tests with `@pytest.mark.slow` and fix tests that share state.
+- [x] **[Implement]** Add a slow-suite step running `pytest -m slow --timeout=120` to python-package.yml.
+- [x] **[Verify]**    Run both suites, recording timings and verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document both suites in devops.md and AGENTS.md, and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Read]**
+  Read guidelines and recorded serial baseline durations.
+  - 1243 passed in 313.7s.
+  - Slowest tests subprocess git release.
+
+- [2026-11-11] **[Implement]**
+  Added dev extras, slow marker, and addopts to pyproject.toml.
+  - dev extra has pytest-xdist and pytest-timeout.
+  - addopts sets parallel auto and slow exclusion.
+
+- [2026-11-11] **[Verify]**
+  Ran default suite under -n auto and recorded zero failures or timeouts.
+  - 1243 passed on 8 workers in 113.8s.
+  - No tests failed or timed out.
+
+- [2026-11-11] **[Implement]**
+  Marked slow integration and subprocess tests across 12 modules.
+  - 159 slow tests marked with pytest.mark.slow.
+  - Fast suite now runs in 17.4s.
+
+- [2026-11-11] **[Implement]**
+  Added slow-suite step to python-package.yml CI workflow.
+  - CI runs fast suite then slow suite.
+  - pytest -m slow --timeout=120 added.
+
+- [2026-11-11] **[Verify]**
+  Verified fast suite and slow suite, recording verbatim proofs.
+  - Fast suite passed in 16.98s.
+  - Slow suite passed in 60.48s.
+
+- [2026-11-11] **[Doc]**
+  Documented fast and slow suites in devops.md, AGENTS.md, and CHANGELOG.md.
+  - Documented parallel fast suite.
+  - Documented slow suite command and CI.
+
