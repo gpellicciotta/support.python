@@ -11,6 +11,9 @@ ended_at: —
 review: none
 preview: none
 protocol: adhoc
+usage:
+  worker: {turns: 2, duration_s: 3602.8, input: 11100, output: 9232}
+work_duration: 1815.2
 ---
 # T0073: Fail the test run when a test writes into the real home directory or the repository's own .plan directory
 
@@ -23,9 +26,9 @@ Fix every test the guard catches.
 - [x] **[Read]**      Read the testing guidelines and list tests that call `Path.home()` or `expanduser`.
 - [x] **[Implement]** Write a failing test proving a deliberate write under the real home directory fails the run.
 - [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Add the redirecting fixture and the snapshot guard to conftest.py, then fix the tests it catches.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Note the guard in AGENTS.md boundaries and add a CHANGELOG.md entry.
+- [x] **[Implement]** Add the redirecting fixture and the snapshot guard to conftest.py, then fix the tests it catches.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Note the guard in AGENTS.md boundaries and add a CHANGELOG.md entry.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -33,4 +36,13 @@ Fix every test the guard catches.
 
 - [2026-11-10] **[Review]**
   Review lowered from agent to none by @<your name>: Very simple task..
+
+- [2026-11-10] **[Implement]**
+  Added conftest session fixture redirecting home and real-state write guard.
+
+- [2026-11-10] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 4
+  - Lines touched: 333
+  - Reopenings: 0
 
