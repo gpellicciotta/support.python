@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3027.0, input: 2024896, output: 145592, cache_read: 51400574}
+work_duration: 1526.6
 ---
 # T0088: Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none
 
@@ -34,6 +37,21 @@ This repository's own configuration lists `gpellicciotta`, so its lint results d
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
 
+- [2026-11-10] **[Read]**
+  Read profiles.py, the link checker in lint.py, and lint-markdown documentation.
+
 - [2026-11-10] **[Implement]**
-  Added github-owners configuration, updated link checker, added tests, and updated documentation.
+  Wrote failing tests for loading github-owners and owner-dependent link resolution.
+
+- [2026-11-10] **[Verify]**
+  Ran new tests and recorded expected failures in validation-proof.md as red-phase proof.
+
+- [2026-11-10] **[Implement]**
+  Added github_owners to LintProfile, updated link checker, and added .lint-markdown.json.
+
+- [2026-11-10] **[Verify]**
+  Verified lint-markdown rules, offline check output, and full devops check passing cleanly.
+
+- [2026-11-10] **[Doc]**
+  Updated lint-markdown.md, migration-v2.md, and CHANGELOG.md for github-owners.
 
