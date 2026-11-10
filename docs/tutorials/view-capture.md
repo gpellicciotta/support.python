@@ -36,17 +36,19 @@ if __name__ == "__main__":
     sys.exit(run_capture_cli(config))
 ```
 
-Add app-specific `capture` options with `capture_options`, and apply them in `prepare_capture` before the capture runs:
+Add app-specific `capture` options with `capture_options`, and apply them in `prepare_capture` before the capture runs.
+Set both before calling `run_capture_cli`; they apply to the `capture` action, not to `tour`.
+Built-in option names such as `--mode` and `--verbose` are reserved.
 ```python
-def add_theme(parser):
-    parser.add_argument("--theme", choices=["light", "dark"], help="theme to capture")
+def add_dark(parser):
+    parser.add_argument("--dark", action="store_true", help="capture the dark variant")
 
 
-def apply_theme(args):
-    if args.theme:
-        args.mode = f"{args.mode}&theme={args.theme}" if args.mode else f"theme={args.theme}"
+def apply_dark(args):
+    if args.dark:
+        args.mode = "dark"  # requests ?mode=dark unless resolve_mode_path maps it
 
 
-config.capture_options = add_theme
-config.prepare_capture = apply_theme
+config.capture_options = add_dark
+config.prepare_capture = apply_dark
 ```
