@@ -2,7 +2,8 @@
 
 A :class:`Project` exposes the standard operations of one repository: lint, format, test, build, clean,
 check, and the files to attach to a release. Every command runs through an injectable ``runner``, so tests
-can stub it. :class:`PythonProject` runs ruff, pytest, and build through the repository's own ``.venv``.
+can stub it. :class:`PythonProject` runs ruff, pytest, and build through the repository's own ``.venv``;
+:class:`GradleProject` runs Gradle tasks through the repository's own Gradle wrapper.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from ..logging import CliLogger
+from .release import confirm_typed, read_version, release_version
 from .steps import run_step_command
 
 #: Runs a command as ``runner(argv, cwd, logger)`` and returns its exit code.
@@ -64,6 +66,14 @@ class Project(ABC):
     def release_assets(self) -> list[Path]:
         """Return the build outputs to attach to a release."""
         return []
+
+    def release(self, *, dry_run: bool = False, assume_yes: bool = False) -> Optional[bool]:
+        """Run the project's own release instead of :class:`~support_python.devops.release.ReleasePipeline`.
+
+        Returns:
+            Whether the release succeeded, or ``None`` when the project has no own release (the default).
+        """
+        return None
 
     def run_command(self, argv: Sequence[str]) -> bool:
         """Run one command in ``root`` through ``runner`` and return whether it succeeded."""
@@ -121,4 +131,110 @@ class PythonProject(Project):
         return self._has_venv() and self.run_command([str(self.venv_python), *args])
 
 
-__all__ = ["Project", "PythonProject", "Runner"]
+class GradleProject(Project):
+    """A Gradle project with a Gradle wrapper at its root and the version in ``gradle.properties``.
+
+    Every keyword task list replaces the default Gradle tasks of its operation. ``check`` runs ``build`` once,
+    since Gradle's ``build`` already runs the checks and tests.
+
+    Attributes:
+        lint_tasks: Tasks run by :meth:`lint`.
+        format_tasks: Tasks run by :meth:`format`.
+        test_tasks: Tasks run by :meth:`test`.
+        build_tasks: Tasks run by :meth:`build`.
+        check_tasks: Tasks run by :meth:`check`.
+        clean_tasks: Tasks run by :meth:`clean`.
+        gradle_options: Options passed to every Gradle invocation.
+        release_task: Gradle task replacing ``ReleasePipeline`` in ``devops release``, or ``None``.
+        release_args: Extra arguments passed to ``release_task`` after the confirmation.
+    """
+
+    def __init__(
+        self,
+        root: Path,
+        *,
+        runner: Runner = run_step_command,
+        logger: Optional[CliLogger] = None,
+        lint_tasks: Sequence[str] = ("spotlessCheck", "checkstyleMain", "checkstyleTest"),
+        format_tasks: Sequence[str] = ("spotlessApply",),
+        test_tasks: Sequence[str] = ("test",),
+        build_tasks: Sequence[str] = ("build",),
+        check_tasks: Sequence[str] = ("build",),
+        clean_tasks: Sequence[str] = ("clean",),
+        gradle_options: Sequence[str] = ("--console=plain",),
+        release_task: Optional[str] = None,
+        release_args: Sequence[str] = (),
+    ) -> None:
+        super().__init__(root, runner=runner, logger=logger)
+        self.lint_tasks = list(lint_tasks)
+        self.format_tasks = list(format_tasks)
+        self.test_tasks = list(test_tasks)
+        self.build_tasks = list(build_tasks)
+        self.check_tasks = list(check_tasks)
+        self.clean_tasks = list(clean_tasks)
+        self.gradle_options = list(gradle_options)
+        self.release_task = release_task
+        self.release_args = list(release_args)
+
+    @property
+    def wrapper(self) -> Path:
+        """Return the Gradle wrapper (``gradlew.bat`` on Windows, ``gradlew`` elsewhere)."""
+        return self.root / ("gradlew.bat" if sys.platform == "win32" else "gradlew")
+
+    def lint(self) -> bool:
+        return self._gradle(*self.lint_tasks)
+
+    def format(self) -> bool:
+        return self._gradle(*self.format_tasks)
+
+    def test(self, selection: Sequence[str] = ()) -> bool:
+        """Run ``test_tasks`` with a ``--tests`` filter per selection item; items starting with ``-`` pass unchanged."""
+        filters: list[str] = []
+        for item in selection:
+            filters.extend([item] if item.startswith("-") else ["--tests", item])
+        return self._gradle(*self.test_tasks, *filters)
+
+    def build(self) -> bool:
+        return self._gradle(*self.build_tasks)
+
+    def check(self) -> bool:
+        return self._gradle(*self.check_tasks)
+
+    def clean(self) -> bool:
+        return self._gradle(*self.clean_tasks)
+
+    def release_assets(self) -> list[Path]:
+        return sorted(self.root.glob("build/libs/*.jar")) + sorted(self.root.glob("*/build/libs/*.jar"))
+
+    def release(
+        self, *, dry_run: bool = False, assume_yes: bool = False, input_fn: Optional[Callable[[str], str]] = None
+    ) -> Optional[bool]:
+        """Run ``release_task`` after the typed confirmation, or with Gradle's ``--dry-run`` and no confirmation.
+
+        ``input_fn`` prompts for the confirmation and defaults to :func:`input`. Returns ``None`` without a
+        ``release_task``, so ``devops release`` runs ``ReleasePipeline``.
+        """
+        if self.release_task is None:
+            return None
+        if dry_run:
+            return self._gradle(self.release_task, "--dry-run")
+        try:
+            tag = f"v{release_version(read_version(self.root))}"
+        except (FileNotFoundError, ValueError) as exc:
+            self.logger.error(str(exc))
+            return False
+        if not assume_yes:
+            summary = [f"About to release {tag} with the Gradle task '{self.release_task}'."]
+            if not confirm_typed(summary, f"release {tag}", input_fn=input_fn or input):
+                self.logger.error("Release not confirmed; nothing was changed.")
+                return False
+        return self._gradle(self.release_task, *self.release_args)
+
+    def _gradle(self, *args: str) -> bool:
+        if not self.wrapper.is_file():
+            self.logger.error(f"Gradle wrapper missing at {self.wrapper}; run `gradle wrapper` to generate it.")
+            return False
+        return self.run_command([str(self.wrapper), *self.gradle_options, *args])
+
+
+__all__ = ["GradleProject", "Project", "PythonProject", "Runner"]

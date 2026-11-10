@@ -94,7 +94,8 @@ class DevopsCli:
             self._release,
             detail=(
                 "Release the project with ReleasePipeline after running `check` as its quality check.\n"
-                "The project is rebuilt after the version freeze, and those outputs are attached to the GitHub release."
+                "The project is rebuilt after the version freeze, and those outputs are attached to the GitHub release.\n"
+                "A project with its own release, such as a GradleProject with a release_task, runs that instead."
             ),
             usage_suffix="[--dry-run] [--skip-checks] [--yes]",
             configure_parser=_configure_release,
@@ -130,6 +131,9 @@ class DevopsCli:
 
     def _release(self, args: argparse.Namespace, logger: CliLogger) -> int:
         self.project.logger = logger
+        released = self.project.release(dry_run=args.dry_run, assume_yes=args.yes)
+        if released is not None:
+            return 0 if released else 1
         pipeline = ReleasePipeline(
             root=self.project.root,
             logger=logger,

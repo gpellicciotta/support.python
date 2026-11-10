@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.23-pre
+## v2.0.24-pre
+- DevEx: Added `GradleProject`, running overridable Gradle wrapper tasks and optionally delegating `devops release` to a Gradle task via the new `Project.release` hook ([projects.py](src/support_python/devops/projects.py), [cli.py](src/support_python/devops/cli.py)).
 - DevEx: Added `DevopsCli` with lint, format, test, build, check, clean, versions, and release actions over `Project`/`PythonProject` adapters, and rebuilt [devops.py](scripts/devops.py) on them ([cli.py](src/support_python/devops/cli.py), [projects.py](src/support_python/devops/projects.py)).
 - DevEx: Added an optional post-freeze `build` hook to `ReleasePipeline`, so release assets carry the release version instead of `-pre` ([release.py](src/support_python/devops/release.py)).
 - DevEx: Made `extract-release-notes.py`, `migrate-namespace.py`, and `reset-history.py` act on the current directory's Git repository via `support_python`, deleting `_repo_common.py`; `migrate-namespace.py finish` now publishes the frozen section as release notes ([extract-release-notes.py](scripts/extract-release-notes.py), [migrate-namespace.py](scripts/migrate-namespace.py), [reset-history.py](scripts/reset-history.py)).

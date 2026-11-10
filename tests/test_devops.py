@@ -72,6 +72,7 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "ReleasePipeline",
             "Project",
             "PythonProject",
+            "GradleProject",
             "DevopsCli",
         ]
         self.assertCountEqual(devops_pkg.__all__, expected_all)

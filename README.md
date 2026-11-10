@@ -332,6 +332,22 @@ Its actions are `lint`, `format`, `test`, `build`, `check`, `clean`, `versions`,
 `release` runs `ReleasePipeline` with `check` as its quality check and `build` as its post-freeze build hook.
 It attaches the outputs of that post-freeze build, never the `-pre` build from `check`.
 `PythonProject` runs ruff, pytest, and build through `<root>/.venv` and exits 1 with a bootstrap hint when it is missing.
+`GradleProject` runs `gradlew.bat` on Windows and `./gradlew` elsewhere, adding `--console=plain` (`gradle_options`):
+
+| Action   | Default Gradle tasks                                | Keyword override |
+|----------|-----------------------------------------------------|------------------|
+| `lint`   | `spotlessCheck checkstyleMain checkstyleTest`       | `lint_tasks`     |
+| `format` | `spotlessApply`                                     | `format_tasks`   |
+| `test`   | `test`, plus `--tests ITEM` per selection item      | `test_tasks`     |
+| `build`  | `build`                                             | `build_tasks`    |
+| `check`  | `build`, once, since Gradle's build runs the checks | `check_tasks`    |
+| `clean`  | `clean`                                             | `clean_tasks`    |
+
+Test selection items starting with `-` pass to Gradle unchanged.
+It reads the version from `gradle.properties` and releases `build/libs/*.jar` and `*/build/libs/*.jar`.
+With `release_task`, `release` asks for the typed confirmation, then runs that task with `release_args` instead of `ReleasePipeline`.
+`release --dry-run` runs the task with Gradle's own `--dry-run` and no prompt.
+For example, `GradleProject(REPO_ROOT, release_task="doFullRelease", release_args=["-PreleaseConfirmed=yes"])`.
 Commands go through an injectable `runner` (default `run_step_command`), and `add_action` adds project-specific actions.
 A consumer's devops script stays as thin as this repository's own [devops.py](scripts/devops.py):
 
