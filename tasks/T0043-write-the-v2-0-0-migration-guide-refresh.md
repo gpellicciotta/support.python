@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 953.4, input: 268, output: 76438, cache_read: 13811478, cache_write: 261272}
+review_status: pending
+review_round: 1
 ---
 # T0043: Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories
 
@@ -50,4 +54,7 @@ Record one Backlog task per consumer repository in the technical spec with `plan
   - Files touched: 5.
   - Lines touched: 254.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
