@@ -281,6 +281,26 @@ class ToolHarness:
             verbose=verbose,
         )
 
+    def _reorder_leading_options(self, args: list[str]) -> list[str]:
+        """Put the action first when a fallback harness's command line starts with an option.
+
+        The first non-option token after the leading options selects the action when it names one
+        (``--verbose list``); otherwise the whole command line goes to the fallback action (``--url x``).
+        Option values are skipped using the fallback action's parser.
+        """
+        if not self.fallback_action or self.fallback_action not in self._actions:
+            return args
+        if not args[0].startswith("-") or args[0] in ("-h", "--help", "--version"):
+            return args
+        options = self._build_parser(self.fallback_action)._option_string_actions
+        i = 0
+        while i < len(args) and args[i].startswith("-") and args[i] != "--":
+            option = options.get(args[i])
+            i += 2 if option is not None and option.nargs != 0 else 1
+        if i < len(args) and args[i] in {*self._actions, "version", "help"}:
+            return [args[i], *args[:i], *args[i + 1 :]]
+        return [self.fallback_action, *args]
+
     def _build_parser(self, action_name: Optional[str] = None) -> argparse.ArgumentParser:
         prog = f"{self.name} {action_name}" if action_name else self.name
         parser = argparse.ArgumentParser(prog=prog, description=self.description, add_help=False)
@@ -335,6 +355,7 @@ class ToolHarness:
             print(self.format_help(verbose=False), end="")
             return 0
 
+        raw_args = self._reorder_leading_options(raw_args)
         first, rest = raw_args[0], raw_args[1:]
         if first in ("version", "--version"):
             print(self.format_version())

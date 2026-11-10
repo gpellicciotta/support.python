@@ -129,10 +129,35 @@ class ToolHarnessUnitTests(unittest.TestCase):
             self.assertEqual(fb_harness.run([]), 0)
         self.assertIn("Usage:", fb_bare_out.getvalue())
 
-        fb_err = io.StringIO()
-        with redirect_stdout(io.StringIO()), contextlib.redirect_stderr(fb_err):
-            self.assertEqual(fb_harness.run(["--target", "staging"]), 2)
-        self.assertIn("**[ERROR]** Unknown subcommand: '--target'", fb_err.getvalue())
+        err = io.StringIO()
+        with redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            self.assertEqual(harness.run(["--target", "staging"]), 2)
+        self.assertIn("**[ERROR]** Unknown subcommand: '--target'", err.getvalue())
+
+    def test_fallback_action_runs_when_the_command_line_starts_with_an_option(self) -> None:
+        harness = self._make_harness(fallback_action="run")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(harness.run(["--target", "staging", "--verbose"]), 0)
+        self.assertIn("Running on staging", out.getvalue())
+
+    def test_leading_options_keep_a_named_action(self) -> None:
+        harness = self._make_harness(fallback_action="run")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(harness.run(["--verbose", "run", "--target", "prod"]), 0)
+            self.assertEqual(harness.run(["--log-level", "DEBUG", "version"]), 0)
+            self.assertEqual(harness.run(["--verbose", "help"]), 0)
+        self.assertIn("Running on prod", out.getvalue())
+        self.assertIn("demo-tool v2.0.0", out.getvalue())
+        self.assertIn("Usage:", out.getvalue())
+
+    def test_leading_option_with_an_invalid_value_still_exits_two(self) -> None:
+        import contextlib
+
+        harness = self._make_harness(fallback_action="run")
+        with redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(harness.run(["--log-level", "LOUD"]), 2)
 
     def test_handlers_propagate_exit_codes_and_invalid_args_return_two(self) -> None:
         import contextlib

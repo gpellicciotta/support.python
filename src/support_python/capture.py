@@ -941,20 +941,7 @@ def run_capture_cli(
     Returns:
         Exit code (0 on success, 1 on failure, 2 on invalid arguments).
     """
-    harness = build_capture_harness(config)
-    args = list(sys.argv[1:] if argv is None else argv)
-    if args and args[0].startswith("-") and args[0] not in ("-h", "--help", "--version"):
-        options = harness._build_parser("capture")._option_string_actions
-        action_names = {*harness._actions, "version", "help"}
-        i = 0
-        while i < len(args) and args[i].startswith("-") and args[i] != "--":
-            option = options.get(args[i])
-            i += 2 if option is not None and option.nargs != 0 else 1
-        if i < len(args) and args[i] in action_names:
-            args.insert(0, args.pop(i))
-        else:
-            args.insert(0, "capture")
-    return harness.run(args)
+    return build_capture_harness(config).run(argv)
 
 
 __all__ = [

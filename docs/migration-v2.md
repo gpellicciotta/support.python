@@ -160,8 +160,8 @@ Kept names changed behavior; update tests that assert exact output:
 - `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.
 - `format_log_message` and `CliLogger` stamp UTC times and keep blank lines inside multi-line messages.
 - `CliLogger.log_start` opens with `Starting {{name}} v{{version}} with configuration:`, as `ToolHarness` does.
-- `ToolHarness` runs its fallback action only when the first argument is not an option.
-  A v1.x `tool --url x` call now exits `2`; name the action, as in `tool run --url x`.
+- `ToolHarness` in v2.0.0 runs its fallback action only when the first argument is not an option.
+  A v1.x `tool --url x` call exits `2` there; later releases run the fallback action for it again.
 
 `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` import from `support_python.markdown` or the package root.
 
