@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3050.4, input: 2373310, output: 135888, cache_read: 54463054}
+review_status: pending
+review_round: 1
 ---
 # T0071: Split the test suite into a parallel fast default suite and a marked slow suite, with per-test timeouts
 
@@ -69,4 +73,7 @@ Run both suites in CI, and keep the fast suite under 2 minutes.
   Documented fast and slow suites in devops.md, AGENTS.md, and CHANGELOG.md.
   - Documented parallel fast suite.
   - Documented slow suite command and CI.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
