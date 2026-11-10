@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1451.8, input: 16, output: 4970, cache_read: 1275320, cache_write: 6332}
-review_status: pending
+  review: {turns: 2, duration_s: 489.8, input: 8, output: 4552, cache_read: 340852, cache_write: 6014}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude-2"
+work_duration: 989.2
 ---
 # T0042: Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers
 
@@ -78,4 +81,31 @@ Match the command shapes and options of ../auth/scripts/devops.py, so consumers 
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude-2: The dispatch design is clean and well tested against mocks.
+  - Findings: [review-findings-1.md](T0042-add-opt-in-docker-db-server-mail-and/review-findings-1.md).
+
+- [2026-11-10] **[Decide]**
+  Rework: load_snapshot accepts testdb or any <name>_test alias, loading into that database; add_services rejects other db_targets with ValueError.
+  - Safety check against the env JDBC URL is unchanged.
+
+- [2026-11-10] **[Decide]**
+  Implemented client verify-deployment --timeout via a new verify_deployment timeout parameter, and opt-in server start --testdb via testdb_env_file.
+  - --testdb env-file names differ per consumer, so callers pass it.
+
+- [2026-11-10] **[Implement]**
+  Sub-actions now reject another sub-action's positional argument with exit 2, such as db snapshot stray.sql.
+
+- [2026-11-10] **[Verify]**
+  Rework red phase: 14 failures; green: full suite 1033 passed, 3 skipped; real-manager todos_test load reaches the proxy check.
+
+- [2026-11-10] **[Decide]**
+  Size note: review rework raised the diff to 1061 lines, above the large line but below three times the estimate.
+
+- [2026-11-10] **[Verify]**
+  Recorded task outcomes.
+  - Files touched: 8.
+  - Lines touched: 1061.
+  - Reopenings: 0.
 
