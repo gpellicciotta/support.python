@@ -7,7 +7,7 @@ An overview of all tasks and their planning.
 - [x] T0099 Make ToolHarness run its fallback action when the command line starts with an option, moving run_capture_cli's reordering into the harness.
 - [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
 - [ ] T0097 Derive version build metadata from the support.python checkout, not an enclosing repository.
-- [ ] T0094 Let run_capture_cli accept app-specific options and pass their values to the capture and tour handlers.
+- [x] T0094 Let run_capture_cli accept app-specific options and pass their values to the capture and tour handlers.
 - [ ] T0088 Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none.
 - [ ] T0087 Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs.
 - [ ] T0086 [needs: T0084] Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers.
