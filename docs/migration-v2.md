@@ -200,4 +200,4 @@ sys.exit(cli.run())
 ```
 
 Keep project-specific actions with `add_action(name, summary, handler)`, where `handler(args, logger)` returns an exit code.
-The [README](../README.md#devops-script-helpers-and-environment-managers) documents every option and sub-action.
+The [DevOps scripts tutorial](tutorials/devops-scripts.md) documents every option and sub-action.
