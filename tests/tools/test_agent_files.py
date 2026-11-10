@@ -451,7 +451,7 @@ class DefaultLogFileTests(unittest.TestCase):
                     mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                     mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
                 ):
-                    code, out, _ = _run_main(["check"])
+                    code, out, _ = _run_main(["check", "--verbose"])
             finally:
                 os.chdir(original_cwd)
             self.assertEqual(code, 1)

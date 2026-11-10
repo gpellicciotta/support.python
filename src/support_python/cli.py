@@ -301,13 +301,13 @@ class ToolHarness:
             f"- Verbose: {str(logger.verbose).lower()}",
             *(f"- {key}: {val}" for key, val in (extra or {}).items()),
         ]
-        logger.info("\n".join(lines))
+        logger.info("\n".join(lines), to_stdout=logger.verbose)
 
     def log_completion(self, logger: CliLogger, action: str, exit_code: int, started_at: float) -> None:
-        """Emit completion summary upon exit per logging guidelines."""
+        """Emit completion summary upon exit; success reaches stdout only with ``--verbose``, failure goes to stderr."""
         duration = time.monotonic() - started_at
         msg = f"Finished {self.name} {action} in {duration:.1f}s with status: {'succeeded' if exit_code == 0 else 'failed'}"
-        logger.info(msg) if exit_code == 0 else logger.error(msg)
+        logger.info(msg, to_stdout=logger.verbose) if exit_code == 0 else logger.error(msg)
 
     def run(self, argv: Optional[Sequence[str]] = None, extra_startup: Optional[dict[str, Any]] = None) -> int:
         """Execute the requested command line, handling standard actions and logging."""

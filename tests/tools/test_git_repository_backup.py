@@ -244,7 +244,7 @@ class TestHarnessCli(BackupTestCase):
 
     def test_startup_banner_lists_configuration(self) -> None:
         make_repo(self.root / "alpha")
-        code, out, err = self.run_main("list", "--root", str(self.root))
+        code, out, err = self.run_main("list", "--root", str(self.root), "--verbose")
         self.assertEqual(code, 0, err)
         lines = out.splitlines()
         self.assertRegex(lines[0], r"^Starting git-repository-backup v\S+ with configuration:$")
@@ -258,19 +258,19 @@ class TestHarnessCli(BackupTestCase):
         home = self.tmp / "home"
         expected = home / ".config" / "git-repository-backup" / "config.json"
         with mock.patch.object(Path, "home", return_value=home):
-            code, out, _ = self.run_raw("list", "--root", str(self.root), "--dry-run")
+            code, out, _ = self.run_raw("list", "--root", str(self.root), "--dry-run", "--verbose")
         self.assertEqual(code, 0)
         self.assertIn(f"- Config file: {expected} (default, absent)", out.splitlines())
         self.assertIn("- Dry run: true", out.splitlines())
 
     def test_backup_emits_completion_summary_with_duration(self) -> None:
         make_repo(self.root / "alpha")
-        code, out, err = self.run_main(*self.backup_args("--no-archive"))
+        code, out, err = self.run_main(*self.backup_args("--no-archive", "--verbose"))
         self.assertEqual(code, 0, err)
         self.assertRegex(out.splitlines()[-1], "^" + FINISHED_PATTERN.format(action="backup", status="succeeded") + "$")
 
     def test_list_emits_completion_summary_with_duration(self) -> None:
-        code, out, err = self.run_main("list", "--root", str(self.root))
+        code, out, err = self.run_main("list", "--root", str(self.root), "--verbose")
         self.assertEqual(code, 0, err)
         self.assertRegex(out.splitlines()[-1], "^" + FINISHED_PATTERN.format(action="list", status="succeeded") + "$")
 
@@ -384,7 +384,7 @@ class TestConfig(BackupTestCase):
     def test_list_format_json_and_text(self) -> None:
         alpha = make_repo(self.root / "alpha")
         beta = make_repo(self.root / "beta")
-        code, text_out, err = self.run_main("list", "--root", str(self.root), "--format", "text")
+        code, text_out, err = self.run_main("list", "--root", str(self.root), "--format", "text", "--verbose")
         self.assertEqual(code, 0, err)
         self.assertIn(f"alpha  {alpha}", text_out)
         self.assertIn(f"beta  {beta}", text_out)
@@ -935,7 +935,7 @@ class TestActionCompletionSummaries(RestoreTestCase):
 
     def test_restore_emits_completion_summary(self) -> None:
         self.backup("--no-archive")
-        code, out, err = self.restore("--source", str(self.mirrors / "alpha.git"))
+        code, out, err = self.restore("--source", str(self.mirrors / "alpha.git"), "--verbose")
         self.assertEqual(code, 0, err)
         self.assertIn("- Command: restore", out.splitlines())
         self.assertRegex(out.splitlines()[-1], "^" + FINISHED_PATTERN.format(action="restore", status="succeeded") + "$")
@@ -946,7 +946,7 @@ class TestActionCompletionSummaries(RestoreTestCase):
         self.assertRegex(err, FINISHED_PATTERN.format(action="restore", status="failed"))
 
     def test_set_password_emits_completion_summary(self) -> None:
-        code, out, err = self.run_with_prompts(*self.set_password_args(), prompts=["pw-1", "pw-1"])
+        code, out, err = self.run_with_prompts(*self.set_password_args(), "--verbose", prompts=["pw-1", "pw-1"])
         self.assertEqual(code, 0, err)
         self.assertIn("- Command: set-password", out.splitlines())
         self.assertRegex(out.splitlines()[-1], "^" + FINISHED_PATTERN.format(action="set-password", status="succeeded") + "$")

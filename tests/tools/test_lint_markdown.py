@@ -328,8 +328,11 @@ class TestCLIAndMain(unittest.TestCase):
     def test_startup_and_completion_banners_on_console_without_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             (Path(tmp_dir) / "clean.md").write_bytes(b"# Title\n\n- Bullet item\n")
-            code, out, _ = run_main(["check", tmp_dir])
-        self.assertEqual(code, 0)
+            code, quiet_out, _ = run_main(["check", tmp_dir])
+            code_verbose, out, _ = run_main(["check", tmp_dir, "--verbose"])
+        self.assertEqual((code, code_verbose), (0, 0))
+        self.assertNotIn("Starting lint-markdown", quiet_out)
+        self.assertNotIn("Finished lint-markdown", quiet_out)
         self.assertTrue(out.startswith(f"Starting lint-markdown v{get_full_version()} with configuration:\n"), out)
         for token in ("- Command: check\n", "- Log file: none\n", f"- Working directory: {Path.cwd()}\n"):
             self.assertIn(token, out)
@@ -345,7 +348,7 @@ class TestCLIAndMain(unittest.TestCase):
     def test_debug_flag_logs_to_console_without_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             (Path(tmp_dir) / "clean.md").write_bytes(b"# Title\n\n- Bullet item\n")
-            code, out, _ = run_main(["check", "--debug", "--offline", tmp_dir])
+            code, out, _ = run_main(["check", "--debug", "--verbose", "--offline", tmp_dir])
         self.assertEqual(code, 0)
         self.assertIn("- Log level: DEBUG\n", out)
         self.assertIn(f"{format_severity_indicator('DEBUG')} Linting 1 markdown file", out)
@@ -404,7 +407,7 @@ class TestEndToEnd(unittest.TestCase):
         self.assertIn("Exit codes:", result.stdout)
 
     def test_script_entry_point_checks_readme_offline(self) -> None:
-        result = self._run_script("check", "--offline", "LICENSE.md")
+        result = self._run_script("check", "--offline", "--verbose", "LICENSE.md")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("All 1 markdown files passed linting.", result.stdout)
         self.assertIn("Finished lint-markdown check in", result.stdout)

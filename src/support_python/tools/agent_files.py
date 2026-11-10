@@ -980,6 +980,7 @@ class SyncHarness(ToolHarness):
         logger.log(
             f"Finished {self.name} {action} in {duration} with status: {status}",
             level="INFO" if exit_code == 0 else "ERROR",
+            **({"to_stdout": logger.verbose} if exit_code == 0 and not self.json_mode else {}),
         )
 
     def _build_parser(self, action_name: str | None = None) -> argparse.ArgumentParser:

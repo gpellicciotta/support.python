@@ -292,14 +292,14 @@ class CliLogger:
 
         Args:
             log_path: Optional path to append log entries to.
-            verbose: If True, progress messages are written to stdout in addition to the file.
+            verbose: If True (or if debug is True), progress messages are written to stdout in addition to the file.
             debug: If True, debug messages are written to the log file.
             origin: Optional default origin tag for messages.
         """
         chosen_path = log_path if log_path is not None else log_file
         self.log_path = Path(chosen_path) if chosen_path else None
         self.log_file = self.log_path
-        self.verbose = verbose
+        self.verbose = verbose or debug
         self.debug_enabled = debug
         self.origin = origin
         self.start_time = time.monotonic()

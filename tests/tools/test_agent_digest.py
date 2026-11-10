@@ -583,6 +583,7 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
                     "100000",
                     "--log-file",
                     str(log_path),
+                    "--verbose",
                 ]
             )
             self.assertEqual(code, 0, err)
@@ -610,7 +611,7 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
             self.assertEqual(out, "")
             self.assertEqual(err, "")
 
-            code_dbg, out_dbg, _ = run_main([*base_args, "--debug"])
+            code_dbg, out_dbg, _ = run_main([*base_args, "--debug", "--verbose"])
             self.assertEqual(code_dbg, 0)
             self.assertIn("- Log level: DEBUG", out_dbg)
             self.assertRegex(out_dbg, r"(?m)^\*\*\[DEBUG\]\*\* ")
@@ -689,6 +690,7 @@ class TestGenerateAgentDigestEndToEnd(unittest.TestCase):
             "guidelines/general-guidelines.md",
             "--link-base",
             DEV_GUIDELINES_LINK_BASE,
+            "--verbose",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Starting agent-digest v", result.stdout)
