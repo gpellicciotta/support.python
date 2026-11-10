@@ -12,8 +12,8 @@ review: none
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 2, duration_s: 3602.8, input: 11100, output: 9232}
-work_duration: 1815.2
+  worker: {turns: 4, duration_s: 4645.0, input: 2422516, output: 174472, cache_read: 43644788}
+work_duration: 2362.6
 ---
 # T0073: Fail the test run when a test writes into the real home directory or the repository's own .plan directory
 
@@ -37,8 +37,23 @@ Fix every test the guard catches.
 - [2026-11-10] **[Review]**
   Review lowered from agent to none by @<your name>: Very simple task..
 
+- [2026-11-10] **[Read]**
+  Read testing guidelines and cataloged tests invoking Path.home() and expanduser.
+
 - [2026-11-10] **[Implement]**
-  Added conftest session fixture redirecting home and real-state write guard.
+  Authored red-phase guard tests in tests/test_conftest_guard.py.
+
+- [2026-11-10] **[Verify]**
+  Executed red-phase tests, confirmed expected collection failures, and documented in validation-proof.md.
+
+- [2026-11-10] **[Implement]**
+  Added conftest session fixture redirecting home and real-state write guard in tests/conftest.py.
+
+- [2026-11-10] **[Verify]**
+  Ran affected test suites, confirmed green-phase passing, and documented in validation-proof.md.
+
+- [2026-11-10] **[Doc]**
+  Updated AGENTS.md boundaries and added entry to CHANGELOG.md.
 
 - [2026-11-10] **[Verify]**
   Recorded task outcomes.
