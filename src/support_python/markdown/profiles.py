@@ -33,6 +33,7 @@ _ALLOWED_PROFILE_KEYS = frozenset(
         "exclude",
         "excludes",
         "plugins",
+        "github_owners",
     }
 )
 
@@ -45,6 +46,7 @@ class LintProfile:
     enabled_rules: frozenset[str]
     historical_task_exemptions: bool = False
     excludes: tuple[str, ...] = ()
+    github_owners: tuple[str, ...] = ()
 
 
 DEFAULT_PROFILE = LintProfile(
@@ -139,7 +141,9 @@ def load_profile(
             enabled_rules=_validate_rule_ids(profile.enabled_rules, reg),
             historical_task_exemptions=profile.historical_task_exemptions,
             excludes=profile.excludes,
+            github_owners=profile.github_owners,
         )
+
     elif isinstance(profile, str):
         base = get_profile(profile, reg)
     else:
@@ -208,11 +212,16 @@ def load_profile(
     if not isinstance(excl_raw, list) or not all(isinstance(x, str) and x.strip() for x in excl_raw):
         raise ValueError("'excludes' must be a list of non-empty strings")
 
+    owners_raw = raw.get("github_owners", list(base.github_owners))
+    if not isinstance(owners_raw, list) or not all(isinstance(x, str) and x.strip() for x in owners_raw):
+        raise ValueError(f"'github-owners' must be a list of non-empty strings in {target}")
+
     return LintProfile(
         name=base.name,
         enabled_rules=frozenset(enabled),
         historical_task_exemptions=hist,
         excludes=tuple(x.strip() for x in excl_raw),
+        github_owners=tuple(x.strip() for x in owners_raw),
     )
 
 

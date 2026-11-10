@@ -333,3 +333,29 @@ def test_profile_key_clash_warning_uses_given_logger(tmp_path) -> None:
     cfg.write_text(json.dumps({"disable_rules": [], "disable-rules": []}), encoding="utf-8")
     load_profile(cfg, logger=_Logger())
     assert len(messages) == 1
+
+
+def test_profile_github_owners_loading_and_validation(tmp_path: Path) -> None:
+    """Verify LintProfile.github_owners default, config loading, alias spelling, and rejection of invalid values."""
+    assert DEFAULT_PROFILE.github_owners == ()
+    assert DEV_GUIDELINES_PROFILE.github_owners == ()
+
+    # Loads github-owners list of non-empty strings
+    cfg_file = tmp_path / ".lint-markdown.json"
+    cfg_file.write_text(json.dumps({"github-owners": ["gpellicciotta", "octocat"]}), encoding="utf-8")
+    loaded = load_profile(cfg_file)
+    assert loaded.github_owners == ("gpellicciotta", "octocat")
+
+    # Accepts underscore spelling github_owners
+    cfg_file.write_text(json.dumps({"github_owners": ["my-org"]}), encoding="utf-8")
+    loaded_snake = load_profile(cfg_file)
+    assert loaded_snake.github_owners == ("my-org",)
+
+    # Rejects non-list and empty values, raising ValueError naming the file
+    bad_values = ["not-a-list", 123, None, [""], ["   "], [123], ["valid", ""]]
+    for bad in bad_values:
+        cfg_file.write_text(json.dumps({"github-owners": bad}), encoding="utf-8")
+        with pytest.raises(ValueError) as exc_info:
+            load_profile(cfg_file)
+        assert str(cfg_file) in str(exc_info.value)
+        assert "github-owners" in str(exc_info.value)

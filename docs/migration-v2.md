@@ -165,6 +165,7 @@ Kept names changed behavior; update tests that assert exact output:
 - `CliLogger.log_start` opens with `Starting {{name}} v{{version}} with configuration:`, as `ToolHarness` does.
 - `ToolHarness` in v2.0.0 runs its fallback action only when the first argument is not an option.
   A v1.x `tool --url x` call exits `2` there; later releases run the fallback action for it again.
+- `lint-markdown` resolves GitHub repository links to sibling checkouts only for owners configured in `github-owners`, defaulting to none.
 
 `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` import from `support_python.markdown` or the package root.
 

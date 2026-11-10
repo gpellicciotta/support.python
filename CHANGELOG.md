@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.17-pre
+## v2.0.18-pre
+- CLI: **[breaking]** Resolved GitHub repository links to sibling checkouts only for configured github-owners, defaulting to none ([lint.py](src/support_python/markdown/lint.py)).
 - Library: **[breaking]** Defaulted APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright suffix when empty, while bundled tools keep theirs ([cli.py](src/support_python/cli.py)).
 - Library: Derived version build metadata only from support-python checkouts or install metadata, not enclosing repositories ([cli.py](src/support_python/cli.py)).
 - Library: Made `ToolHarness` map a trailing `rc0` version suffix back to `-pre` ([cli.py](src/support_python/cli.py)).

@@ -15,7 +15,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Set, Tuple, Union
+from typing import Iterable, List, Optional, Set, Tuple, Union
+
 
 from support_python.markdown.profiles import LintProfile, get_profile
 from support_python.markdown.registry import LintContext, Rule, RuleRegistry
@@ -407,7 +408,10 @@ class MarkdownLinter:
         "devops.py",
         "run-checks.py",
         "test-service.py",
+        ".lint-markdown.json",
+        ".markdown-lint.json",
     }
+
     RE_BARE_PATH = re.compile(r"(?<![a-zA-Z0-9_/-])(?:\.{1,2}/|[a-zA-Z0-9_-]+/)+[a-zA-Z0-9_.-]+\.([a-zA-Z0-9]+)(?![a-zA-Z0-9_/-])")
     RE_BARE_NAME = re.compile(r"\b([a-zA-Z0-9_-]+\.([a-zA-Z0-9]+))\b")
 
@@ -428,6 +432,7 @@ class MarkdownLinter:
         project_root: Optional[Path] = None,
         profile: Optional[Union[str, LintProfile]] = None,
         registry: Optional[RuleRegistry] = None,
+        github_owners: Optional[Iterable[str]] = None,
     ) -> None:
         self.registry: RuleRegistry = registry if registry is not None else DEFAULT_REGISTRY
         resolved_profile = get_profile(profile, self.registry) if isinstance(profile, str) else profile
@@ -435,6 +440,20 @@ class MarkdownLinter:
         self.historical_task_exemptions: bool = (
             resolved_profile.historical_task_exemptions if resolved_profile is not None else True
         )
+        if github_owners is not None:
+            self.github_owners: tuple[str, ...] = tuple(github_owners)
+        elif resolved_profile is not None:
+            self.github_owners = resolved_profile.github_owners
+        else:
+            self.github_owners = ()
+        if self.github_owners:
+            owners_pattern = "|".join(re.escape(o) for o in self.github_owners)
+            self._github_repo_re: Optional[re.Pattern[str]] = re.compile(
+                rf"^https?://github\.com/(?:{owners_pattern})/([^/]+?)(?:\.git)?(?:/(?:blob|tree)/[^/]+/(.+)|/?)$",
+                re.IGNORECASE,
+            )
+        else:
+            self._github_repo_re = None
         if enabled_rules is not None:
             self.enabled_rules = {r.rule_id for r in self.registry.select(enabled_rules)}
         elif resolved_profile is not None:
@@ -507,30 +526,28 @@ class MarkdownLinter:
             self._url_cache[url] = None
             return None
 
-        m_repo = re.match(
-            r"^https?://github\.com/gpellicciotta/([^/]+?)(?:\.git)?(?:/(?:blob|tree)/[^/]+/(.+)|/?)$",
-            url,
-        )
-        if m_repo:
-            repo_name = m_repo.group(1)
-            subpath = m_repo.group(2)
-            base_root = project_root or self.project_root or find_project_root(Path.cwd())
-            workspace_root = _resolve_workspace_root(base_root)
-            target_repo = base_root if repo_name == base_root.name else (workspace_root / repo_name).resolve()
-            if target_repo.exists():
-                if not subpath:
-                    self._url_cache[url] = None
-                    return None
-                else:
-                    repo_rel = subpath.split("#")[0].split("?")[0]
-                    repo_file = (target_repo / urllib.parse.unquote(repo_rel)).resolve()
-                    if repo_file.exists():
+        if self._github_repo_re is not None:
+            m_repo = self._github_repo_re.match(url)
+            if m_repo:
+                repo_name = m_repo.group(1)
+                subpath = m_repo.group(2)
+                base_root = project_root or self.project_root or find_project_root(Path.cwd())
+                workspace_root = _resolve_workspace_root(base_root)
+                target_repo = base_root if repo_name == base_root.name else (workspace_root / repo_name).resolve()
+                if target_repo.exists():
+                    if not subpath:
                         self._url_cache[url] = None
                         return None
                     else:
-                        err = f"Repository file '{repo_rel}' does not exist on disk in '{repo_name}'"
-                        self._url_cache[url] = err
-                        return err
+                        repo_rel = subpath.split("#")[0].split("?")[0]
+                        repo_file = (target_repo / urllib.parse.unquote(repo_rel)).resolve()
+                        if repo_file.exists():
+                            self._url_cache[url] = None
+                            return None
+                        else:
+                            err = f"Repository file '{repo_rel}' does not exist on disk in '{repo_name}'"
+                            self._url_cache[url] = err
+                            return err
 
         headers = {
             "User-Agent": (

@@ -48,19 +48,21 @@ When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the targe
   "disable": ["MD018"],
   "historical-task-exemptions": true,
   "excludes": ["archive/*"],
-  "plugins": ["rules/no_todo.py"]
+  "plugins": ["rules/no_todo.py"],
+  "github-owners": ["gpellicciotta"]
 }
 ```
 
-| Field                        | Type                      | Default         | Purpose                                              |
-| :--------------------------- | :------------------------ | :-------------- | :--------------------------------------------------- |
-| `profile`                    | `string`                  | `"default"`     | Base profile (`"default"` or `"dev-guidelines"`)     |
-| `rules` / `enabled-rules`    | `array<string> \| object` | Profile rules   | Explicit rule ID list or `{ "MD0xx": bool }` map     |
-| `enable` / `enable-rules`    | `array<string>`           | `[]`            | Additional `MD0xx` rule IDs enabled on the profile   |
-| `disable` / `disable-rules`  | `array<string>`           | `[]`            | `MD0xx` rule IDs removed from the profile            |
-| `historical-task-exemptions` | `boolean`                 | Profile setting | Exempt completed or pre-cutoff `.plan/tasks/` files  |
-| `excludes` / `exclude`       | `array<string>`           | `[]`            | Additional glob patterns excluded during discovery   |
-| `plugins`                    | `array<string>`           | `[]`            | Rule plugin files or modules loaded before the rules |
+| Field                             | Type                      | Default         | Purpose                                                           |
+| :-------------------------------- | :------------------------ | :-------------- | :---------------------------------------------------------------- |
+| `profile`                         | `string`                  | `"default"`     | Base profile (`"default"` or `"dev-guidelines"`)                  |
+| `rules` / `enabled-rules`         | `array<string> \| object` | Profile rules   | Explicit rule ID list or `{ "MD0xx": bool }` map                  |
+| `enable` / `enable-rules`         | `array<string>`           | `[]`            | Additional `MD0xx` rule IDs enabled on the profile                |
+| `disable` / `disable-rules`       | `array<string>`           | `[]`            | `MD0xx` rule IDs removed from the profile                         |
+| `historical-task-exemptions`      | `boolean`                 | Profile setting | Exempt completed or pre-cutoff `.plan/tasks/` files               |
+| `excludes` / `exclude`            | `array<string>`           | `[]`            | Additional glob patterns excluded during discovery                |
+| `plugins`                         | `array<string>`           | `[]`            | Rule plugin files or modules loaded before the rules              |
+| `github-owners` / `github_owners` | `array<string>`           | `[]`            | GitHub owners whose repository links resolve to sibling checkouts |
 
 ---
 

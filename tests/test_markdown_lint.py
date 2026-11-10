@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from support_python.markdown import lint as lint_markdown
+from support_python.markdown.profiles import LintProfile
 
 MarkdownLinter = lint_markdown.MarkdownLinter
 LintIssue = lint_markdown.LintIssue
@@ -660,8 +661,9 @@ class TestRuleMD018ValidExternalLinks(unittest.TestCase):
                 b"# Links\n\n"
                 b"See [generate-agent-digest.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/generate-agent-digest.py).\n"
             )
+            linter = MarkdownLinter(github_owners=["gpellicciotta"])
             with patch("urllib.request.urlopen") as mock_open:
-                issues = self.linter.lint_content(sibling_proj / "test.md", content)
+                issues = linter.lint_content(sibling_proj / "test.md", content)
                 md018 = [i for i in issues if i.rule_id == "MD018"]
                 self.assertEqual(md018, [])
                 mock_open.assert_not_called()
@@ -669,7 +671,59 @@ class TestRuleMD018ValidExternalLinks(unittest.TestCase):
                 missing_content = (
                     b"# Links\n\nSee [missing.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/missing.py).\n"
                 )
-                missing_issues = self.linter.lint_content(sibling_proj / "test.md", missing_content)
+                missing_issues = linter.lint_content(sibling_proj / "test.md", missing_content)
+
+                missing_md018 = [i for i in missing_issues if i.rule_id == "MD018"]
+                self.assertEqual(len(missing_md018), 1)
+                self.assertIn("does not exist on disk in 'dev-guidelines'", missing_md018[0].message)
+                mock_open.assert_not_called()
+
+    def test_github_link_without_configured_owner_reaches_http_checker(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            workspace = Path(tmp_dir).resolve()
+            dev_guidelines = workspace / "dev-guidelines" / "scripts"
+            dev_guidelines.mkdir(parents=True)
+            sibling_proj = workspace / "sibling-repo"
+            (sibling_proj / ".git").mkdir(parents=True)
+
+            content = (
+                b"# Links\n\nSee [missing.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/missing.py).\n"
+            )
+            linter = MarkdownLinter()
+            with patch("urllib.request.urlopen") as mock_open:
+                mock_resp = mock_open.return_value.__enter__.return_value
+                mock_resp.status = 200
+                issues = linter.lint_content(sibling_proj / "test.md", content)
+                md018 = [i for i in issues if i.rule_id == "MD018"]
+                self.assertEqual(md018, [])
+                mock_open.assert_called()
+
+    def test_github_link_with_configured_owner_resolves_to_disk(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            workspace = Path(tmp_dir).resolve()
+            dev_guidelines = workspace / "dev-guidelines" / "scripts"
+            dev_guidelines.mkdir(parents=True)
+            (dev_guidelines / "generate-agent-digest.py").write_text("# script\n", encoding="utf-8")
+            sibling_proj = workspace / "sibling-repo"
+            (sibling_proj / ".git").mkdir(parents=True)
+
+            content = (
+                b"# Links\n\n"
+                b"See [generate-agent-digest.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/generate-agent-digest.py).\n"
+            )
+            linter = MarkdownLinter(
+                profile=LintProfile(name="custom", enabled_rules=frozenset(["MD018"]), github_owners=("gpellicciotta",))
+            )
+            with patch("urllib.request.urlopen") as mock_open:
+                issues = linter.lint_content(sibling_proj / "test.md", content)
+                md018 = [i for i in issues if i.rule_id == "MD018"]
+                self.assertEqual(md018, [])
+                mock_open.assert_not_called()
+
+                missing_content = (
+                    b"# Links\n\nSee [missing.py](https://github.com/GPELLICCIOTTA/dev-guidelines/blob/main/scripts/missing.py).\n"
+                )
+                missing_issues = linter.lint_content(sibling_proj / "test.md", missing_content)
                 missing_md018 = [i for i in missing_issues if i.rule_id == "MD018"]
                 self.assertEqual(len(missing_md018), 1)
                 self.assertIn("does not exist on disk in 'dev-guidelines'", missing_md018[0].message)
@@ -1050,6 +1104,46 @@ class TestChangelogReleasedHeadings(unittest.TestCase):
         md019 = [i for i in issues if i.rule_id == "MD019"]
         self.assertEqual(len(md014), 1)
         self.assertEqual(len(md019), 1)
+
+
+class TestLintMarkdownGitHubOwnerIntegration(unittest.TestCase):
+    def test_lint_markdown_cli_owner_dependent_link_resolution_integration(self) -> None:
+        import contextlib
+        import io
+        import json
+        from support_python.tools import lint_markdown
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            workspace = Path(tmp_dir).resolve()
+            repo_b = workspace / "b"
+            (repo_b / ".git").mkdir(parents=True)
+
+            repo_a = workspace / "a"
+            (repo_a / ".git").mkdir(parents=True)
+            doc_a = repo_a / "doc.md"
+            doc_a.write_text("# Doc\n\nSee [Missing](https://github.com/test-owner/b/blob/main/missing.md).\n", encoding="utf-8")
+
+            # Without owner configured: reaches HTTP checker
+            with patch("urllib.request.urlopen") as mock_open:
+                mock_resp = mock_open.return_value.__enter__.return_value
+                mock_resp.status = 200
+                out_no_owner, err_no_owner = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out_no_owner), contextlib.redirect_stderr(err_no_owner):
+                    code_no_owner = lint_markdown.main(["check", str(doc_a)])
+                self.assertEqual(code_no_owner, 0)
+                mock_open.assert_called()
+
+            # With owner configured: checks disk, reports missing file
+            cfg_a = repo_a / ".lint-markdown.json"
+            cfg_a.write_text(json.dumps({"github-owners": ["test-owner"]}), encoding="utf-8")
+
+            with patch("urllib.request.urlopen") as mock_open:
+                out_owner, err_owner = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(out_owner), contextlib.redirect_stderr(err_owner):
+                    code_owner = lint_markdown.main(["check", str(doc_a)])
+                self.assertEqual(code_owner, 1)
+                self.assertIn("does not exist on disk in 'b'", out_owner.getvalue())
+                mock_open.assert_not_called()
 
 
 if __name__ == "__main__":
