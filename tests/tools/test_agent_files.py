@@ -904,6 +904,17 @@ class SkillPruningTests(unittest.TestCase):
             manifest = json.loads((target / sync_mod.SKILLS_MANIFEST_NAME).read_text(encoding="utf-8"))
             self.assertEqual(manifest["skills"], ["kept-skill", "renamed-skill"])
 
+    def test_no_prune_check_reports_kept_stale_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tool, skills, target = self._setup(tmp_dir, ["kept-skill", "renamed-skill"])
+
+            ok, output = self._run(tool, skills, "check", prune=False)
+
+            self.assertTrue(ok)
+            self.assertIn("stale skill 'renamed-skill' kept (--no-prune)", output)
+            self.assertNotIn("would be removed", output)
+            self.assertTrue((target / "renamed-skill").is_dir())
+
     def test_stale_file_inside_existing_skill_is_reported_and_removed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             tool, skills, target = self._setup(tmp_dir, ["kept-skill"])
@@ -1098,6 +1109,71 @@ class DryRunCliTests(unittest.TestCase):
             self.assertFalse((target / "kept-skill").exists())
             self.assertFalse((target / sync_mod.SKILLS_MANIFEST_NAME).exists())
             self.assertFalse(fake_target.exists())
+
+    def test_sync_dry_run_no_prune_reports_kept_stale_skills_instead_of_removals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            digest_path = root / "agent-digest.md"
+            digest_path.write_text("Some digest text.", encoding="utf-8")
+            skill_dir = root / "skills" / "kept-skill"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("---\nname: kept-skill\n---\n", encoding="utf-8")
+            target = root / "tool_skills"
+            (target / "ui-verification").mkdir(parents=True)
+            fake_target = root / "FAKE_AGENTS.md"
+            fake_tool = sync_mod.Tool("fake-tool", "fake-cmd", fake_target, lambda p, t, to: [], skills_dir=target)
+
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+                contextlib.redirect_stdout(io.StringIO()) as out,
+            ):
+                exit_code = sync_mod.main(["sync", "--dry-run", "--no-prune", "--log-file", str(root / "sync.log")])
+
+            self.assertEqual(exit_code, 1)
+            self.assertIn("stale skill 'ui-verification' kept (--no-prune)", out.getvalue())
+            self.assertNotIn("stale skill 'ui-verification' would be removed", out.getvalue())
+            self.assertTrue((target / "ui-verification").is_dir())
+            self.assertFalse((target / "kept-skill").exists())
+            self.assertFalse((target / sync_mod.SKILLS_MANIFEST_NAME).exists())
+            self.assertFalse(fake_target.exists())
+
+    def test_sync_dry_run_no_prune_clean_exits_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir)
+            digest_path = root / "agent-digest.md"
+            digest_path.write_text("Some digest text.", encoding="utf-8")
+            skill_dir = root / "skills" / "kept-skill"
+            skill_dir.mkdir(parents=True)
+            (skill_dir / "SKILL.md").write_text("---\nname: kept-skill\n---\n", encoding="utf-8")
+            target = root / "tool_skills"
+            (target / "ui-verification").mkdir(parents=True)
+            (target / "kept-skill").mkdir(parents=True)
+            (target / "kept-skill" / "SKILL.md").write_text("---\nname: kept-skill\n---\n", encoding="utf-8")
+            (target / sync_mod.SKILLS_MANIFEST_NAME).write_text(
+                json.dumps({"schema_version": 1, "source": "dev-guidelines", "skills": ["kept-skill", "ui-verification"]}),
+                encoding="utf-8",
+            )
+            fake_target = root / "FAKE_AGENTS.md"
+            fake_tool = sync_mod.Tool("fake-tool", "fake-cmd", fake_target, lambda p, t, to: [], skills_dir=target)
+
+            skills_catalog = sync_mod.build_skills_catalog(fake_tool, [skill_dir])
+            guarded_block = sync_mod.build_guarded_block("Some digest text.", skills_catalog)
+            fake_target.write_text(guarded_block + "\n", encoding="utf-8")
+
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+                contextlib.redirect_stdout(io.StringIO()) as out,
+            ):
+                exit_code = sync_mod.main(["sync", "--dry-run", "--no-prune", "--log-file", str(root / "sync.log")])
+
+            self.assertEqual(exit_code, 0)
+            self.assertIn("stale skill 'ui-verification' kept (--no-prune)", out.getvalue())
+            self.assertNotIn("would be removed", out.getvalue())
+            self.assertTrue((target / "ui-verification").is_dir())
 
 
 class ParseSkillMetadataTests(unittest.TestCase):

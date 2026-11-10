@@ -611,6 +611,11 @@ def prune_skill_dirs(
         if not stale_dir.exists() and not stale_dir.is_symlink():
             continue
 
+        if not prune:
+            logger.info(f"{action}: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
+            retained.append(skill_name)
+            continue
+
         if action == "check":
             msg = f"stale skill '{skill_name}'{located_in} would be removed"
             logger.info(msg, origin=tool_name)
@@ -619,10 +624,6 @@ def prune_skill_dirs(
             retained.append(skill_name)
             ok = False
         elif action == "sync":
-            if not prune:
-                logger.info(f"{action}: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
-                retained.append(skill_name)
-                continue
             try:
                 if not is_direct_child_dir(skills_dir, stale_dir):
                     raise OSError(f"{stale_dir} is not a direct child directory of {skills_dir}")

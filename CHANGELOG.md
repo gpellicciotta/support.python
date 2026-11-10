@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.12-pre
+## v2.0.13-pre
+- CLI: Made agent-files sync --dry-run --no-prune report kept stale skills instead of removals ([agent_files.py](src/support_python/tools/agent_files.py)).
 - CLI: Made every tool's `--version` report the installed `support-python` version instead of the current directory's project version ([cli.py](src/support_python/cli.py)).
 - DevEx: Added a conftest session fixture redirecting user environment variables and failing tests that write real state ([conftest.py](tests/conftest.py)).
 - CLI: Fixed `agent-digest generate` failing on Python 3.9, which rejects the `newline` argument of `Path.write_text` ([agent_digest.py](src/support_python/tools/agent_digest.py)).
