@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 944.2, input: 180, output: 38586, cache_read: 6861272, cache_write: 166842}
+work_duration: 484.4
 ---
 # T0031: Align processes with ADR-0003: add kill --dry-run and rename the table output format to text
 
@@ -47,4 +50,14 @@ Write `docs/tools/processes.md`.
   - Files touched: 6.
   - Lines touched: 170.
   - Reopenings: 0.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-10] **[Implement]**
+  Added kill --dry-run, renamed the list table format value to text, and routed JSON-mode logs to stderr.
+
+- [2026-11-10] **[Doc]**
+  Wrote docs/tools/processes.md and updated README.md, docs/index.md, and CHANGELOG.md.
 
