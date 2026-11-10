@@ -11,6 +11,6 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
-- [ ] T0064 Add tests for tool-level kebab-case keys, documented example configs, and the agent-files --config integration case.
+- [x] T0064 Add tests for tool-level kebab-case keys, documented example configs, and the agent-files --config integration case.
 - [x] T0063 Report unknown configuration keys as written and pass the tool logger to key normalization in all tools.
 - [ ] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
