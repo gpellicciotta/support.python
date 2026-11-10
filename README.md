@@ -67,17 +67,14 @@ Each script imports `support_python` from the checkout's `src/` directory, or fr
 
 ## Shared CLI helpers, tabular output, and session storage
 
-`support_python.cli` provides `ToolHarness`/`Action` (registered actions with handlers, fallback action, exit-code table, startup/exit banners, and `get_full_version`/`resolve_build_metadata` build-metadata version suffixes) alongside `build_action_parser`/`print_version`/`print_help`. `support_python.tables` provides tabular output formatting (`format_table`/`render_output`), and `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`):
+`support_python.cli` provides `ToolHarness`/`Action` (registered actions with handlers, fallback action, exit-code table, startup/exit banners, and `get_full_version`/`resolve_build_metadata` build-metadata version suffixes). `support_python.tables` provides tabular output formatting (`format_table`/`render_output`), and `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`):
 
 ```python
 from dataclasses import dataclass
 from support_python import (
     FileTokenStore,
     ToolHarness,
-    build_action_parser,
     format_table,
-    print_help,
-    print_version,
     render_output,
 )
 
@@ -100,27 +97,6 @@ render_output([Item(1, "Alpha"), Item(2, "Beta")], output_format="table")
 store = FileTokenStore()
 store.store_token("my-auth-token")
 saved_token = store.load_token()
-```
-
-An action-oriented CLI can also be built directly on `build_action_parser`/`print_version`/`print_help`:
-
-```python
-from support_python import build_action_parser, print_help, print_version
-
-PROG, DESCRIPTION, ACTIONS = "my-tool", "My tool's description", ["run", "version", "help"]
-
-
-def main(argv=None) -> int:
-    parser = build_action_parser(PROG, DESCRIPTION, ACTIONS, default_action="run")
-    args = parser.parse_args(argv)
-    if args.help or args.action == "help":
-        print_help(PROG, "1.0.0", DESCRIPTION, parser)
-        return 0
-    if args.version or args.action == "version":
-        print_version(PROG, "1.0.0")
-        return 0
-    ...  # dispatch on args.action
-    return 0
 ```
 
 ## Common script utilities
@@ -449,7 +425,9 @@ sys.exit(cli.run())  # e.g. `devops db start`, `devops server start --memory-db`
 ## View Capture Engine and Static Server
 
 `support_python.capture` provides browser screenshot automation (`ViewCaptureEngine`) and visual UI tour
-orchestration (`run_tour`, `run_capture_cli`). Embedded static web serving is provided by
+orchestration (`run_tour`, `run_capture_cli`). `run_capture_cli` runs a `ToolHarness` CLI
+(`build_capture_harness`) with `capture` (the default action), `tour`, `list`, `version`, and `help` actions.
+Embedded static web serving is provided by
 `support_python.httpd` (`EmbeddedStaticServer`, `StaticServerManager`).
 Webapps can declare their view presets and drive screenshot capture and markdown tour reports (`ui-tour-report.md`)
 with minimal boilerplate:

@@ -7,52 +7,18 @@ import io
 import unittest
 from unittest.mock import patch
 
-from support_python.cli import (
-    build_action_parser,
-    format_version,
-    print_help,
-    print_version,
-)
+import support_python
+import support_python.cli
 
 
-class BuildActionParserTests(unittest.TestCase):
-    def test_default_action_used_when_omitted(self) -> None:
-        parser = build_action_parser("some-tool", "A tool", ["greet", "version"], default_action="greet")
-        args = parser.parse_args([])
-        self.assertEqual(args.action, "greet")
-        self.assertFalse(args.help)
-        self.assertFalse(args.version)
-        self.assertFalse(args.verbose)
-        self.assertFalse(args.debug)
-
-    def test_rejects_unknown_action(self) -> None:
-        parser = build_action_parser("some-tool", "A tool", ["greet", "version"], default_action="greet")
-        with self.assertRaises(SystemExit):
-            parser.parse_args(["not-an-action"])
-
-
-class PrintVersionAndHelpTests(unittest.TestCase):
-    def test_format_version(self) -> None:
-        self.assertEqual(
-            format_version("some-tool", "1.2.3", author="Some Author"),
-            "some-tool v1.2.3 - Copyright (c) Some Author",
-        )
-
-    def test_print_version_uses_standard_template(self) -> None:
-        buffer = io.StringIO()
-        with redirect_stdout(buffer):
-            print_version("some-tool", "1.2.3", author="Some Author")
-        self.assertEqual(buffer.getvalue().strip(), "some-tool v1.2.3 - Copyright (c) Some Author")
-
-    def test_print_help_lists_custom_exit_codes(self) -> None:
-        parser = build_action_parser("some-tool", "A tool", ["run"], default_action="run")
-        buffer = io.StringIO()
-        with redirect_stdout(buffer):
-            print_help("some-tool", "1.2.3", "A tool", parser, exit_codes=[(0, "OK"), (2, "Bad input")], author="Some Author")
-        output = buffer.getvalue()
-        self.assertIn("some-tool v1.2.3 - Copyright (c) Some Author", output)
-        self.assertIn("0  OK", output)
-        self.assertIn("2  Bad input", output)
+class RemovedArgparseHelpersTests(unittest.TestCase):
+    def test_removed_helpers_are_not_exposed(self) -> None:
+        for name in ("build_action_parser", "print_help", "print_version", "format_version"):
+            with self.subTest(name=name):
+                self.assertFalse(hasattr(support_python.cli, name))
+                self.assertNotIn(name, support_python.cli.__all__)
+                self.assertFalse(hasattr(support_python, name))
+                self.assertNotIn(name, support_python.__all__)
 
 
 class BuildMetadataVersionTests(unittest.TestCase):

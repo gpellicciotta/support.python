@@ -1,7 +1,7 @@
-"""Shared, reusable argparse CLI helper and application entry point.
+"""Shared, reusable action-oriented CLI harness and build-metadata version helpers.
 
 Implements the standard version/help/exit-code template from the CLI guideline
-(action-oriented commands, `-h`/`--help`, `-v`/`--version`, `--verbose`/`--debug`,
+(action-oriented commands, `-h`/`--help`, `--version`, `-v`/`--verbose`, `--debug`,
 a `{prog} v{version} - Copyright (c) {author}` header, and exit-codes listing).
 """
 
@@ -399,94 +399,6 @@ class ToolHarness:
             logger.close()
 
 
-def build_action_parser(
-    prog: str,
-    description: str,
-    actions: Sequence[str],
-    default_action: Optional[str] = None,
-) -> argparse.ArgumentParser:
-    """Build an action-oriented parser with custom help, version, and logging flags.
-
-    Configures an :class:`argparse.ArgumentParser` with an action positional argument and standard
-    switches: ``-h``/``--help``, ``-v``/``--version``, ``--verbose``, and ``--debug``.
-
-    Args:
-        prog: Program name displayed in help and usage banners.
-        description: Description text describing program functionality.
-        actions: Sequence of supported action command names.
-        default_action: Optional default action when none is provided on the command line.
-
-    Returns:
-        Configured :class:`argparse.ArgumentParser` instance.
-    """
-    parser = argparse.ArgumentParser(prog=prog, description=description, add_help=False)
-    parser.add_argument("action", nargs="?", default=default_action, choices=list(actions), help="Action to perform")
-    parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
-    parser.add_argument("-v", "--version", action="store_true", help="Show version information and exit")
-    parser.add_argument("--verbose", action="store_true", help="Provide more detailed operational progress on stdout/stderr")
-    parser.add_argument("--debug", action="store_true", help="Allow debug-level log messages to be written out to the log file")
-    return parser
-
-
-def format_version(prog: str, version: Optional[str] = None, author: str = APP_AUTHOR) -> str:
-    """Format single-line version string according to developer guidelines.
-
-    Outputs formatted text: ``{prog} v{version} - Copyright (c) {author}``.
-
-    Args:
-        prog: Program or utility executable name.
-        version: Optional version string. If omitted, resolved via :func:`~support_python.version.get_project_version`.
-        author: Copyright holder name. Defaults to :const:`APP_AUTHOR`.
-
-    Returns:
-        Formatted single-line version string.
-    """
-    if version is None:
-        version = get_project_version()
-    return f"{prog} v{version} - Copyright (c) {author}"
-
-
-def print_version(prog: str, version: Optional[str] = None, author: str = APP_AUTHOR) -> None:
-    """Print the formatted version string to standard output.
-
-    Args:
-        prog: Program or utility executable name.
-        version: Optional version string.
-        author: Copyright holder name. Defaults to :const:`APP_AUTHOR`.
-    """
-    print(format_version(prog, version, author))
-
-
-def print_help(
-    prog: str,
-    version: Optional[str],
-    description: str,
-    parser: argparse.ArgumentParser,
-    exit_codes: Sequence[Tuple[int, str]] = STANDARD_EXIT_CODES,
-    author: str = APP_AUTHOR,
-) -> None:
-    """Print the standard help template to standard output.
-
-    Includes version banner header, description, argparse usage text, and exit-codes table.
-
-    Args:
-        prog: Program name string.
-        version: Optional version string.
-        description: Functional description text.
-        parser: Configured :class:`argparse.ArgumentParser` whose usage and flags to print.
-        exit_codes: Sequence of ``(code, description)`` tuples. Defaults to :const:`STANDARD_EXIT_CODES`.
-        author: Copyright author name. Defaults to :const:`APP_AUTHOR`.
-    """
-    print_version(prog, version, author)
-    print()
-    print(description)
-    print()
-    parser.print_help()
-    print("\nExit codes:")
-    for code, meaning in exit_codes:
-        print(f"  {code}  {meaning}")
-
-
 __all__ = [
     "APP_AUTHOR",
     "COPYRIGHT",
@@ -497,10 +409,6 @@ __all__ = [
     "ParserConfigurator",
     "STANDARD_EXIT_CODES",
     "ToolHarness",
-    "build_action_parser",
-    "format_version",
     "get_full_version",
-    "print_help",
-    "print_version",
     "resolve_build_metadata",
 ]

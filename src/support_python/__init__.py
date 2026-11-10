@@ -33,11 +33,7 @@ from .cli import (
     ActionHandler,
     ParserConfigurator,
     ToolHarness,
-    build_action_parser,
-    format_version,
     get_full_version,
-    print_help,
-    print_version,
     resolve_build_metadata,
 )
 from .crypto import (
@@ -274,11 +270,7 @@ __all__ = [
     "ActionHandler",
     "ParserConfigurator",
     "ToolHarness",
-    "build_action_parser",
-    "format_version",
     "get_full_version",
-    "print_help",
-    "print_version",
     "resolve_build_metadata",
     # Tables
     "format_table",

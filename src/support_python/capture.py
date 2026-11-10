@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Optional, Sequence
 
-from .cli import APP_AUTHOR, build_action_parser, print_help, print_version
+from .cli import APP_AUTHOR, ToolHarness
 from .httpd import EmbeddedStaticServer, StaticServerManager
 from .logging import CliLogger
 
@@ -39,8 +39,9 @@ MINIMUM_SCREENSHOT_BYTES: int = 5000
 """Minimum expected byte size for a non-blank screenshot image file."""
 
 STANDARD_CAPTURE_EXIT_CODES: Sequence[tuple[int, str]] = [
-    (0, "Success"),
-    (1, "Capture failed, integrity error, or invalid argument"),
+    (0, "success"),
+    (1, "capture failed or screenshot integrity error"),
+    (2, "invalid arguments or syntax errors"),
 ]
 """Standard process exit code definitions for capture CLI operations."""
 
@@ -810,61 +811,117 @@ def print_presets_list(config: CaptureAppConfig) -> None:
         print()
 
 
-def build_capture_parser(config: CaptureAppConfig) -> argparse.ArgumentParser:
-    """Build the standard CLI argument parser for view capture applications.
+def _add_runner_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add the browser and server options shared by the capture and tour actions."""
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=DEFAULT_DELAY_SECONDS,
+        help=f"delay in seconds before taking screenshot (default: {DEFAULT_DELAY_SECONDS})",
+    )
+    parser.add_argument("--chrome-path", help="explicit path to Chrome executable")
+    parser.add_argument("--port", type=int, default=0, help="port for embedded static server (default: 0)")
+
+
+def _add_capture_arguments(parser: argparse.ArgumentParser) -> None:
+    """Add the target and options of the capture action."""
+    parser.add_argument("target", nargs="?", default=None, help="preset name (e.g. sign-in, account) or relative URL path")
+    parser.add_argument("--url", "--path", "-p", dest="url", help="URL or webapp relative path to capture")
+    parser.add_argument("--output", "-o", help="destination file path for the captured screenshot PNG")
+    parser.add_argument("--viewport", "--size", help="viewport size formatted as WIDTHxHEIGHT (e.g. 1200x900)")
+    parser.add_argument("--mobile", action="store_true", help=f"capture with standard mobile viewport ({DEFAULT_MOBILE_VIEWPORT})")
+    parser.add_argument(
+        "--desktop", action="store_true", help=f"capture with standard desktop viewport ({DEFAULT_DESKTOP_VIEWPORT})"
+    )
+    parser.add_argument("--mode", help="preset variant mode (e.g. error, before, after, empty)")
+    parser.add_argument("--all", action="store_true", help="capture all registered presets sequentially")
+    parser.add_argument("--tour", action="store_true", help="run the full visual UI tour instead of a single capture")
+    parser.add_argument("--no-server", action="store_true", help="do not start embedded server")
+    _add_runner_arguments(parser)
+
+
+def build_capture_harness(config: CaptureAppConfig) -> ToolHarness:
+    """Build the :class:`ToolHarness` exposing the capture, tour, and list actions for ``config``.
 
     Args:
         config: Application capture suite configuration.
 
     Returns:
-        Configured ArgumentParser with capture, tour, and list actions and options.
+        Harness named ``config.cli_name`` with ``capture`` as its fallback action.
     """
-    actions = ["capture", "tour", "list", "version", "help"]
-    description = (
-        f"{config.app_name}\n"
-        "============================================================\n"
-        "Unified visual view capture and UI screenshot automation CLI.\n\n"
-        "Actions:\n"
-        "  capture [TARGET]       Capture a screenshot for a view preset or path (default)\n"
-        "  tour                   Run full desktop and mobile visual tour and generate report\n"
-        "  list                   List all registered view presets and their viewports\n"
-        "  version                Show project version and exit\n"
-        "  help                   Show this help message and exit"
-    )
 
-    parser = build_action_parser(
-        prog=config.cli_name,
-        description=description,
-        actions=actions,
-        default_action="capture",
-    )
+    def handle_tour(args: argparse.Namespace, logger: CliLogger) -> int:
+        ok = run_tour(config=config, logger=logger, chrome_path=args.chrome_path, delay=args.delay, port=args.port)
+        return 0 if ok else 1
 
-    parser.add_argument(
-        "target",
-        nargs="?",
-        default=None,
-        help="Preset name (e.g. sign-in, account) or relative URL path",
-    )
-    parser.add_argument("--url", "--path", "-p", dest="url", help="URL or webapp relative path to capture")
-    parser.add_argument("--output", "-o", help="Destination file path for the captured screenshot PNG")
-    parser.add_argument("--viewport", "--size", help="Viewport size formatted as WIDTHxHEIGHT (e.g. 1200x900)")
-    parser.add_argument("--mobile", action="store_true", help="Capture with standard mobile viewport (390x844)")
-    parser.add_argument("--desktop", action="store_true", help="Capture with standard desktop viewport (1200x900)")
-    parser.add_argument("--mode", help="Preset variant mode (e.g. error, before, after, empty)")
-    parser.add_argument("--all", action="store_true", help="Capture all registered presets sequentially")
-    parser.add_argument("--tour", action="store_true", help="Run full visual UI tour and generate docs/tour/ui-tour-report.md")
-    parser.add_argument(
-        "--delay",
-        type=float,
-        default=DEFAULT_DELAY_SECONDS,
-        help=f"Delay in seconds before taking screenshot (default: {DEFAULT_DELAY_SECONDS})",
-    )
-    parser.add_argument("--chrome-path", help="Explicit path to Chrome executable")
-    parser.add_argument("--port", type=int, default=0, help="Port for embedded static server (default: 0)")
-    parser.add_argument("--no-server", action="store_true", help="Do not start embedded server")
-    parser.add_argument("--log-file", help="Path to operational log file")
+    def handle_capture(args: argparse.Namespace, logger: CliLogger) -> int:
+        if args.tour:
+            return handle_tour(args, logger)
+        ok = run_capture(
+            config=config,
+            target=args.target,
+            url=args.url,
+            output=args.output,
+            viewport=args.viewport,
+            mobile=args.mobile,
+            desktop=args.desktop,
+            mode=args.mode,
+            delay=args.delay,
+            all_presets=args.all,
+            port=args.port,
+            no_server=args.no_server,
+            chrome_path=args.chrome_path,
+            logger=logger,
+        )
+        return 0 if ok else 1
 
-    return parser
+    def handle_list(args: argparse.Namespace) -> int:
+        print(harness.format_version())
+        print_presets_list(config)
+        return 0
+
+    harness = ToolHarness(
+        name=config.cli_name,
+        description=f"{config.app_name}\nUnified visual view capture and UI screenshot automation CLI.",
+        version=config.version or "0.0.0",
+        copyright=f"Copyright (c) {config.author}",
+        exit_codes=dict(STANDARD_CAPTURE_EXIT_CODES),
+        examples=[
+            f"{config.cli_name} capture sign-in --mobile",
+            f"{config.cli_name} capture --url /index.html --viewport 1200x900 --output home.png",
+            f"{config.cli_name} capture --all",
+            f"{config.cli_name} tour",
+            f"{config.cli_name} list",
+        ],
+        fallback_action="capture",
+        repo_dir=config.repo_root or Path.cwd(),
+    )
+    harness.add_action(
+        "capture",
+        "capture a screenshot for a view preset or path (default action)",
+        handler=handle_capture,
+        detail=(
+            "Captures TARGET, a preset name or webapp-relative path, or --url, with headless Chrome.\n"
+            "Starts the embedded static server for relative paths unless --no-server is given.\n"
+            "--all captures every registered preset; --tour runs the full visual UI tour instead."
+        ),
+        usage_suffix="[TARGET] [options]",
+        configure_parser=_add_capture_arguments,
+    )
+    harness.add_action(
+        "tour",
+        "run full desktop and mobile visual tour and generate report",
+        handler=handle_tour,
+        detail="Captures every tour step on desktop and mobile viewports and writes the markdown tour report.",
+        configure_parser=_add_runner_arguments,
+    )
+    harness.add_action(
+        "list",
+        "list all registered view presets and their viewports",
+        handler=handle_list,
+        usage_suffix="",
+    )
+    return harness
 
 
 def run_capture_cli(
@@ -873,81 +930,31 @@ def run_capture_cli(
 ) -> int:
     """Entry point for executing the view capture CLI with a given configuration.
 
-    Parses command-line arguments, configures logging, routes subcommands (capture, tour,
-    list, version, help), and exits with standard exit codes.
+    Runs the :func:`build_capture_harness` harness. When the command line starts with an option
+    other than help or version, the first non-option token selects the action if it names one
+    (``--verbose list``); otherwise the arguments go to the default ``capture`` action.
 
     Args:
         config: Application capture suite configuration.
         argv: Command-line arguments sequence. Defaults to ``sys.argv[1:]``.
 
     Returns:
-        Exit code (0 on success, 1 on failure).
+        Exit code (0 on success, 1 on failure, 2 on invalid arguments).
     """
-    version = config.version or "0.0.0"
-    actions = ["capture", "tour", "list", "version", "help"]
-
-    parser = build_capture_parser(config)
-    args = parser.parse_args(argv)
-
-    if args.version or args.action == "version":
-        print_version(config.cli_name, version, author=config.author)
-        return 0
-
-    if args.help or args.action == "help":
-        print_help(
-            prog=config.cli_name,
-            version=version,
-            description=f"{config.app_name}\nUnified visual view capture and UI screenshot automation CLI.",
-            parser=parser,
-            exit_codes=STANDARD_CAPTURE_EXIT_CODES,
-            author=config.author,
-        )
-        return 0
-
-    if args.action == "list":
-        print_version(config.cli_name, version, author=config.author)
-        print_presets_list(config)
-        return 0
-
-    logger = CliLogger(
-        log_path=args.log_file,
-        verbose=args.verbose,
-        debug=args.debug,
-        origin=config.cli_name,
-    )
-
-    if args.action == "tour" or args.tour:
-        ok = run_tour(
-            config=config,
-            logger=logger,
-            chrome_path=args.chrome_path,
-            delay=args.delay,
-            port=args.port,
-        )
-        return 0 if ok else 1
-
-    effective_target = args.target
-    if args.action not in actions and effective_target is None:
-        effective_target = args.action
-
-    ok = run_capture(
-        config=config,
-        target=effective_target,
-        url=args.url,
-        output=args.output,
-        viewport=args.viewport,
-        mobile=args.mobile,
-        desktop=args.desktop,
-        mode=args.mode,
-        delay=args.delay,
-        all_presets=args.all,
-        port=args.port,
-        no_server=args.no_server,
-        chrome_path=args.chrome_path,
-        logger=logger,
-    )
-
-    return 0 if ok else 1
+    harness = build_capture_harness(config)
+    args = list(sys.argv[1:] if argv is None else argv)
+    if args and args[0].startswith("-") and args[0] not in ("-h", "--help", "--version"):
+        options = harness._build_parser("capture")._option_string_actions
+        action_names = {*harness._actions, "version", "help"}
+        i = 0
+        while i < len(args) and args[i].startswith("-") and args[i] != "--":
+            option = options.get(args[i])
+            i += 2 if option is not None and option.nargs != 0 else 1
+        if i < len(args) and args[i] in action_names:
+            args.insert(0, args.pop(i))
+        else:
+            args.insert(0, "capture")
+    return harness.run(args)
 
 
 __all__ = [
@@ -966,6 +973,7 @@ __all__ = [
     "ViewCaptureEngine",
     "ViewCaptureManager",
     "ViewPreset",
+    "build_capture_harness",
     "parse_viewport",
     "resolve_chrome_path",
     "run_capture",

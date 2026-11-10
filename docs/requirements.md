@@ -30,8 +30,8 @@ Functional and technical requirements for the `support-python` project.
   and AES-CBC encrypted property decryption (`decrypt_property_value`) in `support_python.crypto`.
 
 ### CLI and Standalone Tools
-- Provide a shared, reusable CLI harness (`ToolHarness`, `Action`, `build_action_parser`/`print_version`/`print_help`) for
-  guideline-compliant, action-oriented CLIs: `-h`/`--help`, `-v`/`--version`, `--verbose`/`--debug`, the
+- Provide a shared, reusable CLI harness (`ToolHarness`, `Action`) for
+  guideline-compliant, action-oriented CLIs: `-h`/`--help`, `--version`, `-v`/`--verbose`, `--debug`, the
   standard `{prog} v{version} - Copyright (c) {author}` header, centralized UTF-8 console output setup, and standard
   exit codes (`0` success, `1` failure or `check` findings, `2` invalid arguments) in `support_python.cli`, with no umbrella `support-python` command or `python -m support_python` entry point.
 - Provide five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`,

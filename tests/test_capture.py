@@ -25,7 +25,8 @@ from support_python import (
     run_capture_cli,
     run_tour,
 )
-from support_python.capture import MINIMUM_SCREENSHOT_BYTES, build_capture_parser
+from support_python.capture import DEFAULT_DELAY_SECONDS, MINIMUM_SCREENSHOT_BYTES, build_capture_harness
+from support_python.cli import ToolHarness
 
 
 class ViewportTests(unittest.TestCase):
@@ -355,51 +356,207 @@ class CaptureCliTests(unittest.TestCase):
             cli_name="test-capture",
             version="2.0.0",
             presets=self.presets,
+            author="Some Author",
         )
 
-    def test_parser_generation(self) -> None:
-        parser = build_capture_parser(self.config)
-        self.assertEqual(parser.prog, "test-capture")
-
-    def test_cli_version_action(self) -> None:
+    def _run(self, argv: list[str]) -> tuple[int, str]:
         stdout = io.StringIO()
-        with patch("sys.stdout", stdout):
-            code = run_capture_cli(self.config, ["version"])
-        self.assertEqual(code, 0)
-        self.assertIn("test-capture v2.0.0", stdout.getvalue())
+        with patch("support_python.cli.resolve_build_metadata", return_value="abc1234"), patch("sys.stdout", stdout):
+            code = run_capture_cli(self.config, argv)
+        return code, stdout.getvalue()
 
-    def test_cli_help_action(self) -> None:
-        stdout = io.StringIO()
-        with patch("sys.stdout", stdout):
-            code = run_capture_cli(self.config, ["help"])
+    def test_build_capture_harness_registers_actions(self) -> None:
+        harness = build_capture_harness(self.config)
+        self.assertIsInstance(harness, ToolHarness)
+        self.assertEqual(harness.name, "test-capture")
+        self.assertEqual(harness.fallback_action, "capture")
+        self.assertEqual(list(harness._actions), ["capture", "tour", "list"])
+
+    def test_cli_version_action_uses_harness_banner(self) -> None:
+        for argv in (["version"], ["--version"]):
+            with self.subTest(argv=argv):
+                code, output = self._run(argv)
+                self.assertEqual(code, 0)
+                self.assertEqual(output.strip(), "test-capture v2.0.0+abc1234 - Copyright (c) Some Author")
+
+    def test_cli_help_action_uses_harness_format(self) -> None:
+        for argv in (["help"], ["--help"], []):
+            with self.subTest(argv=argv):
+                code, output = self._run(argv)
+                self.assertEqual(code, 0)
+                self.assertTrue(output.startswith("test-capture v2.0.0+abc1234 - Copyright (c) Some Author\n"))
+                self.assertIn("Unified visual view capture", output)
+                self.assertIn("  test-capture capture [TARGET] [options]", output)
+                self.assertIn("Exit codes:", output)
+
+    def test_cli_capture_action_help_lists_options(self) -> None:
+        code, output = self._run(["help", "capture"])
         self.assertEqual(code, 0)
-        self.assertIn("test-capture v2.0.0", stdout.getvalue())
-        self.assertIn("Unified visual view capture", stdout.getvalue())
+        for option in ("--url, --path, -p", "--viewport, --size", "--mobile", "--all", "--tour", "--chrome-path", "--no-server"):
+            self.assertIn(option, output)
 
     def test_cli_list_action(self) -> None:
-        stdout = io.StringIO()
-        with patch("sys.stdout", stdout):
-            code = run_capture_cli(self.config, ["list"])
+        code, output = self._run(["list"])
         self.assertEqual(code, 0)
-        output = stdout.getvalue()
+        self.assertIn("test-capture v2.0.0+abc1234 - Copyright (c) Some Author", output)
         self.assertIn("account", output)
         self.assertIn("User account management harness", output)
 
     @patch("support_python.capture.run_capture", return_value=True)
     def test_cli_capture_action_dispatch(self, mock_run_capture: MagicMock) -> None:
-        code = run_capture_cli(self.config, ["capture", "account", "--mobile", "--no-server"])
+        code, _ = self._run(["capture", "account", "--mobile", "--no-server"])
         self.assertEqual(code, 0)
         mock_run_capture.assert_called_once()
         kwargs = mock_run_capture.call_args.kwargs
+        self.assertIs(kwargs["config"], self.config)
         self.assertEqual(kwargs["target"], "account")
         self.assertTrue(kwargs["mobile"])
         self.assertTrue(kwargs["no_server"])
+        self.assertIsNotNone(kwargs["logger"])
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_capture_options_yield_same_settings(self, mock_run_capture: MagicMock) -> None:
+        argv = [
+            "capture",
+            "--url",
+            "/demo/x.html",
+            "--output",
+            "out.png",
+            "--viewport",
+            "800x600",
+            "--desktop",
+            "--mode",
+            "error",
+            "--delay",
+            "1.5",
+            "--chrome-path",
+            "chrome.exe",
+            "--port",
+            "8123",
+        ]
+        code, _ = self._run(argv)
+        self.assertEqual(code, 0)
+        kwargs = mock_run_capture.call_args.kwargs
+        self.assertIsNone(kwargs["target"])
+        self.assertEqual(kwargs["url"], "/demo/x.html")
+        self.assertEqual(kwargs["output"], "out.png")
+        self.assertEqual(kwargs["viewport"], "800x600")
+        self.assertTrue(kwargs["desktop"])
+        self.assertFalse(kwargs["mobile"])
+        self.assertEqual(kwargs["mode"], "error")
+        self.assertEqual(kwargs["delay"], 1.5)
+        self.assertEqual(kwargs["chrome_path"], "chrome.exe")
+        self.assertEqual(kwargs["port"], 8123)
+        self.assertFalse(kwargs["all_presets"])
+        self.assertFalse(kwargs["no_server"])
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_option_aliases_and_defaults(self, mock_run_capture: MagicMock) -> None:
+        code, _ = self._run(["capture", "-p", "/a.html", "--size", "1x2"])
+        self.assertEqual(code, 0)
+        kwargs = mock_run_capture.call_args.kwargs
+        self.assertEqual(kwargs["url"], "/a.html")
+        self.assertEqual(kwargs["viewport"], "1x2")
+        self.assertEqual(kwargs["delay"], DEFAULT_DELAY_SECONDS)
+        self.assertEqual(kwargs["port"], 0)
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_capture_is_default_action(self, mock_run_capture: MagicMock) -> None:
+        for argv, target, all_presets in ((["account"], "account", False), (["--all"], None, True)):
+            with self.subTest(argv=argv):
+                mock_run_capture.reset_mock()
+                code, _ = self._run(argv)
+                self.assertEqual(code, 0)
+                kwargs = mock_run_capture.call_args.kwargs
+                self.assertEqual(kwargs["target"], target)
+                self.assertEqual(kwargs["all_presets"], all_presets)
+
+    @patch("support_python.capture.run_capture", return_value=False)
+    def test_cli_capture_failure_exits_one(self, mock_run_capture: MagicMock) -> None:
+        code, _ = self._run(["capture", "account"])
+        self.assertEqual(code, 1)
 
     @patch("support_python.capture.run_tour", return_value=True)
     def test_cli_tour_action_dispatch(self, mock_run_tour: MagicMock) -> None:
-        code = run_capture_cli(self.config, ["tour"])
+        code, _ = self._run(["tour", "--delay", "2", "--port", "9000", "--chrome-path", "c.exe"])
         self.assertEqual(code, 0)
         mock_run_tour.assert_called_once()
+        kwargs = mock_run_tour.call_args.kwargs
+        self.assertEqual(kwargs["delay"], 2.0)
+        self.assertEqual(kwargs["port"], 9000)
+        self.assertEqual(kwargs["chrome_path"], "c.exe")
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    @patch("support_python.capture.run_tour", return_value=False)
+    def test_cli_tour_flag_runs_tour(self, mock_run_tour: MagicMock, mock_run_capture: MagicMock) -> None:
+        code, _ = self._run(["--tour"])
+        self.assertEqual(code, 1)
+        mock_run_tour.assert_called_once()
+        mock_run_capture.assert_not_called()
+
+    def test_cli_invalid_option_exits_two(self) -> None:
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr):
+            code, _ = self._run(["capture", "--port", "not-a-number"])
+        self.assertEqual(code, 2)
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    @patch("support_python.capture.print_presets_list")
+    def test_cli_leading_global_option_keeps_list_action(self, mock_list: MagicMock, mock_run_capture: MagicMock) -> None:
+        for argv in (["--verbose", "list"], ["--log-level", "DEBUG", "list"]):
+            with self.subTest(argv=argv):
+                mock_list.reset_mock()
+                code, _ = self._run(argv)
+                self.assertEqual(code, 0)
+                mock_list.assert_called_once_with(self.config)
+                mock_run_capture.assert_not_called()
+        with patch("sys.stderr", io.StringIO()):
+            code, _ = self._run(["--port", "8000", "list"])
+        self.assertEqual(code, 2)
+        mock_run_capture.assert_not_called()
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    @patch("support_python.capture.run_tour", return_value=True)
+    def test_cli_leading_global_option_keeps_tour_action(self, mock_run_tour: MagicMock, mock_run_capture: MagicMock) -> None:
+        code, _ = self._run(["--debug", "tour"])
+        self.assertEqual(code, 0)
+        mock_run_tour.assert_called_once()
+        code, _ = self._run(["--port", "8000", "tour"])
+        self.assertEqual(code, 0)
+        self.assertEqual(mock_run_tour.call_args.kwargs["port"], 8000)
+        mock_run_capture.assert_not_called()
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    @patch("support_python.capture.print_presets_list")
+    def test_cli_leading_log_file_keeps_list_action(self, mock_list: MagicMock, mock_run_capture: MagicMock) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "capture.log"
+            code, _ = self._run(["--log-file", str(log_path), "list"])
+            self.assertEqual(code, 0)
+            mock_list.assert_called_once_with(self.config)
+            mock_run_capture.assert_not_called()
+            self.assertIn("- Command: list", log_path.read_text(encoding="utf-8"))
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_leading_capture_option_keeps_target(self, mock_run_capture: MagicMock) -> None:
+        for argv in (["--mobile", "sign-in"], ["--mode", "tour", "sign-in"]):
+            with self.subTest(argv=argv):
+                mock_run_capture.reset_mock()
+                code, _ = self._run(argv)
+                self.assertEqual(code, 0)
+                kwargs = mock_run_capture.call_args.kwargs
+                self.assertEqual(kwargs["target"], "sign-in")
+        self.assertEqual(mock_run_capture.call_args.kwargs["mode"], "tour")
+
+    @patch("support_python.capture.run_capture", return_value=True)
+    def test_cli_leading_option_before_version_and_help(self, mock_run_capture: MagicMock) -> None:
+        code, output = self._run(["--verbose", "version"])
+        self.assertEqual(code, 0)
+        self.assertEqual(output.strip(), "test-capture v2.0.0+abc1234 - Copyright (c) Some Author")
+        code, output = self._run(["--verbose", "help"])
+        self.assertEqual(code, 0)
+        self.assertIn("Detailed Action Descriptions:", output)
+        mock_run_capture.assert_not_called()
 
 
 class RunCaptureOrchestrationTests(unittest.TestCase):

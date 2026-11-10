@@ -12,7 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.27-pre
+## v2.0.28-pre
+- CLI: **[breaking]** Rebuilt `run_capture_cli` on `ToolHarness` via the new `build_capture_harness`, replacing `build_capture_parser`; help and version use the harness format, no arguments shows help, `-v` means `--verbose`, invalid arguments exit 2, `list` output carries harness startup and completion lines, and log lines no longer carry a `cli_name` origin ([capture.py](src/support_python/capture.py)).
+- CLI: **[breaking]** Removed `build_action_parser`, `print_help`, `print_version`, and `format_version` from `support_python.cli` and the package root in favor of `ToolHarness` ([cli.py](src/support_python/cli.py), [__init__.py](src/support_python/__init__.py)).
 - DevEx: Added `DevopsCli.add_services`, registering opt-in `docker`, `db`, `server`, `mail`, and `client` action groups with sub-actions such as `devops db start`, plus `LocalVerifier.run_all_checks`, a `verify_deployment` `timeout`, and `<name>_test` snapshot targets such as `todos_test` in `LocalMySqlManager.load_snapshot` ([service_actions.py](src/support_python/devops/service_actions.py), [cli.py](src/support_python/devops/cli.py), [services.py](src/support_python/devops/services.py)).
 - DevEx: Added a `deploy` action to `DevopsCli` via `set_deploy`, checking a clean tree, a released version, its `origin` tag at HEAD, and CI, then confirming, running `DeployStep`s, and verifying ([deploy.py](src/support_python/devops/deploy.py), [cli.py](src/support_python/devops/cli.py)).
 - DevEx: Added `NodeProject`, running npm lint, format, test, build, and pack scripts and releasing the packed `dist/*.tgz` tarballs ([projects.py](src/support_python/devops/projects.py)).
