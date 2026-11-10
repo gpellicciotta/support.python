@@ -166,17 +166,21 @@ class ToolHarness:
         """Return single-line formatted version banner per CLI guidelines."""
         return f"{self.name} v{get_full_version(self.version, cwd=self.repo_dir)} - {self.copyright}"
 
-    def _standard_option_lines(self) -> list[str]:
+    def _standard_option_rows(self) -> list[tuple[str, str]]:
         return [
-            "",
-            "Options:",
-            "  -h, --help             show help message and exit",
-            "  --version              show version information and exit",
-            "  -v, --verbose          enable verbose output logging",
-            "  --debug                enable debug output logging",
-            "  --log-file PATH        append operational logs to specified file",
-            f"  --log-level LEVEL      logging severity threshold (DEBUG, INFO, WARN, ERROR; default: {self.default_log_level})",
+            ("-h, --help", "show help message and exit"),
+            ("--version", "show version information and exit"),
+            ("-v, --verbose", "enable verbose output logging"),
+            ("--debug", "enable debug output logging"),
+            ("--log-file PATH", "append operational logs to specified file"),
+            ("--log-level LEVEL", f"logging severity threshold (DEBUG, INFO, WARN, ERROR; default: {self.default_log_level})"),
         ]
+
+    @staticmethod
+    def _format_option_lines(rows: list[tuple[str, str]]) -> list[str]:
+        """Render an ``Options:`` block whose help column clears the longest label by at least two spaces."""
+        col = max(max(len(label) for label, _ in rows) + 2, 23)
+        return ["", "Options:", *(f"  {label:<{col}}{text}".rstrip() for label, text in rows)]
 
     def format_help(self, verbose: bool = False) -> str:
         """Return standardized help screen per CLI guidelines."""
@@ -193,12 +197,12 @@ class ToolHarness:
             lines.append(f"  {name:<{act_col}}{action.description}")
         lines.append(f"  {'version':<{act_col}}show version information and exit")
         lines.append(f"  {'help':<{act_col}}show help message and exit (use --verbose for details)")
-        lines.extend(self._standard_option_lines())
-
+        rows = self._standard_option_rows()
         for g_args, g_kwargs in self._global_args:
             opts = ", ".join(arg for arg in g_args if isinstance(arg, str) and arg.startswith("-"))
             opts = f"{opts} {g_kwargs['metavar']}" if g_kwargs.get("metavar") else opts
-            lines.append(f"  {opts:<23}{g_kwargs.get('help', '')}")
+            rows.append((opts, g_kwargs.get("help", "")))
+        lines.extend(self._format_option_lines(rows))
 
         lines.extend(["", "Exit codes:", *(f"  {code:<4}{self.exit_codes[code]}" for code in sorted(self.exit_codes))])
         if not verbose:
@@ -226,11 +230,13 @@ class ToolHarness:
         if relevant:
             lines.extend(["", "Examples:", *(f"  {ex}" for ex in relevant)])
 
-        lines.extend(["", "Usage:", f"  {self.name} {action_name}{suffix}", *self._standard_option_lines()])
+        lines.extend(["", "Usage:", f"  {self.name} {action_name}{suffix}"])
         standard_dest = {"help", "version", "verbose", "debug", "log_file", "log_level"}
+        rows = self._standard_option_rows()
         for action_obj in self._build_parser(action_name)._actions:
             if action_obj.dest not in standard_dest and action_obj.option_strings:
-                lines.append(f"  {', '.join(action_obj.option_strings):<23}{action_obj.help or ''}")
+                rows.append((", ".join(action_obj.option_strings), action_obj.help or ""))
+        lines.extend(self._format_option_lines(rows))
 
         lines.extend(["", "Exit codes:", *(f"  {code:<4}{self.exit_codes[code]}" for code in sorted(self.exit_codes))])
         return "\n".join(lines) + "\n"

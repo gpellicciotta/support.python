@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.38-pre
+## v2.0.39-pre
+- CLI: Fixed `ToolHarness` help option labels of 22 or more characters running into their help text; the option column now clears the longest label by two spaces and stays aligned ([cli.py](src/support_python/cli.py)).
 - CLI: **[breaking]** Added `--version` and a working `--help` to `extract-release-notes`, `migrate-namespace`, `reset-history`, and `install-from-github-release` in [scripts](scripts/); the `--version` options of `migrate-namespace` and `reset-history reinit` are now `--new-version`.
 - Docs: Restructured [README.md](README.md) into bootstrap, build, install, command-line tool, and library sections linking each tool page and tutorial, grouped [index.md](docs/index.md) by tools and tutorials, and refreshed the [devops.md](docs/devops.md) scripts table.
 - Docs: Moved the README Git, locking, process, file, Markdown, duration, and rate limiter sections into five [docs/tutorials](docs/tutorials/) pages, and added a Markdown linter library example to [markdown.md](docs/tutorials/markdown.md).

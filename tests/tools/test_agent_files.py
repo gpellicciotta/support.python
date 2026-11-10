@@ -1554,8 +1554,8 @@ class AgentFilesConfigTests(unittest.TestCase):
             )
             help_code, help_out, _ = _run_main(["help"])
             self.assertEqual(help_code, 0)
-            self.assertIn("  --digest PATH          digest file to install (default: ./agent-digest.md)", help_out)
-            self.assertIn("  --skills-dir PATH      skills directory to install (default: ./agent-skills)", help_out)
+            self.assertIn("  --digest PATH           digest file to install (default: ./agent-digest.md)", help_out)
+            self.assertIn("  --skills-dir PATH       skills directory to install (default: ./agent-skills)", help_out)
             code, out, err = _run_main(
                 [
                     "sync",

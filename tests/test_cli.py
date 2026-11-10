@@ -159,6 +159,48 @@ class ToolHarnessUnitTests(unittest.TestCase):
         self.assertEqual(mock_utf8.call_count, 1)
         self.assertEqual(events, ["utf8", "handler"])
 
+    @staticmethod
+    def _option_columns(help_text: str, labels: list[str]) -> dict[str, int]:
+        """Return the column at which each labeled option line's help text starts."""
+        columns: dict[str, int] = {}
+        for line in help_text.splitlines():
+            for label in labels:
+                if line.startswith(f"  {label} "):
+                    rest = line[2 + len(label) :]
+                    columns[label] = 2 + len(label) + (len(rest) - len(rest.lstrip(" ")))
+        return columns
+
+    def test_long_global_option_label_keeps_aligned_separated_columns(self) -> None:
+        harness = self._make_harness()
+        harness.add_global_argument("--extremely-long-option-name", metavar="VALUE", help="global help text")
+        label = "--extremely-long-option-name VALUE"
+        help_text = harness.format_help()
+        self.assertIn(f"{label}  ", help_text)
+        columns = self._option_columns(help_text, [label, "--log-level LEVEL", "-h, --help"])
+        self.assertEqual(len(set(columns.values())), 1, columns)
+        self.assertEqual(columns[label], 2 + len(label) + 2)
+
+    def test_long_action_option_label_keeps_aligned_separated_columns(self) -> None:
+        harness = self._make_harness()
+
+        def configure(parser) -> None:
+            parser.add_argument("--extremely-long-action-option-name", help="action help text")
+
+        harness.add_action("long", "long option action", handler=lambda a, logger: 0, configure_parser=configure)
+        label = "--extremely-long-action-option-name"
+        help_text = harness.format_action_help("long")
+        self.assertIn(f"{label}  action help text", help_text)
+        columns = self._option_columns(help_text, [label, "--log-level LEVEL", "-h, --help"])
+        self.assertEqual(len(set(columns.values())), 1, columns)
+        self.assertEqual(columns[label], 2 + len(label) + 2)
+
+    def test_short_option_labels_keep_column_twenty_five(self) -> None:
+        harness = self._make_harness()
+        for help_text in (harness.format_help(), harness.format_action_help("run")):
+            columns = self._option_columns(help_text, ["-h, --help", "--log-level LEVEL", "--target"])
+            self.assertTrue(set(columns.values()) <= {25}, columns)
+            self.assertIn("-h, --help", columns)
+
     def test_no_tool_module_calls_stream_reconfigure(self) -> None:
         from pathlib import Path
 
