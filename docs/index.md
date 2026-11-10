@@ -9,6 +9,7 @@ Overview of all documentation for the `support-python` project.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
 - [LICENSE](../LICENSE.md): License terms (MIT).
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release process.
+- [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
 
 ---
 
@@ -31,26 +32,24 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 
 ---
 
-## Core Documentation
-- [CLI harness and helpers](tutorials/cli-harness-and-logging.md): Action-oriented `ToolHarness`, `Action`, version/help banners, and build-metadata version formatting.
-- [CLI logging](tutorials/cli-harness-and-logging.md#cli-logging): Unified `CliLogger`, `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
-- [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
+## Command-Line Tools
+- [processes](tools/processes.md): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected kills with `kill --dry-run`.
+- [agent-digest](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks.
+- [agent-files](tools/agent-files.md): Global agent instructions, skills synchronization, `.agent-files.json` schema, and `ToolRegistry`.
+- [lint-markdown](tools/lint-markdown.md): Markdown style and link linter, rule registry, JSON profiles, and rule plugins.
+- [git-repository-backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore.
+
+---
+
+## Library Tutorials
+- [CLI harness and logging](tutorials/cli-harness-and-logging.md): `ToolHarness`, `Action`, build-metadata versions, `CliLogger` with 11-character severity padding and console/file teeing, table output, and token storage.
+- [Script utilities](tutorials/script-utilities.md): UTF-8 console setup, project version lookup, port checks, env-file parsing, and password hashing.
+- [REST clients](tutorials/rest-clients.md): Stdlib-only HTTP transport, REST error hierarchy and status mapping, wire datetimes, and metadata models.
+- [DevOps scripts](tutorials/devops-scripts.md): Subprocess step runners, local service managers, release helpers, `ReleasePipeline`, `DevopsCli` project adapters, `deploy`, and service action groups.
 - [Git helpers](tutorials/git-helpers.md): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
-- [Locking](tutorials/files-and-locking.md#locks): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
-- [Process helpers and CLI](tools/processes.md): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI with `kill --dry-run` (see also the [process management tutorial](tutorials/process-management.md)).
-- [File helpers](tutorials/files-and-locking.md#atomic-text-files): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
-- [Markdown table helpers](tutorials/markdown.md#table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
-- [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also the [Markdown tutorial](tutorials/markdown.md#linter)).
-- [Agent files sync](tools/agent-files.md): Global agent instructions, skills synchronization, `.agent-files.json` schema, and `ToolRegistry` exposed via `agent-files` (see also [README](../README.md#agent-files-sync)).
-- [Agent digest generator](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks exposed via `agent-digest` (see also [README](../README.md#agent-digest-generator)).
-- [Duration and time helpers](tutorials/durations-and-rate-limiting.md): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
-- [Task rate limiter](tutorials/durations-and-rate-limiting.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
-- [Script utilities tutorial](tutorials/script-utilities.md): UTF-8 console setup, project version lookup, port checks, env-file parsing, and password hashing.
-- [REST clients tutorial](tutorials/rest-clients.md): Stdlib-only HTTP transport, REST error hierarchy and status mapping, wire datetimes, and metadata models.
-- [View capture tutorial](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.
-- [SQL anonymizer tutorial](tutorials/sql-anonymizer.md): Streaming, deterministic anonymization of `auth` and `counters` SQL dumps.
-- [DevOps scripts tutorial](tutorials/devops-scripts.md): Subprocess step runners, local service managers, release helpers, `ReleasePipeline`, `DevopsCli` project adapters, `deploy`, and service action groups.
-- [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
-
-
-
+- [Files and locking](tutorials/files-and-locking.md): Atomic UTF-8 text writes, retrying replaces and reads, and file, null, Redis, and MySQL locks with a backend factory.
+- [Process management](tutorials/process-management.md): Process hierarchy, descendants, open-path lookup, PID-reuse-safe liveness checks, and ancestor-protected termination.
+- [Markdown tables and linting](tutorials/markdown.md): ANSI-aware table formatting and alignment checks, and the in-memory linter API.
+- [Durations and rate limiting](tutorials/durations-and-rate-limiting.md): Duration and ISO-8601 parsing, human-readable and relative epoch formatting, and `TaskRateLimiter`.
+- [View capture](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.
+- [SQL anonymizer](tutorials/sql-anonymizer.md): Streaming, deterministic anonymization of `auth` and `counters` SQL dumps.

@@ -39,23 +39,31 @@ python scripts/bootstrap-dev-environment.py
 This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packages.
 
 ### Scripts
-Cross-platform Python scripts under `scripts/`; each supports `--help` and `--version`.
+Cross-platform Python scripts under `scripts/`; they are not installed with the package.
 
-| Script                           | Purpose                                                                             |
-| :------------------------------- | :---------------------------------------------------------------------------------- |
-| `bootstrap-dev-environment.py`   | Create the venv, install, lint, test, and build                                     |
-| `devops.py`                      | Run lint, format, test, build, check, clean, versions, and release in the venv      |
-| `processes.py`                   | Safely terminate processes by PID and list running processes with filters           |
-| `lint-markdown.py`               | Lint and fix Markdown files with the packaged `support_python` linter               |
-| `agent-files.py`                 | Sync repository guideline digests and skills into AI coding tools                   |
-| `backup-git-repos.py`            | Back up Git repos to bare mirrors and encrypted 7-Zip archives; restore from either |
-| `reset-history.py`               | Restart a repo from one root commit and recreate its GitHub remote (destructive)    |
-| `migrate-namespace.py`           | Rename a namespace word across paths, text, version, and changelog, then release    |
-| `extract-release-notes.py`       | Print one version's CHANGELOG.md section for GitHub Release notes                   |
-| `install-from-github-release.py` | Install a released wheel from any GitHub repo (defaults to this project)            |
+| Script                           | Purpose                                                                          |
+| :------------------------------- | :------------------------------------------------------------------------------- |
+| `bootstrap-dev-environment.py`   | Create the venv, install, lint, test, and build                                  |
+| `devops.py`                      | Run lint, format, test, build, check, clean, versions, and release in the venv   |
+| `install-from-github-release.py` | Install a released wheel from any GitHub repo (defaults to this project)         |
+| `extract-release-notes.py`       | Print one version's CHANGELOG.md section for GitHub Release notes                |
+| `migrate-namespace.py`           | Rename a namespace word across paths, text, version, and changelog, then release |
+| `reset-history.py`               | Restart a repo from one root commit and recreate its GitHub remote (destructive) |
 
-`_cli_common.py`, `_tool_common.py`, and `_harness.py` are shared helper modules.
-`reset-history.py`, `migrate-namespace.py`, and `extract-release-notes.py` act on the Git repository containing the current directory.
+`_cli_common.py` is a shared helper module.
+The v1.x wrapper scripts became console scripts; see [migration-v2.md](migration-v2.md).
+
+`extract-release-notes.py`, `migrate-namespace.py`, and `reset-history.py` act on the Git repository containing the current directory.
+Run them from a support-python checkout against any repository:
+
+```bash
+cd path/to/other-repo
+python path/to/support.python/scripts/extract-release-notes.py 1.2.3
+python path/to/support.python/scripts/migrate-namespace.py --old acme --new widgets rewrite
+python path/to/support.python/scripts/reset-history.py backup ../backups
+```
+
+Each script imports `support_python` from the checkout's `src/` directory, or from an installed package.
 
 ### The devops.py Script
 [devops.py](../scripts/devops.py) runs `DevopsCli(PythonProject(REPO_ROOT))` from `support_python.devops`.
