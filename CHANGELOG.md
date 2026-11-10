@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.34-pre
+## v2.0.35-pre
+- Docs: Moved the README Git, locking, process, file, Markdown, duration, and rate limiter sections into five [docs/tutorials](docs/tutorials/) pages, and added a Markdown linter library example to [markdown.md](docs/tutorials/markdown.md).
 - Docs: Moved the README CLI, logging, script utility, REST client, view capture, SQL anonymizer, and model sections into five [docs/tutorials](docs/tutorials/) pages, starting at [cli-harness-and-logging.md](docs/tutorials/cli-harness-and-logging.md).
 - CLI: Aligned the `CliLogger.log_start` header with `ToolHarness`, now reading `Starting {name} v{version} with configuration:` ([logging.py](src/support_python/logging.py)).
 - CLI: Printed the `Starting ... with configuration:` and `Finished ... with status: succeeded` lines on stdout only with `-v`/`--verbose`; they still reach the log file, and failed summaries still go to stderr ([cli.py](src/support_python/cli.py)).

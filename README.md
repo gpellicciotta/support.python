@@ -134,162 +134,22 @@ Project version is maintained in `pyproject.toml` under `[project].version`.
 Dependencies are maintained in `pyproject.toml` under `[project].dependencies`.
 
 ## Git repository helpers
-The package exports Git helpers from [git.py](src/support_python/git.py), also available through `support_python.git`.
-Git must be installed and available on `PATH`; no Python dependencies are required.
-
-```python
-from support_python import get_repo_root, has_remote, is_git_clean
-
-root = get_repo_root(".")
-clean = is_git_clean(".")
-if clean is None:
-    print("Repository status could not be queried")
-elif clean:
-    print("Working tree is clean")
-else:
-    print("Working tree has changes")
-
-remote = has_remote(".", "origin")  # True: configured; False: absent; None: query failed.
-```
-
-All repository queries return `None` on execution failure, including missing Git, timeouts, and invalid repositories.
-`is_git_clean`, `has_remote`, and `branch_exists` return `False` only for confirmed negative results.
-Use `result is None` to distinguish failures from negative results.
-This intentionally differs from plan's original clean and remote helpers, which returned `False` on errors.
-`get_head_commit` also returns `None` before the first commit.
-`get_current_branch` returns `"(detached)"` for detached HEAD.
-An unborn branch has a symbolic name but does not yet exist as a branch ref.
-
-`get_working_tree_status` returns dictionaries containing `status`, `path`, and optional `original_path` for renames or copies.
-`list_worktrees` returns dictionaries using Git's porcelain keys, including `worktree`, `HEAD`, `branch`, and optional flags.
-Flags such as `detached` have empty string values.
-Both queries use NUL-delimited output to preserve filenames containing whitespace, quotes, or newlines.
-`parse_status_porcelain` and `parse_worktree_porcelain` also accept newline-delimited output for simple fixtures.
-Newline status parsing does not decode Git's quoted escape sequences; use NUL-delimited output for arbitrary filenames.
-
-`run_git_command(cwd, *args)` returns `subprocess.CompletedProcess[str]` with UTF-8 stdout and stderr.
-It raises `CalledProcessError` for disallowed exit codes, `TimeoutExpired` for timeouts, and `OSError` for execution failures.
-The default timeout is 10 seconds; `allowed_returncodes`, `env`, and `input_data` customize execution.
-Defaults disable optional locks, lazy fetching, and terminal prompts; caller environment overrides take precedence.
-`no_optional_locks=False` omits the command flag; override `GIT_OPTIONAL_LOCKS` separately if optional locks are needed.
-The runner accepts arbitrary Git commands, including mutations; repository query helpers only inspect local state.
+Tri-state repository queries, porcelain parsing, and the Git runner: see the [Git helpers tutorial](docs/tutorials/git-helpers.md).
 
 ## Locking
-The package exports locks from [locking.py](src/support_python/locking.py), also available through `support_python.locking`.
-The core has no Python dependencies.
-
-```python
-from support_python import LockTimeoutError, create_lock
-
-lock = create_lock("file", path=".app/.app.lock", timeout=5.0)
-try:
-    with lock:
-        ...  # Critical section; nested `with` blocks in one thread are re-entrant.
-except LockTimeoutError as error:
-    print(error)  # Includes holder diagnostics when the holder is in this process.
-```
-
-- `FileLock` uses `msvcrt` on Windows and `fcntl` elsewhere; the OS frees it when a process dies.
-- `NullLock` always succeeds; use it for tests or disabled locking.
-- `RedisLock` provides distributed locking backed by Redis using `SET NX PX` and an atomic Lua release script. It requires the `redis` optional extra (`pip install support-python[redis]`).
-- `MySQLLock` provides distributed server-wide advisory locking backed by MySQL using `GET_LOCK` and `RELEASE_LOCK`. It requires the `mysql` optional extra (`pip install support-python[mysql]`).
-- `create_lock(backend, key, path, timeout, poll_interval, max_jitter, ttl)` maps `null`/`none` to `NullLock`.
-  `file`, `local`, or an empty value select `FileLock` and require `path`.
-  `redis://` and `rediss://` select `RedisLock` and require `key`.
-  `mysql://`, `mysql+pymysql://`, and `jdbc:mysql://` select `MySQLLock` and require `key`.
-  Unsupported schemes raise `ValueError`.
-- Timeouts and TTLs are floats in seconds.
+File, null, Redis, and MySQL locks and `create_lock`: see the [files and locking tutorial](docs/tutorials/files-and-locking.md#locks).
 
 ## Process hierarchy and safe termination
-The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [tools/processes.py](src/support_python/tools/processes.py) (see [processes.md](docs/tools/processes.md)).
-All helpers use only the Python standard library and `ctypes`.
-
-```python
-import os
-from support_python.processes import (
-    get_process_cwd,
-    get_process_descendants,
-    get_process_hierarchy,
-    get_process_start_time,
-    is_process_alive,
-    list_processes,
-    safe_kill,
-    terminate_process_tree,
-)
-
-pid = os.getpid()
-ancestors = get_process_hierarchy(pid)
-descendants = get_process_descendants(pid)
-cwd = get_process_cwd(pid)
-started = get_process_start_time(pid)
-alive = is_process_alive(pid, expected_start=started, slack_seconds=2.0)
-matching = list_processes(cwd=cwd, descendants_of=pid)
-safe_kill([pid])  # Skips the current process and its ancestors with a warning.
-```
-
-```bash
-processes list --cwd . --format json
-processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
-processes kill 1234 5678 --force
-processes kill 1234 5678 --dry-run
-processes list --descendants-of 1234
-```
-
-- `get_process_hierarchy(start_pid)` returns `start_pid` and all ancestor PIDs, failing closed with `OSError` when inspection fails.
-- `get_process_descendants(start_pid)` returns `start_pid` and all child and descendant PIDs.
-- `get_process_cwd(pid)` and `find_pids_with_open_path(path)` inspect process working directories and open files across Windows, Linux, and macOS.
-- `list_processes(...)` and `filter_processes(...)` filter `ProcessInfo` records by `--cwd`, `--open-path`, `--started-before`, `--started-after`, `--ancestors-of`, and `--descendants-of`.
-- `windows_parent_map()` enumerates running Windows processes via `CreateToolhelp32Snapshot` without spawning a shell.
-- `get_process_start_time(pid)` returns a naive local `datetime`, or `None` if the process is absent.
-- `is_process_alive(pid, expected_start=None, slack_seconds=2.0)` checks liveness and guards against recycled PIDs.
-- `terminate_process(pid, force=False)` signals one positive PID directly; callers must enforce ancestor protection first.
-- `terminate_process_tree(pid)` terminates a process and its child tree, returning `False` on invalid PIDs or failures.
-- `safe_kill(pids, logger=None, force=False)` skips the current process and ancestors with a warning and returns `bool`.
+Process trees, liveness checks, and `safe_kill`: see the [process management tutorial](docs/tutorials/process-management.md).
 
 ## Atomic text file helpers
-The package exports atomic file helpers from [files.py](src/support_python/files.py), also available through `support_python.files`.
-All helpers use only the Python standard library.
-
-```python
-from pathlib import Path
-from support_python import atomic_replace, atomic_write_text, read_text_retrying
-
-path = Path("state.txt")
-atomic_write_text(path, "consistent text\n")
-content = read_text_retrying(path, errors="strict")
-```
-
-- `atomic_write_text(path, content, newline=None)` writes UTF-8 text via a temporary sibling file so readers never see partial content.
-- `atomic_write_text` preserves existing POSIX permission bits, omits the target filename from the temporary name, and removes failed temporaries.
-- `atomic_replace(src, dst, max_retries=15, base_delay=0.01)` replaces `dst` with `src`, retrying transient `PermissionError` and Windows error `5` or `32`.
-- `read_text_retrying(path, max_retries=10, base_delay=0.005, errors="replace")` reads UTF-8 text while retrying transient `PermissionError` locks during concurrent renames.
+Atomic UTF-8 writes and retrying replaces and reads: see the [files and locking tutorial](docs/tutorials/files-and-locking.md#atomic-text-files).
 
 ## Markdown table helpers
-The package exports Markdown table helpers from [tables.py](src/support_python/markdown/tables.py), also available through `support_python.markdown`.
-All helpers use only the Python standard library and preserve `support_python.tables.format_table`.
-
-```python
-from support_python import (
-    check_table_alignment,
-    format_markdown_table,
-    format_markdown_table_block,
-    strip_ansi,
-    visible_width,
-)
-
-table = format_markdown_table(["Name", "Score"], [["\x1b[32mAlice\x1b[0m", "100"]], alignments=["left", "right"])
-issues = check_table_alignment(table)
-```
-
-- `strip_ansi(text)` removes ANSI CSI escape sequences, and `visible_width(text)` returns the stripped character count.
-- `find_delimiter_pipes(line)` finds unescaped pipe indices outside backtick code spans, and `split_table_row(line)` returns trimmed cells.
-- `is_table_delimiter_row(line)` validates GitHub Flavored Markdown separator rows such as `:---`, `:---:`, and `---:`.
-- `format_markdown_table(headers, rows, alignments=None)` formats aligned GFM tables using visible cell widths.
-- `format_markdown_table_block(table_lines)` reformats raw table lines in place while preserving leading blockquote prefixes.
-- `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
+ANSI-aware GFM table helpers: see the [Markdown tutorial](docs/tutorials/markdown.md#table-helpers).
 
 ## Markdown linter
-`support_python.markdown` ([lint.py](src/support_python/markdown/lint.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provides `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` (also re-exported from `support_python`), with the `lint-markdown` CLI in [lint_markdown.py](src/support_python/tools/lint_markdown.py) reading `.lint-markdown.json` (or legacy `.markdown-lint.json` with a warning; see [lint-markdown.md](docs/tools/lint-markdown.md)):
+The `lint-markdown` CLI reads `.lint-markdown.json` (see [lint-markdown.md](docs/tools/lint-markdown.md)); the linter library API is in the [Markdown tutorial](docs/tutorials/markdown.md#linter).
 ```bash
 lint-markdown check [paths...] [--format text|json] [--offline] [--profile PROFILE] [--config PATH] [--plugin ENTRY]... [--rules MD001,MD017] [--exclude GLOB]
 lint-markdown fix [paths...] [--dry-run] [--offline] [--profile PROFILE] [--config PATH] [--plugin ENTRY]... [--rules MD001,MD017] [--exclude GLOB]
@@ -328,55 +188,7 @@ git-repository-backup set-password --archive-dir PATH --password-keyring NAME [-
 ```
 
 ## Duration and time formatting helpers
-The package exports duration and timestamp helpers from [durations.py](src/support_python/durations.py), also available through `support_python.durations`.
-All helpers use only the Python standard library and preserve `support_python.dates.format_datetime`.
-
-```python
-from support_python import (
-    format_duration,
-    format_epoch,
-    format_past_epoch,
-    format_short_duration,
-    parse_date_or_datetime,
-    parse_duration_to_seconds,
-    parse_iso8601,
-)
-
-seconds = parse_duration_to_seconds("1h 02m 05s")  # 3725.0
-label = format_duration(seconds)  # "1h 02m 05s"
-short = format_short_duration(seconds)  # "1h 2m"
-ts = parse_iso8601("2026-09-11T10:00:00Z")
-dt = parse_date_or_datetime("2026-09-11 10:00:00")
-future = format_epoch(ts + seconds, now_ts=ts)
-past = format_past_epoch(ts, now_ts=ts + seconds)
-```
-
-- `parse_iso8601(text)` parses an ISO 8601 timestamp (including trailing `Z`) into a POSIX float timestamp, or `None` on invalid input.
-- `parse_date_or_datetime(text)` parses `YYYY-MM-DD`, `YYYY-MM-DD[T ]HH:MM[:SS]`, or a `YYYY-MM-DD` prefix into a naive `datetime`, or `None`.
-- `parse_duration_to_seconds(dur_str, default_unit="s")` parses single or compound units (`d`, `h`, `m`, `s`, `ms`) and bare numbers into seconds, returning `None` for invalid or negative input.
-- `format_duration(seconds)` formats durations as `<sec.f>s`, `<m>m <ss>s`, `<h>h <mm>m <ss>s`, or `<d>d <hh>h` (clamping negatives to `0.0s`).
-- `format_short_duration(seconds)` formats durations as `<secs>s` under 2 minutes, `<m>m` under 1 hour, `<h>h <m>m` under 1 day, or `<d>d <h>h`.
-- `format_epoch(ts, now_ts=None)` formats a target timestamp as `YYYY-MM-DD HH:MM:SS (in <duration>)`.
-- `format_past_epoch(ts, now_ts=None)` formats a past timestamp as `YYYY-MM-DD HH:MM (<short_duration> ago)`.
+Duration and timestamp parsing and formatting: see the [durations and rate limiting tutorial](docs/tutorials/durations-and-rate-limiting.md).
 
 ## Task rate limiter
-The package exports `TaskRateLimiter` from [ratelimit.py](src/support_python/ratelimit.py), also available through `support_python.ratelimit`.
-It uses only the Python standard library and pairs with [durations.py](src/support_python/durations.py) for wait-duration formatting.
-
-```python
-from support_python import TaskRateLimiter, format_duration
-
-limiter = TaskRateLimiter(max_tasks_per_hour=2, window_seconds=3600.0)
-if limiter.can_dispatch():
-    limiter.record_dispatch()
-else:
-    wait_seconds = limiter.get_wait_duration()
-    print(f"Rate limit reached; retry in {format_duration(wait_seconds)}")
-```
-
-- `TaskRateLimiter(max_tasks_per_hour=None, window_seconds=3600.0)` tracks dispatch timestamps in a sliding window.
-- `is_enabled` is `True` only when `max_tasks_per_hour` is set and greater than `0`.
-- `prune(now=None)` removes recorded timestamps at or before `now - window_seconds`.
-- `can_dispatch(now=None)` prunes expired timestamps and returns `True` when disabled or below capacity.
-- `get_wait_duration(now=None)` returns `0.0` when dispatch is allowed, or `max(1.0, oldest + window_seconds - now)` when blocked.
-- `record_dispatch(now=None)` appends a dispatch timestamp when enabled.
+`TaskRateLimiter`: see the [durations and rate limiting tutorial](docs/tutorials/durations-and-rate-limiting.md#task-rate-limiter).

@@ -35,16 +35,16 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 - [CLI harness and helpers](tutorials/cli-harness-and-logging.md): Action-oriented `ToolHarness`, `Action`, version/help banners, and build-metadata version formatting.
 - [CLI logging](tutorials/cli-harness-and-logging.md#cli-logging): Unified `CliLogger`, `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
 - [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
-- [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
-- [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
-- [Process helpers and CLI](tools/processes.md): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI with `kill --dry-run` (see also [README](../README.md#process-hierarchy-and-safe-termination)).
-- [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
-- [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
-- [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also [README](../README.md#markdown-linter)).
+- [Git helpers](tutorials/git-helpers.md): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
+- [Locking](tutorials/files-and-locking.md#locks): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
+- [Process helpers and CLI](tools/processes.md): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI with `kill --dry-run` (see also the [process management tutorial](tutorials/process-management.md)).
+- [File helpers](tutorials/files-and-locking.md#atomic-text-files): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
+- [Markdown table helpers](tutorials/markdown.md#table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
+- [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also the [Markdown tutorial](tutorials/markdown.md#linter)).
 - [Agent files sync](tools/agent-files.md): Global agent instructions, skills synchronization, `.agent-files.json` schema, and `ToolRegistry` exposed via `agent-files` (see also [README](../README.md#agent-files-sync)).
 - [Agent digest generator](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks exposed via `agent-digest` (see also [README](../README.md#agent-digest-generator)).
-- [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
-- [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
+- [Duration and time helpers](tutorials/durations-and-rate-limiting.md): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
+- [Task rate limiter](tutorials/durations-and-rate-limiting.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
 - [Script utilities tutorial](tutorials/script-utilities.md): UTF-8 console setup, project version lookup, port checks, env-file parsing, and password hashing.
 - [REST clients tutorial](tutorials/rest-clients.md): Stdlib-only HTTP transport, REST error hierarchy and status mapping, wire datetimes, and metadata models.
 - [View capture tutorial](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.

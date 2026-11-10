@@ -37,5 +37,6 @@ processes kill 1234 5678 --dry-run
 processes kill 1234 --force
 processes list --cwd /path/to/workdir
 processes list --open-path /path/to/file.txt --format json
+processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
 processes list --descendants-of 1234
 ```
