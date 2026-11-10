@@ -5,8 +5,7 @@
 - The guide covers tool installation and the `scripts/devops.py` migration pattern per project type.
 - Refreshed the CLAUDE.md overview, Commands, and Architecture sections for the v2.0.0 layout.
 - Linked the guide from README.md, docs/index.md, and the CHANGELOG.md pre-release section.
-- Fixed existing lint findings in the declared files so the completion check exits 0.
-- These were broken v1.x CHANGELOG links, README workflow and `PLAN.md` links, and a blank line before a list.
+- Fixed existing README lint findings: workflow and `PLAN.md` links, and a blank line before a list.
 - Created 13 consumer Backlog tasks with `plan tasks create --project`, then expanded their Goals with the spec wording.
 
 ### Completion check: lint-markdown
@@ -73,3 +72,31 @@ All 1 task file passed validation.
 exit=0
 ```
 The consumer warnings (counters.server T0051, plan T0547 and T0548) also come from existing task files.
+
+### Review round 1 rework
+- Reverted every edit inside the frozen `## v1.3.0 [2026-11-07]` CHANGELOG section.
+- Bumped the active heading to `## v2.0.29-pre` and `pyproject.toml` to `2.0.29-pre`.
+- Scoped the `--dry-run` and `--format` claims in the guide to the actions that support them.
+- The guide now names the `agent-digest` gap; Backlog task T0048 tracks closing it.
+- Checked with `help --verbose` on each tool; `agent-digest help check` and `help generate` list neither option.
+
+`pytest` against the worktree sources: exit 0.
+```text
+1041 passed, 3 skipped, 133 subtests passed in 146.10s (0:02:26)
+```
+
+The completion check now fails, because the frozen v1.3.0 links point at files moved in v2.
+Exit code: 1.
+```text
+CHANGELOG.md:54:115: MD014 [valid-relative-links] Relative link 'src/support_python/agent_files_config.py' does not resolve to an existing file on disk
+CHANGELOG.md:54:178: MD014 [valid-relative-links] Relative link 'docs/agent-files.md' does not resolve to an existing file on disk
+CHANGELOG.md:55:59: MD014 [valid-relative-links] Relative link 'src/support_python/agent_files.py' does not resolve to an existing file on disk
+CHANGELOG.md:56:54: MD014 [valid-relative-links] Relative link 'src/support_python/markdown_lint.py' does not resolve to an existing file on disk
+CHANGELOG.md:57:188: MD014 [valid-relative-links] Relative link 'src/support_python/backup.py' does not resolve to an existing file on disk
+CHANGELOG.md:58:123: MD014 [valid-relative-links] Relative link 'src/support_python/devops.py' does not resolve to an existing file on disk
+**[WARN]**  Found 6 lint issues across 5 files.
+**[ERROR]** Finished lint-markdown check in 0.1s with status: failed
+exit=1
+```
+The other four declared files pass.
+The user's decision on this conflict is pending; the task stays suspended until it arrives.

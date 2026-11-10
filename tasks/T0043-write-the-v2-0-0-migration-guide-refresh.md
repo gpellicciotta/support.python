@@ -5,7 +5,7 @@ session: claude-20261110-6243cc
 needs: []
 branch: task/T0043-write-the-v2-0-0-migration-guide-refresh
 worktree: .plan/work/T0043-write-the-v2-0-0-migration-guide-refresh
-status: active
+status: suspended
 started_at: "2026-11-10T04:44:13Z"
 ended_at: —
 review: agent
@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 953.4, input: 268, output: 76438, cache_read: 13811478, cache_write: 261272}
-review_status: pending
+  review: {turns: 2, duration_s: 543.4, input: 144, output: 33494, cache_read: 5199706, cache_write: 160674}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude-2"
+work_duration: 767.7
 ---
 # T0043: Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories
 
@@ -29,7 +32,7 @@ Record one Backlog task per consumer repository in the technical spec with `plan
 - [x] **[Doc]**       Write docs/migration-v2.md covering every breaking change in the v2.0.0-pre CHANGELOG section.
 - [x] **[Doc]**       Refresh CLAUDE.md, and link the guide from README.md, docs/index.md, and CHANGELOG.md.
 - [x] **[Implement]** Create the consumer Backlog tasks with plan tasks create --project, using the spec's wording.
-- [x] **[Verify]**    Run lint-markdown check --offline on the changed documents and plan tasks validate per consumer.
+- [ ] **[Verify]**    Run lint-markdown check --offline on the changed documents and plan tasks validate per consumer.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -57,4 +60,18 @@ Record one Backlog task per consumer repository in the technical spec with `plan
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude-2: Most of the work is solid.
+  - Findings: [review-findings-1.md](T0043-write-the-v2-0-0-migration-guide-refresh/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Reworked review round 1: reverted the frozen v1.3.0 CHANGELOG edits, bumped to 2.0.29-pre, and scoped the guide's dry-run and format claims.
+  - Recorded the agent-digest option gap as Backlog task T0048.
+
+- [2026-11-10] **[Verify]**
+  Pytest passed with 1041 tests. The lint completion check fails only on six moved-file links in the frozen v1.3.0 section.
+
+- [2026-11-10] **[Implement]**
+  Touched undeclared pyproject.toml for the required version bump; recount is 6 files and 250 lines, under the typical line.
 
