@@ -7,18 +7,22 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from typing import Any, List, NoReturn, Optional
+from typing import Any, Dict, List, NoReturn, Optional, Tuple
 
 from support_python.cli import ToolHarness
 from support_python.logging import CliLogger
 from support_python.markdown.lint import DEFAULT_EXCLUDES, LintIssue, MarkdownLinter
 from support_python.markdown.lint import discover_markdown_files, find_project_root, parse_rule_codes
-from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME, load_profile
+from support_python.markdown.plugins import load_plugins
+from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME, LintProfile, load_profile
+from support_python.markdown.profiles import read_plugin_entries, resolve_config_file
+from support_python.markdown.registry import RuleRegistry
+from support_python.tables import format_table
 
 TOOL_NAME = "lint-markdown"
 DESCRIPTION = """Automated markdown linter enforcing repository markdown styling guidelines.
 Directory walks skip Git-ignored files; files named explicitly are always linted."""
-SHORT_USAGE = f"{TOOL_NAME} {{check|fix|help|version}} [{{{{path}}}}...] [options]"
+SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [options]"
 
 
 class _JsonAwareLogger(CliLogger):
@@ -71,10 +75,21 @@ def configure_lint_parser(parser: argparse.ArgumentParser) -> None:
     parser.error = report_argument_error  # type: ignore[method-assign]
 
 
+def add_format_argument(parser: argparse.ArgumentParser) -> None:
+    """Add the '--format' option to an action parser."""
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json; default: text)")
+
+
 def configure_check_parser(parser: argparse.ArgumentParser) -> None:
     """Add the path arguments and '--format' option to the 'check' parser."""
     configure_lint_parser(parser)
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json; default: text)")
+    add_format_argument(parser)
+
+
+def configure_rules_parser(parser: argparse.ArgumentParser) -> None:
+    """Add the '--format' option and standard error reporting to the 'rules' parser."""
+    add_format_argument(parser)
+    parser.error = report_argument_error  # type: ignore[method-assign]
 
 
 def configure_fix_parser(parser: argparse.ArgumentParser) -> None:
@@ -119,6 +134,66 @@ def _emit_json_check(logger: CliLogger, files_checked: int, issues: List[LintIss
     logger.emit(json.dumps(payload))
 
 
+def build_linter(
+    args: argparse.Namespace, logger: CliLogger, input_paths: List[Path], repo_root: Path
+) -> Optional[Tuple[LintProfile, MarkdownLinter, Dict[str, str]]]:
+    """Load the config, plugins, and profile, returning the profile, linter, and plugin rule sources, or None on error."""
+    cfg_arg = getattr(args, "config", None)
+    prof_arg = getattr(args, "profile", None)
+    if cfg_arg is not None and not Path(cfg_arg).resolve().exists():
+        logger.error(f"Configuration file does not exist: {cfg_arg}")
+        return None
+    if cfg_arg is not None:
+        resolved_cfg: Optional[Path] = resolve_config_file(Path(cfg_arg).resolve())
+    else:
+        resolved_cfg = _discover_config_path(input_paths, repo_root, logger=logger)
+    try:
+        registry = RuleRegistry()
+        cfg_dir = resolved_cfg.parent if resolved_cfg is not None else None
+        loaded: set[str] = set()
+        sources = load_plugins(read_plugin_entries(resolved_cfg), registry, base_dir=cfg_dir, loaded=loaded)
+        sources.update(load_plugins(getattr(args, "plugin", None) or [], registry, base_dir=repo_root, loaded=loaded))
+        profile = load_profile(resolved_cfg, profile=prof_arg, registry=registry)
+        linter = MarkdownLinter(
+            enabled_rules=parse_rule_codes(args.rules),
+            offline=args.offline,
+            timeout=args.timeout,
+            profile=profile,
+            registry=registry,
+        )
+    except ValueError as exc:
+        logger.error(str(exc))
+        return None
+    return profile, linter, sources
+
+
+def run_rules(args: argparse.Namespace, logger: CliLogger) -> int:
+    """List every registered rule with its scope, fixability, enablement under the active profile, and source."""
+    repo_root = Path.cwd()
+    setup = build_linter(args, logger, [repo_root], repo_root)
+    if setup is None:
+        return 2
+    _, linter, sources = setup
+    rules = [
+        {
+            "id": rule.rule_id,
+            "name": rule.name,
+            "scope": rule.scope,
+            "fixable": rule.fixable,
+            "enabled": linter.is_rule_enabled(rule.rule_id),
+            "source": sources.get(rule.rule_id.strip().upper(), "builtin"),
+        }
+        for rule in linter.registry
+    ]
+    if getattr(args, "format", "text") == "json":
+        logger.emit(json.dumps({"rules": rules}))
+        return 0
+    headers = ["id", "name", "scope", "fixable", "enabled", "source"]
+    rows = [[("yes" if value else "no") if isinstance(value, bool) else value for value in rule.values()] for rule in rules]
+    logger.emit(format_table(headers, rows))
+    return 0
+
+
 def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
     """Lint the markdown files under the requested paths, fixing safe issues first when asked."""
     repo_root = Path.cwd()
@@ -131,20 +206,10 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
             return 2
     input_paths = list(args.paths) or [repo_root]
 
-    cfg_arg = getattr(args, "config", None)
-    prof_arg = getattr(args, "profile", None)
-    if cfg_arg is not None and not Path(cfg_arg).resolve().exists():
-        logger.error(f"Configuration file does not exist: {cfg_arg}")
+    setup = build_linter(args, logger, input_paths, repo_root)
+    if setup is None:
         return 2
-    resolved_cfg = Path(cfg_arg).resolve() if cfg_arg is not None else _discover_config_path(input_paths, repo_root, logger=logger)
-    try:
-        profile = load_profile(resolved_cfg, profile=prof_arg)
-        linter = MarkdownLinter(
-            enabled_rules=parse_rule_codes(args.rules), offline=args.offline, timeout=args.timeout, profile=profile
-        )
-    except ValueError as exc:
-        logger.error(str(exc))
-        return 2
+    profile, linter, _ = setup
 
     excludes = DEFAULT_EXCLUDES + (list(profile.excludes) if profile else []) + (args.exclude or [])
     files = discover_markdown_files(input_paths, repo_root, excludes)
@@ -258,6 +323,8 @@ def build_harness() -> ToolHarness:
             f"{TOOL_NAME} check --exclude 'archive/*' --log-file lint.log",
             f"{TOOL_NAME} fix docs",
             f"{TOOL_NAME} fix --dry-run docs",
+            f"{TOOL_NAME} check --plugin rules/no_todo.py docs",
+            f"{TOOL_NAME} rules --format json",
         ],
         detailed_help=get_rules_help(),
     )
@@ -267,6 +334,12 @@ def build_harness() -> ToolHarness:
     harness.add_global_argument("--rules", metavar="RULES", help="comma-separated rule codes to check (default: all)")
     harness.add_global_argument("--profile", metavar="PROFILE", help="named lint profile (default or dev-guidelines)")
     harness.add_global_argument("--config", type=Path, metavar="PATH", help=f"path to {DEFAULT_CONFIG_FILENAME} config file")
+    harness.add_global_argument(
+        "--plugin",
+        action="append",
+        metavar="ENTRY",
+        help="load extra rules from a plugin '.py' file or dotted module name (repeatable)",
+    )
     harness.add_global_argument("--offline", action="store_true", help="skip external link checks (rule MD018)")
     harness.add_global_argument(
         "--timeout", type=float, default=10.0, metavar="SECONDS", help="external link timeout in seconds (default: 10.0)"
@@ -298,6 +371,19 @@ def build_harness() -> ToolHarness:
         detail=fix_detail,
         usage_suffix="[{{path}}...] [options]",
         configure_parser=configure_fix_parser,
+    )
+    rules_detail = (
+        "Lists every built-in and plugin rule with its scope, whether it is fixable, whether it\n"
+        "is enabled under the active profile, and its source ('builtin' or the plugin entry),\n"
+        "or a JSON document with --format json."
+    )
+    harness.add_action(
+        "rules",
+        "list every rule with its scope, enablement, and source",
+        handler=run_rules,
+        detail=rules_detail,
+        usage_suffix="[options]",
+        configure_parser=configure_rules_parser,
     )
     return harness
 

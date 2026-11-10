@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 from typing import Any, Iterable
@@ -30,6 +30,7 @@ _ALLOWED_PROFILE_KEYS = frozenset(
         "historical_tasks",
         "exclude",
         "excludes",
+        "plugins",
     }
 )
 
@@ -76,14 +77,16 @@ def _validate_rule_ids(rule_ids: Iterable[Any], registry: RuleRegistry) -> froze
 
 
 def get_profile(name: str, registry: RuleRegistry | None = None) -> LintProfile:
-    """Return a built-in LintProfile by name ('default' or 'dev-guidelines')."""
+    """Return a built-in LintProfile by name, also enabling registry rules beyond the built-in ones."""
     clean = name.strip().lower() if isinstance(name, str) else ""
     if clean not in PROFILES:
         raise ValueError(f"Unknown profile: '{name}' (expected one of: {', '.join(sorted(PROFILES))})")
     base = PROFILES[clean]
-    if registry is not None:
-        _validate_rule_ids(base.enabled_rules, registry)
-    return base
+    if registry is None:
+        return base
+    _validate_rule_ids(base.enabled_rules, registry)
+    extra_rule_ids = frozenset(registry.rule_ids()) - ALL_RULE_IDS
+    return replace(base, enabled_rules=base.enabled_rules | extra_rule_ids) if extra_rule_ids else base
 
 
 def _resolve_dir_config_file(directory: Path) -> Path | None:
@@ -95,6 +98,27 @@ def _resolve_dir_config_file(directory: Path) -> Path | None:
     if legacy.is_file():
         return legacy
     return None
+
+
+def resolve_config_file(config_path: Path) -> Path:
+    """Return config_path, or the config file inside it when config_path is a directory."""
+    if not config_path.is_dir():
+        return config_path
+    return _resolve_dir_config_file(config_path) or (config_path / DEFAULT_CONFIG_FILENAME)
+
+
+def read_plugin_entries(config_path: Path | None) -> list[str]:
+    """Return the validated 'plugins' entries of a '.lint-markdown.json' file, or an empty list."""
+    if config_path is None or not config_path.is_file():
+        return []
+    try:
+        raw = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Invalid JSON in {config_path}: {exc}") from exc
+    entries = raw.get("plugins", []) if isinstance(raw, dict) else []
+    if not isinstance(entries, list) or not all(isinstance(x, str) and x.strip() for x in entries):
+        raise ValueError(f"'plugins' must be a list of non-empty strings in {config_path}")
+    return [x.strip() for x in entries]
 
 
 def load_profile(
@@ -116,15 +140,14 @@ def load_profile(
     elif isinstance(profile, str):
         base = get_profile(profile, reg)
     else:
-        base = DEFAULT_PROFILE
+        base = get_profile(DEFAULT_PROFILE.name, reg)
 
     if isinstance(config_path, str) and config_path.strip().lower() in PROFILES and not Path(config_path).exists():
         return get_profile(config_path, reg)
 
     target: Path | None = None
     if config_path is not None:
-        candidate = Path(config_path).expanduser()
-        target = (_resolve_dir_config_file(candidate) or (candidate / DEFAULT_CONFIG_FILENAME)) if candidate.is_dir() else candidate
+        target = resolve_config_file(Path(config_path).expanduser())
     elif profile is None:
         target = _resolve_dir_config_file(Path.cwd())
 
@@ -199,4 +222,6 @@ __all__ = [
     "PROFILES",
     "get_profile",
     "load_profile",
+    "read_plugin_entries",
+    "resolve_config_file",
 ]

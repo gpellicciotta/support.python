@@ -519,9 +519,13 @@ issues = check_table_alignment(table)
 ## Markdown linter
 `support_python.markdown` ([lint.py](src/support_python/markdown/lint.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provides `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` (also re-exported from `support_python`), with the `lint-markdown` CLI in [lint_markdown.py](src/support_python/tools/lint_markdown.py) reading `.lint-markdown.json` (or legacy `.markdown-lint.json` with a warning; see [lint-markdown.md](docs/tools/lint-markdown.md)):
 ```bash
-lint-markdown check [paths...] [--format text|json] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
-lint-markdown fix [paths...] [--dry-run] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown check [paths...] [--format text|json] [--offline] [--profile PROFILE] [--config PATH] [--plugin ENTRY]... [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown fix [paths...] [--dry-run] [--offline] [--profile PROFILE] [--config PATH] [--plugin ENTRY]... [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown rules [--format text|json] [--profile PROFILE] [--config PATH] [--plugin ENTRY]...
 ```
+
+Extra rules load from plugin files or modules listed under the config `plugins` key or passed with `--plugin`.
+Each plugin defines `register(registry)`; `rules` lists every rule with its source (see [lint-markdown.md](docs/tools/lint-markdown.md#rule-plugins)).
 
 ## Agent files sync
 [agent_files.py](src/support_python/tools/agent_files.py) and [agent_files_config.py](src/support_python/tools/agent_files_config.py) install an existing digest and skills directory into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
