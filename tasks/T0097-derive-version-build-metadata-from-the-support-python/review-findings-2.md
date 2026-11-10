@@ -3,7 +3,7 @@ task: T0097
 round: 2
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-10T21:20:59Z
+reviewed_at: 2026-11-10T21:24:47Z
 reviewed_commit: "a504d0e"
 base_commit: "4b44ff9"
 branch: task/T0097-derive-version-build-metadata-from-the-support-python
