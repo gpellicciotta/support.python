@@ -5,16 +5,20 @@ session: claude-20261110-2e468e
 needs: []
 branch: task/T0037-rebuild-extract-release-notes-migrate-namespace-and-reset
 worktree: .plan/work/T0037-rebuild-extract-release-notes-migrate-namespace-and-reset
-status: active
+status: completed
 started_at: "2026-11-10T02:30:54Z"
-ended_at: —
+ended_at: "2026-11-10T02:46:28Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1362.6, input: 196, output: 74778, cache_read: 9321344, cache_write: 233654}
-review_status: pending
+  review: {turns: 2, duration_s: 466.2, input: 76, output: 18408, cache_read: 2120270, cache_write: 111536}
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+work_duration: 932.9
+completion-commit: aefdff6162df94f0c073cd82699943448eeecc0c
 ---
 # T0037: Rebuild extract-release-notes, migrate-namespace, and reset-history on support_python.devops.release, and delete scripts/_repo_common.py
 
@@ -31,7 +35,7 @@ Leave `scripts/install-from-github-release.py` self-contained and untouched.
 - [x] **[Implement]** Rebuild the scripts on the library, add missing Git queries, and delete _repo_common.py.
 - [x] **[Verify]**    Run the full suite and the integration commands from the technical spec.
 - [x] **[Doc]**       Update README.md and CHANGELOG.md for the scripts' new repository targeting.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -69,4 +73,11 @@ Leave `scripts/install-from-github-release.py` self-contained and untouched.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 approved by @claude-2: Approved.
+  - Findings: [review-findings-1.md](T0037-rebuild-extract-release-notes-migrate-namespace-and-reset/review-findings-1.md).
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 
