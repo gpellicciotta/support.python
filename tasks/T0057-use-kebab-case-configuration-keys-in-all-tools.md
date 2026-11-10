@@ -4,12 +4,16 @@ owner: "@claude-code"
 needs: []
 branch: —
 worktree: —
-status: active
+status: completed
 started_at: "2026-11-10T11:25:29Z"
-ended_at: —
+ended_at: "2026-11-10T11:33:53Z"
 review: agent
 preview: none
 protocol: standard
+review_status: approved
+review_round: 1
+reviewed_by: "@claude-subagent"
+completion-commit: 6eb25b02ed73a128c9bd0f754a06b1f5a440cf43
 ---
 # T0057: Use kebab-case configuration keys in all tools, still accepting snake_case keys, per the configuration guidelines
 
@@ -23,13 +27,35 @@ Completion check: `python -m pytest tests/` filtered to the configuration tests 
 Size estimate: 10 files, 300 lines
 
 ## Task Execution Steps
-- [ ] **[Verify]**    Author the failing unit tests from the technical spec and record their failure output.
-- [ ] **[Implement]** Normalize configuration keys once at load time, so dashes and underscores match.
-- [ ] **[Implement]** Switch documented, generated, and example configuration to kebab-case keys.
-- [ ] **[Verify]**    Run the completion check and the integration scenario; record verbatim output.
-- [ ] **[Doc]**       Update `docs/tools/*.md`, `docs/migration-v2.md`, and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Verify]**    Author the failing unit tests from the technical spec and record their failure output.
+- [x] **[Implement]** Normalize configuration keys once at load time, so dashes and underscores match.
+- [x] **[Implement]** Switch documented, generated, and example configuration to kebab-case keys.
+- [x] **[Verify]**    Run the completion check and the integration scenario; record verbatim output.
+- [x] **[Doc]**       Update `docs/tools/*.md`, `docs/migration-v2.md`, and CHANGELOG.md.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-10] **[Verify]**
+  Tests prove kebab and snake parity; full suite passed with ruff clean.
+  - Files touched: 14.
+  - Lines touched: 330.
+  - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 approved by @claude-subagent.
+
+- [2026-11-10] **[Implement]**
+  Added shared normalize_config_keys; wired agent-files, lint-markdown profiles, and git-repository-backup; docs and CHANGELOG updated.
+
+- [2026-11-10] **[Review]**
+  Subagent review approved; follow-ups: unknown-key messages, tool logger passing, extra tests.
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
+
