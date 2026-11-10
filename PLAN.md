@@ -4,6 +4,8 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
+- [~] T0101 [owner: @claude-code] Run the Python 3.9 CI job on ubuntu-24.04, since setup-python has no 3.9 for the ubuntu-latest image.
+- [x] T0100 Make MD014 resolve root-relative links against the project root on POSIX, where they now count as absolute and are skipped.
 - [x] T0099 Make ToolHarness run its fallback action when the command line starts with an option, moving run_capture_cli's reordering into the harness.
 - [x] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
 - [ ] T0097 Derive version build metadata from the support.python checkout, not an enclosing repository.
