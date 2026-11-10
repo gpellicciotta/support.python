@@ -12,7 +12,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.46-pre
+## v2.0.47-pre
 - CLI: Made `agent-files`, `lint-markdown`, and `git-repository-backup` accept configuration keys in kebab-case or snake_case with identical effect, via the new shared `normalize_config_keys`; a file setting both spellings uses the kebab-case value and logs one warning, and docs now show kebab-case keys ([config.py](src/support_python/config.py), [agent-files.md](docs/tools/agent-files.md), [lint-markdown.md](docs/tools/lint-markdown.md)).
 - CLI: Made `lint-markdown` rule `MD011` allow up to two trailing spaces, so Markdown hard line breaks pass; it still flags three or more spaces and any trailing tab, and `fix` now trims longer runs to two spaces instead of stripping all trailing whitespace ([rules.py](src/support_python/markdown/rules.py), [lint.py](src/support_python/markdown/lint.py), [lint-markdown.md](docs/tools/lint-markdown.md)).
 - CLI: Added `skill.references` to `agent-digest` front-matter: `generate` copies each listed file into its skill (rewriting Markdown links), and `check` reports `missing-reference`, `missing-skill-file`, `stale-skill-file`, and `unlisted-file` issues, with per-file statuses under `skills[].files` in JSON; listed files are no longer digest or skill sources, and files under a skill directory that are not listed now fail as `unlisted-file` instead of `orphan-file` ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
