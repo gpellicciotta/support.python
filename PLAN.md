@@ -26,8 +26,8 @@ An overview of all tasks and their planning.
 - [x] T0038 Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them.
 - [x] T0039 Add a GradleProject adapter to support_python.devops for gradlew-based lint, test, build, check, clean, and release.
 - [x] T0040 Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release.
-- [ ] T0041 Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
-- [ ] T0042 [needs: T0041] Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers.
+- [x] T0041 Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
+- [ ] T0042 Add opt-in docker, db, server, mail, and client action groups to DevopsCli, backed by the devops service managers.
 - [ ] T0043 [needs: T0042, T0044] Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
 - [ ] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 
