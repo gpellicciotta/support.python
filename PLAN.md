@@ -36,8 +36,8 @@ An overview of all tasks and their planning.
 - [x] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 - [x] T0049 Move the README DevOps helpers section into a docs/tutorials/devops-scripts.md tutorial and link it from the README.
 - [x] T0050 Move the README CLI, logging, script utility, REST client, view capture, and SQL sections into docs/tutorials pages.
-- [ ] T0052 Move the README Git, file, locking, process, Markdown, duration, and rate limiter sections into docs/tutorials pages.
-- [ ] T0051 [needs: T0052] Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
+- [x] T0052 Move the README Git, file, locking, process, Markdown, duration, and rate limiter sections into docs/tutorials pages.
+- [ ] T0051 Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
 - [ ] T0053 Share JSON output handling in ToolHarness and CliLogger, and use it in agent-files, lint-markdown, processes, and git-repository-backup.
 
 ---
