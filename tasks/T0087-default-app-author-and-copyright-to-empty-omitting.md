@@ -12,8 +12,8 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 3601.4, input: 4420, output: 552}
-work_duration: 1813.2
+  worker: {turns: 4, duration_s: 6708.2, input: 5819126, output: 272946, cache_read: 185878076}
+work_duration: 3391.9
 ---
 # T0087: Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs
 
@@ -36,3 +36,27 @@ The five bundled tools and this repository's devops script keep their current ba
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 2 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF020.
+
+- [2026-11-10] **[Read]**
+  Inspected banner construction and assertions across CLI, capture, devops, and tools.
+
+- [2026-11-10] **[Implement]**
+  Authored failing tests for default empty banner and explicit copyright forwarding.
+
+- [2026-11-10] **[Verify]**
+  Verified expected test failures and recorded red-phase output in validation proof.
+
+- [2026-11-10] **[Implement]**
+  Defaulted APP_AUTHOR and COPYRIGHT to empty strings and wired TOOLS_COPYRIGHT.
+
+- [2026-11-10] **[Verify]**
+  Ran full devops check suite confirming 1239 passed tests, lint, and build.
+
+- [2026-11-10] **[Doc]**
+  Updated migration guide, harness tutorial, and changelog with breaking changes.
+

@@ -60,19 +60,7 @@ self = <tests.test_devops_cli.HarnessTests testMethod=test_devops_cli_forwards_c
 E       TypeError: DevopsCli.__init__() got an unexpected keyword argument 'copyright'
 
 tests\test_devops_cli.py:264: TypeError
-_______ HarnessTests.test_version_banner_shows_name_and_project_version _______
-
-self = <tests.test_devops_cli.HarnessTests testMethod=test_version_banner_shows_name_and_project_version>
-
-    def test_version_banner_shows_name_and_project_version(self) -> None:
-        code, out, _ = run_cli(self.cli(venv=False), "version")
-        self.assertEqual(code, 0)
->       self.assertEqual(out.strip(), "devops v1.2.0-pre")
-E       AssertionError: 'devops v1.2.0-pre - Copyright (c) Giovanni Pellicciotta' != 'devops v1.2.0-pre'
-E       - devops v1.2.0-pre - Copyright (c) Giovanni Pellicciotta
-E       + devops v1.2.0-pre
-
-tests\test_devops_cli.py:260: AssertionError
+[... 13 lines omitted ...]
 =========================== short test summary info ===========================
 FAILED tests/test_devops_cli.py::HarnessTests::test_devops_cli_forwards_copyright
 FAILED tests/test_devops_cli.py::HarnessTests::test_version_banner_shows_name_and_project_version
@@ -104,26 +92,7 @@ E       AssertionError: 'Giovanni Pellicciotta' != ''
 E       - Giovanni Pellicciotta
 
 tests\test_capture.py:408: AssertionError
-__ CaptureCliTests.test_cli_version_and_help_without_author_omits_copyright ___
-
-self = <tests.test_capture.CaptureCliTests testMethod=test_cli_version_and_help_without_author_omits_copyright>
-
-    def test_cli_version_and_help_without_author_omits_copyright(self) -> None:
-        cfg = CaptureAppConfig(
-            app_name="Empty Author App",
-            cli_name="empty-capture",
-            version="1.0.0",
-            author="",
-        )
-        harness = build_capture_harness(cfg)
-        with patch("support_python.cli.resolve_build_metadata", return_value="abc1234"):
->           self.assertEqual(harness.format_version(), "empty-capture v1.0.0+abc1234")
-E           AssertionError: 'empty-capture v1.0.0+abc1234 - Copyright (c) ' != 'empty-capture v1.0.0+abc1234'
-E           - empty-capture v1.0.0+abc1234 - Copyright (c)
-E           ?                             -----------------
-E           + empty-capture v1.0.0+abc1234
-
-tests\test_capture.py:419: AssertionError
+[... 19 lines omitted ...]
 =========================== short test summary info ===========================
 FAILED tests/test_capture.py::CaptureCliTests::test_capture_app_config_default_author_is_empty
 FAILED tests/test_capture.py::CaptureCliTests::test_cli_version_and_help_without_author_omits_copyright
