@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 2786.6, input: 764052, output: 172938, cache_read: 11212854}
+  worker: {turns: 4, duration_s: 2920.4, input: 795370, output: 176008, cache_read: 12058534}
 work_duration: 1405.9
+review_status: pending
+review_round: 1
 ---
 # T0020: Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check
 
@@ -66,4 +68,12 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 
 - [2026-11-10] **[Doc]**
   Authored docs/tools/agent-digest.md and updated README.md, docs/index.md, CHANGELOG.md, and validation-proof.md.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Size]**
+  Size note: diff is 8 files and 2063 lines, above the large line but under three times the 700-line estimate.
+  - Accepted by the orchestrator under the user's size delegation.
+  - Most lines rework the ported generator; splitting would leave it half-generalized.
 
