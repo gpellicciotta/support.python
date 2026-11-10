@@ -32,8 +32,8 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 ---
 
 ## Core Documentation
-- [CLI harness and helpers](../README.md#shared-cli-helpers-tabular-output-and-session-storage): Action-oriented `ToolHarness`, `Action`, version/help banners, and build-metadata version formatting.
-- [CLI logging](../README.md#cli-logging): Unified `CliLogger`, `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
+- [CLI harness and helpers](tutorials/cli-harness-and-logging.md): Action-oriented `ToolHarness`, `Action`, version/help banners, and build-metadata version formatting.
+- [CLI logging](tutorials/cli-harness-and-logging.md#cli-logging): Unified `CliLogger`, `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
 - [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
@@ -45,6 +45,10 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 - [Agent digest generator](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks exposed via `agent-digest` (see also [README](../README.md#agent-digest-generator)).
 - [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
 - [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
+- [Script utilities tutorial](tutorials/script-utilities.md): UTF-8 console setup, project version lookup, port checks, env-file parsing, and password hashing.
+- [REST clients tutorial](tutorials/rest-clients.md): Stdlib-only HTTP transport, REST error hierarchy and status mapping, wire datetimes, and metadata models.
+- [View capture tutorial](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.
+- [SQL anonymizer tutorial](tutorials/sql-anonymizer.md): Streaming, deterministic anonymization of `auth` and `counters` SQL dumps.
 - [DevOps scripts tutorial](tutorials/devops-scripts.md): Subprocess step runners, local service managers, release helpers, `ReleasePipeline`, `DevopsCli` project adapters, `deploy`, and service action groups.
 - [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
 
