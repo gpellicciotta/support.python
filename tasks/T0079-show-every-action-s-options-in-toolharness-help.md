@@ -18,6 +18,7 @@ Make `ToolHarness` `help --verbose` list each action's own options, with metavar
 Show metavars such as `PATH` and `PID` in per-action option rows, which now show bare flags like `--cwd`.
 Start every option description lowercase, matching the standard option rows.
 Apply the change to every tool built on `ToolHarness`, including `DevopsCli`.
+List positional arguments with their help text too; template.python's T0015 had to describe them in `detail=`.
 
 ## Task Execution Steps
 - [ ] **[Read]**      Read the CLI guidelines and the help rendering in cli.py.
