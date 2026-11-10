@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.51-pre
+## v2.0.52-pre
+- CLI: Replaced the stale `update-global-agent-files.py` text in the `agent-files` begin marker, still syncing blocks with the old marker ([agent-files.md](docs/tools/agent-files.md)).
 - CLI: Made `lint-markdown` `MD019` skip plan task files and ask for code spans for bare paths to missing files.
 - CLI: Wrote help placeholders as `{{path}}` and `{{pid}}` in `agent-digest`, `agent-files`, and `processes`, replacing `<PATH>` and sample paths.
 - CLI: **[breaking]** Made the `lint-markdown` `default` profile enable `MD015`, so `check` follows the Markdown guidelines without `--profile`.
