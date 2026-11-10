@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from support_python.config import normalize_config_keys
+from support_python.config import kebab_keys, normalize_config_keys
 
 DEFAULT_CONFIG_FILENAME = ".agent-files.json"
 LEGACY_CONFIG_FILENAME = "agent-files.json"
@@ -146,14 +146,18 @@ def _validate_str_list(value: Any, field_name: str) -> tuple[str, ...]:
     return tuple(item.strip() for item in value)
 
 
-def build_tool_from_dict(data: dict[str, Any], default_legacy_skills: tuple[str, ...] = ()) -> Any:
+def build_tool_from_dict(data: dict[str, Any], default_legacy_skills: tuple[str, ...] = (), logger: Any | None = None) -> Any:
     """Validate and construct a Tool instance from a JSON dictionary definition."""
     from support_python.tools.agent_files import Tool
 
     if isinstance(data, dict):
-        data = normalize_config_keys(data)
-    if not isinstance(data, dict) or (set(data.keys()) - _ALLOWED_TOOL_KEYS):
-        raise ValueError("invalid tool definition object or unknown keys")
+        data = normalize_config_keys(data, source=f"tool '{data.get('name')}'", logger=logger)
+    if not isinstance(data, dict):
+        raise ValueError("tool definition must be an object")
+    if set(data.keys()) - _ALLOWED_TOOL_KEYS:
+        raise ValueError(
+            f"tool '{data.get('name')}' has unknown keys: {', '.join(kebab_keys(set(data.keys()) - _ALLOWED_TOOL_KEYS))}"
+        )
     for req in ("name", "command", "target_file"):
         if not isinstance(data.get(req), str) or not data[req].strip():
             raise ValueError(f"tool definition requires non-empty string '{req}'")
@@ -196,15 +200,19 @@ def _resolve_path(base: Path, raw: str | Path) -> Path:
     return candidate if candidate.is_absolute() else (base / candidate).resolve()
 
 
-def _read_and_validate_json(path: Path) -> dict[str, Any]:
+def _read_and_validate_json(path: Path, logger: Any | None = None) -> dict[str, Any]:
     try:
         parsed = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
     if isinstance(parsed, dict):
-        parsed = normalize_config_keys(parsed, source=path)
-    if not isinstance(parsed, dict) or (set(parsed.keys()) - _ALLOWED_CONFIG_KEYS):
-        raise ValueError(f"Invalid configuration schema in {path}")
+        parsed = normalize_config_keys(parsed, source=path, logger=logger)
+    if not isinstance(parsed, dict):
+        raise ValueError(f"Invalid configuration schema in {path}: expected a JSON object")
+    if set(parsed.keys()) - _ALLOWED_CONFIG_KEYS:
+        raise ValueError(
+            f"Invalid configuration schema in {path}: unknown keys {kebab_keys(set(parsed.keys()) - _ALLOWED_CONFIG_KEYS)}"
+        )
     return parsed
 
 
@@ -232,13 +240,13 @@ def load_agent_files_config(
         resolved_cfg = Path(config_path).expanduser().resolve()
         if not resolved_cfg.is_file():
             raise FileNotFoundError(f"Configuration file not found: {resolved_cfg}")
-        cfg_dir, raw = resolved_cfg.parent, _read_and_validate_json(resolved_cfg)
+        cfg_dir, raw = resolved_cfg.parent, _read_and_validate_json(resolved_cfg, logger)
     else:
         init_root = Path(repo_root).expanduser().resolve() if repo_root is not None else find_project_root()
         candidate = init_root / DEFAULT_CONFIG_FILENAME
         legacy = init_root / LEGACY_CONFIG_FILENAME
         if candidate.is_file():
-            cfg_dir, raw = candidate.parent, _read_and_validate_json(candidate)
+            cfg_dir, raw = candidate.parent, _read_and_validate_json(candidate, logger)
             if legacy.is_file():
                 from support_python.logging import CliLogger
 
@@ -251,7 +259,7 @@ def load_agent_files_config(
             (logger or CliLogger()).warn(
                 f"Reading legacy config {legacy}; rename it to {DEFAULT_CONFIG_FILENAME}. The legacy filename is removed in v3.0.0."
             )
-            cfg_dir, raw = legacy.parent, _read_and_validate_json(legacy)
+            cfg_dir, raw = legacy.parent, _read_and_validate_json(legacy, logger)
 
     if repo_root is not None:
         resolved_root = Path(repo_root).expanduser().resolve()
@@ -310,7 +318,7 @@ def load_agent_files_config(
         else:
             raise ValueError("'tools' must be a list or object of tool definitions")
         for entry in entries:
-            registry.register(build_tool_from_dict(entry, default_legacy_skills=resolved_legacy))
+            registry.register(build_tool_from_dict(entry, default_legacy_skills=resolved_legacy, logger=logger))
 
     return AgentFilesConfig(
         repo_root=resolved_root,

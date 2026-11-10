@@ -1814,3 +1814,48 @@ class AgentFilesKebabConfigTests(unittest.TestCase):
         }
         self.assertEqual(self._load(kebab), self._load(snake))
         self.assertEqual(self._load(kebab)[:2], ("d.md", "s"))
+
+
+class AgentFilesKeyDiagnosticsTests(unittest.TestCase):
+    def test_unknown_config_key_is_named_in_kebab_case(self) -> None:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_file = Path(tmp_dir).resolve() / ".agent-files.json"
+            cfg_file.write_text(json.dumps({"foo_bar": 1}), encoding="utf-8")
+            with self.assertRaises(ValueError) as ctx:
+                cfg_mod.load_agent_files_config(cfg_file)
+        self.assertIn("foo-bar", str(ctx.exception))
+
+    def test_unknown_tool_key_is_named_with_tool(self) -> None:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        with self.assertRaises(ValueError) as ctx:
+            cfg_mod.build_tool_from_dict({"name": "x", "command": "x", "target-file": "t", "bad_key": 1})
+        self.assertIn("bad-key", str(ctx.exception))
+        self.assertIn("'x'", str(ctx.exception))
+
+    def test_clash_warnings_use_given_logger_and_name_the_tool(self) -> None:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        messages: list[str] = []
+
+        class _Logger:
+            def warn(self, message: str) -> None:
+                messages.append(message)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_file = Path(tmp_dir).resolve() / ".agent-files.json"
+            cfg_file.write_text(
+                json.dumps(
+                    {
+                        "digest_path": "a",
+                        "digest-path": "b",
+                        "tools": [{"name": "x", "command": "x", "target_file": "t", "target-file": "t"}],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            cfg_mod.load_agent_files_config(cfg_file, logger=_Logger())
+        self.assertEqual(len(messages), 2)
+        self.assertTrue(any("'x'" in m for m in messages))

@@ -36,3 +36,8 @@ def normalize_config_keys(
             kebab_seen.add(canonical)
         result[canonical] = value
     return result
+
+
+def kebab_keys(keys: Any) -> list[str]:
+    """Return the sorted keys spelled in kebab-case, for error messages."""
+    return sorted(str(key).replace("_", "-") for key in keys)

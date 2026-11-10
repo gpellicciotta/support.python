@@ -304,3 +304,32 @@ def test_profile_with_both_key_spellings_prefers_kebab_case(tmp_path) -> None:
     enabled = load_profile(cfg).enabled_rules
     assert "MD019" not in enabled
     assert "MD018" in enabled
+
+
+def test_unknown_profile_key_is_reported_in_kebab_case(tmp_path) -> None:
+    import json
+
+    import pytest
+
+    cfg = tmp_path / "bad.json"
+    cfg.write_text(json.dumps({"foo_bar": 1, "baz-qux": 2}), encoding="utf-8")
+    with pytest.raises(ValueError) as info:
+        load_profile(cfg)
+    assert "baz-qux" in str(info.value)
+    assert "foo-bar" in str(info.value)
+    assert "foo_bar" not in str(info.value)
+
+
+def test_profile_key_clash_warning_uses_given_logger(tmp_path) -> None:
+    import json
+
+    messages: list[str] = []
+
+    class _Logger:
+        def warn(self, message: str) -> None:
+            messages.append(message)
+
+    cfg = tmp_path / "both.json"
+    cfg.write_text(json.dumps({"disable_rules": [], "disable-rules": []}), encoding="utf-8")
+    load_profile(cfg, logger=_Logger())
+    assert len(messages) == 1

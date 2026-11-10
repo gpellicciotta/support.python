@@ -112,7 +112,7 @@ def build_linter(
         loaded: set[str] = set()
         sources = load_plugins(read_plugin_entries(resolved_cfg), registry, base_dir=cfg_dir, loaded=loaded)
         sources.update(load_plugins(getattr(args, "plugin", None) or [], registry, base_dir=repo_root, loaded=loaded))
-        profile = load_profile(resolved_cfg, profile=prof_arg, registry=registry)
+        profile = load_profile(resolved_cfg, profile=prof_arg, registry=registry, logger=logger)
         linter = MarkdownLinter(
             enabled_rules=parse_rule_codes(args.rules),
             offline=args.offline,
