@@ -12,8 +12,10 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.30-pre
+## v2.0.32-pre
 - CLI: Aligned the `CliLogger.log_start` header with `ToolHarness`, now reading `Starting {name} v{version} with configuration:` ([logging.py](src/support_python/logging.py)).
+- CLI: Printed the `Starting ... with configuration:` and `Finished ... with status: succeeded` lines on stdout only with `-v`/`--verbose`; they still reach the log file, and failed summaries still go to stderr ([cli.py](src/support_python/cli.py)).
+- Docs: Moved the README DevOps helpers section into the [devops-scripts.md](docs/tutorials/devops-scripts.md) tutorial, the first page of a new `docs/tutorials/` folder.
 - Docs: Added [migration-v2.md](docs/migration-v2.md), mapping every v1.x command, module, option, verb, and config file to its v2.0.0 replacement, and refreshed [CLAUDE.md](CLAUDE.md).
 - CLI: **[breaking]** Rebuilt `run_capture_cli` on `ToolHarness` via the new `build_capture_harness`, replacing `build_capture_parser`; help and version use the harness format, no arguments shows help, `-v` means `--verbose`, invalid arguments exit 2, `list` output carries harness startup and completion lines, and log lines no longer carry a `cli_name` origin ([capture.py](src/support_python/capture.py)).
 - CLI: **[breaking]** Removed `build_action_parser`, `print_help`, `print_version`, and `format_version` from `support_python.cli` and the package root in favor of `ToolHarness` ([cli.py](src/support_python/cli.py), [__init__.py](src/support_python/__init__.py)).

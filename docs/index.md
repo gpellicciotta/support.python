@@ -4,10 +4,34 @@ Overview of all documentation for the `support-python` project.
 
 ---
 
-## Core Documentation
+## Project Essentials
+- [README](../README.md): Project overview, build, install, and usage.
+- [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
+- [LICENSE](../LICENSE.md): License terms (MIT).
+- [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release process.
+
+---
+
+## Requirements & Design
 - [Requirements](requirements.md): High-level goals, functional scope, and technical requirements.
-- [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release
-  process.
+- [ADR-0001: Scope for a Shared DevOps-Scripts Toolkit](adrs/ADR-0001-devops-scripts-toolkit-scope.md): Why
+  bootstrap scripts and project-specific deploy steps stay project-local with a pinned `scripts/requirements.txt` dependency (partially superseded by [ADR-0003-standalone-tools-and-reusable-devops.md](adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
+- [ADR-0002: Modular Guidelines and Mechanical Skill Derivation](adrs/ADR-0002-modular-agent-skills-architecture.md): Why
+  guidelines carry skill front-matter and `agent-digest` derives a size-capped digest and on-demand skills from them.
+- [ADR-0003: Standalone Tools and Reusable DevOps](adrs/ADR-0003-standalone-tools-and-reusable-devops.md): Why
+  `support-python` ships five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, `git-repository-backup`) with uniform CLI conventions and a library-based `support_python.devops` package.
+
+---
+
+## Guidelines
+This project follows the cross-project [dev-guidelines](https://github.com/gpellicciotta/dev-guidelines), in particular:
+- [general guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/general-guidelines.md),
+- [Python guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/python-guidelines.md), and
+- [coordinating work guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/coordinating-work-guidelines.md).
+
+---
+
+## Core Documentation
 - [CLI harness and helpers](../README.md#shared-cli-helpers-tabular-output-and-session-storage): Action-oriented `ToolHarness`, `Action`, version/help banners, and build-metadata version formatting.
 - [CLI logging](../README.md#cli-logging): Unified `CliLogger`, `LogLevel`, `resolve_log_level`, 11-character severity padding, and console/file teeing.
 - [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
@@ -21,29 +45,8 @@ Overview of all documentation for the `support-python` project.
 - [Agent digest generator](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks exposed via `agent-digest` (see also [README](../README.md#agent-digest-generator)).
 - [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
 - [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
-- [DevOps script helpers and subprocess streaming](../README.md#devops-script-helpers-and-environment-managers): Subprocess line-by-line output streaming (`stream_subprocess`, `run_step_command`, `resolve_executable`), `run_step`, and local service managers.
-- [README](../README.md): Project overview, build, install, and usage.
-- [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
+- [DevOps scripts tutorial](tutorials/devops-scripts.md): Subprocess step runners, local service managers, release helpers, `ReleasePipeline`, `DevopsCli` project adapters, `deploy`, and service action groups.
 - [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
-- `PLAN.md`: Task index by milestone (local plan store).
-- [LICENSE](../LICENSE.md): License terms (MIT).
 
----
 
-## Architectural Decision Records
-- [ADR-0001: Scope for a Shared DevOps-Scripts Toolkit](adrs/ADR-0001-devops-scripts-toolkit-scope.md): Why
-  bootstrap scripts and project-specific deploy steps stay project-local with a pinned `scripts/requirements.txt` dependency (partially superseded by [ADR-0003-standalone-tools-and-reusable-devops.md](adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
-- [ADR-0002: Modular Guidelines and Mechanical Skill Derivation](adrs/ADR-0002-modular-agent-skills-architecture.md): Why
-  guidelines carry skill front-matter and `agent-digest` derives a size-capped digest and on-demand skills from them.
-- [ADR-0003: Standalone Tools and Reusable DevOps](adrs/ADR-0003-standalone-tools-and-reusable-devops.md): Why
-  `support-python` ships five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, `git-repository-backup`) with uniform CLI conventions and a library-based `support_python.devops` package.
 
----
-
-## Guidelines
-This project follows the cross-project
-[dev-guidelines](https://github.com/gpellicciotta/dev-guidelines), in particular its
-[general guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/general-guidelines.md),
-[Python guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/python-guidelines.md),
-and
-[coordinating work guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/coordinating-work-guidelines.md).
