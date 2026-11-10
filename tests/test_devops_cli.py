@@ -288,6 +288,24 @@ class HarnessTests(DevopsCliTestCase):
         cli.add_services(docker=LocalDockerManager(), server=server, mail=LocalMailManager(server_manager=server))
         self.assertIn("It also manages the docker, server, and mail services.", cli.harness.description)
 
+    def test_default_description_names_a_group_that_replaces_a_custom_action(self) -> None:
+        from support_python.devops.services import LocalDockerManager
+
+        cli = self.cli(venv=False)
+        cli.add_action("docker", "custom docker action", lambda args, logger: 0)
+        cli.add_services(docker=LocalDockerManager())
+        cli.add_services(docker=LocalDockerManager())
+        self.assertTrue(cli.harness.description.endswith(" It also manages the docker services."))
+
+    def test_default_description_joins_two_groups_and_keeps_deploy_in_any_order(self) -> None:
+        from support_python.devops.services import LocalDockerManager, LocalVerifier
+
+        cli = self.cli(venv=False)
+        cli.add_services(docker=LocalDockerManager(), verifier=LocalVerifier(port=8080))
+        cli.set_deploy([])
+        self.assertIn("release, and deploy operations", cli.harness.description)
+        self.assertTrue(cli.harness.description.endswith(" It also manages the docker and client services."))
+
     def test_custom_description_stays_after_set_deploy_and_add_services(self) -> None:
         from support_python.devops.services import LocalDockerManager
 

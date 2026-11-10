@@ -156,7 +156,7 @@ class DevopsCli:
         Raises:
             ValueError: A ``db_targets`` entry is not ``local``, ``testdb``, or ``<name>_test``.
         """
-        before = set(self.harness._actions)
+        before = dict(self.harness._actions)
         ServiceActions(
             docker=docker,
             mysql=mysql,
@@ -168,7 +168,9 @@ class DevopsCli:
             service_url=service_url,
             testdb_env_file=testdb_env_file,
         ).register(self.harness)
-        self._service_groups += [name for name in self.harness._actions if name not in before]
+        for name, action in self.harness._actions.items():
+            if before.get(name) is not action and name not in self._service_groups:
+                self._service_groups.append(name)
         self._refresh_description()
 
     def _refresh_description(self) -> None:
