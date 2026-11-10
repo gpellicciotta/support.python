@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 4, duration_s: 1441.0, input: 320, output: 89682, cache_read: 18033180, cache_write: 303486}
+  worker: {turns: 6, duration_s: 1512.0, input: 348, output: 93590, cache_read: 20109780, cache_write: 317946}
   review: {turns: 2, duration_s: 543.4, input: 144, output: 33494, cache_read: 5199706, cache_write: 160674}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude-2"
+review_status: pending
+review_round: 2
 work_duration: 1036.5
 ---
 # T0043: Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories
@@ -81,4 +80,7 @@ Record one Backlog task per consumer repository in the technical spec with `plan
 
 - [2026-11-10] **[Verify]**
   The amended completion check passes: all six lint issues sit in frozen v1.3.0 lines 54 to 58, and consumer validation is unchanged.
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
