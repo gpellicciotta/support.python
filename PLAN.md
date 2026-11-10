@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [x] T0055 Make --debug imply --verbose in ToolHarness, so actions reading args.verbose also see it.
-- [ ] T0056 Accept millisecond and offset instants and add date-only helpers in support_python.dates, per the REST API guidelines.
+- [x] T0056 Accept millisecond and offset instants and add date-only helpers in support_python.dates, per the REST API guidelines.
 - [x] T0054 [owner: @claude-code] [protocol: adhoc] Give extract-release-notes, migrate-namespace, reset-history, and install-from-github-release working --help and --version options.
 - [x] T0047 [owner: @claude-code] [protocol: adhoc] Make test_is_process_alive_current_dead_and_expected_start derive its stale time from the process start, not from now minus 60s.
 - [x] T0048 Add --dry-run to agent-digest generate and --format text|json to agent-digest check, as ADR-0003 requires.
