@@ -35,6 +35,6 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
-- [ ] T0093 Make GradleProject.release refuse a version without -pre before the confirmation, as ReleasePipeline does.
+- [-] T0093 [reason: ReleasePipeline accepts frozen versions for resumed releases; release tasks such as doFullRelease own the -pre precondition.] Make GradleProject.release refuse a version without -pre before the confirmation, as ReleasePipeline does.
 - [ ] T0092 Let project adapters supply the DevopsCli exit-code text, dropping the virtual environment wording for Gradle and npm projects.
 - [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
