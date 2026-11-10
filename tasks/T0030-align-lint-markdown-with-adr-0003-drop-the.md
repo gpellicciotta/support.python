@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1355.8, input: 503910, output: 65250, cache_read: 12716666}
+review_status: pending
+review_round: 1
 ---
 # T0030: Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json
 
@@ -53,4 +57,7 @@ Keep exit codes 0 for clean, 1 for violations or failure, and 2 for invalid argu
   - Files touched: 8.
   - Lines touched: 355.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
