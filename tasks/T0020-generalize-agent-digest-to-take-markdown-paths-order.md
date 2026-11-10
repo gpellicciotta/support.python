@@ -5,18 +5,20 @@ session: antigravity-20261110-92e0d7
 needs: []
 branch: task/T0020-generalize-agent-digest-to-take-markdown-paths-order
 worktree: .plan/work/T0020-generalize-agent-digest-to-take-markdown-paths-order
-status: active
+status: completed
 started_at: "2026-11-10T00:04:03Z"
-ended_at: —
+ended_at: "2026-11-10T00:41:40Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 6, duration_s: 3532.4, input: 923598, output: 203052, cache_read: 16627998}
-  review: {turns: 2, duration_s: 481.6, input: 68, output: 23106, cache_read: 2073640, cache_write: 138180}
-work_duration: 1744.5
-review_status: pending
+  review: {turns: 4, duration_s: 831.0, input: 116, output: 36164, cache_read: 3219624, cache_write: 235444}
+work_duration: 2256.8
+review_status: approved
 review_round: 2
+reviewed_by: "@claude"
+completion-commit: 19230d3685f45aea01175a80bcadea750e54764b
 ---
 # T0020: Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check
 
@@ -36,7 +38,7 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 - [x] **[Implement]** Merge validate into check and align usage, exit codes, and logging with the guidelines.
 - [x] **[Verify]**    Run the full suite and the dev-guidelines integration commands from the technical spec.
 - [x] **[Doc]**       Write docs/tools/agent-digest.md and update README.md, docs/index.md, and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -96,4 +98,11 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 
 - [2026-11-10] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 2 approved by @claude: Round 2 resolves every round-1 defect and process gap; the work meets the task goals.
+  - Findings: [review-findings-2.md](T0020-generalize-agent-digest-to-take-markdown-paths-order/review-findings-2.md).
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 

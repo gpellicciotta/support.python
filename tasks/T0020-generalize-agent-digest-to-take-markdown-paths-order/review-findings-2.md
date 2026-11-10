@@ -3,7 +3,7 @@ task: T0020
 round: 2
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-10T00:38:39Z
+reviewed_at: 2026-11-10T00:41:38Z
 reviewed_commit: "af98d9f"
 base_commit: "2e7ca39"
 branch: task/T0020-generalize-agent-digest-to-take-markdown-paths-order

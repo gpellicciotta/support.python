@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [x] T0019 Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script.
-- [ ] T0020 Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check.
+- [x] T0020 Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check.
 - [-] T0021 [reason: Superseded by T0024, which installs lint-markdown as a console script within the v2.0.0 tool restructuring.] Expose the Markdown linter as an installable lint-markdown console script.
 - [-] T0022 [reason: Superseded by T0024 and T0029, which install agent-files and align its verbs and tool name.] Expose the agent-files sync as an installable agent-files console script.
 - [x] T0023 Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre.
@@ -17,7 +17,7 @@ An overview of all tasks and their planning.
 - [x] T0029 Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
 - [ ] T0030 Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
 - [ ] T0031 Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.
-- [ ] T0032 [needs: T0020] Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
+- [ ] T0032 Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
 - [ ] T0033 [needs: T0030] Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
 - [x] T0034 Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged.
 - [ ] T0035 Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins.
