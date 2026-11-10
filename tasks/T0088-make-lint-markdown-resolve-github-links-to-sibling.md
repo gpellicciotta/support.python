@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 3027.0, input: 2024896, output: 145592, cache_read: 51400574}
+  worker: {turns: 4, duration_s: 3276.0, input: 2196936, output: 163952, cache_read: 57342886}
 work_duration: 1526.6
+review_status: pending
+review_round: 1
 ---
 # T0088: Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none
 
@@ -54,4 +56,7 @@ This repository's own configuration lists `gpellicciotta`, so its lint results d
 
 - [2026-11-10] **[Doc]**
   Updated lint-markdown.md, migration-v2.md, and CHANGELOG.md for github-owners.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
