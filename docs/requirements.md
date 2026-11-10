@@ -39,9 +39,9 @@ Functional and technical requirements for the `support-python` project.
   standard `{prog} v{version} - Copyright (c) {author}` header, centralized UTF-8 console output setup, and standard
   exit codes (`0` success, `1` failure or `check` findings, `2` invalid arguments) in `support_python.cli`, with no umbrella `support-python` command or `python -m support_python` entry point.
 - Provide five standalone console scripts (`processes`, `agent-files`, `agent-digest`, `lint-markdown`,
-  `git-repository-backup`) implemented under `support_python.tools.<snake_name>` with uniform CLI conventions:
+  `git-repository-backup`) implemented under `support_python.tools.{{snake-name}}` with uniform CLI conventions:
   `list`/`check`/write verbs, `--dry-run` on write actions, `--format text|json` on `list` and `check`, and
-  `--config` overrides for project-scoped (`./.<tool-name>.json`) and user-scoped (`~/.config/<tool-name>/config.json`)
+  `--config` overrides for project-scoped (`./.{{tool-name}}.json`) and user-scoped (`~/.config/{{tool-name}}/config.json`)
   configuration files (see [ADR-0003-standalone-tools-and-reusable-devops.md](adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
 - Provide a reusable settings resolver and `config` command group (`Setting`, `SettingsSchema`, `resolve_settings`,
   `add_config_actions` in `support_python.config`) that apply the configuration guidelines: precedence command line,

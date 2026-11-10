@@ -248,3 +248,14 @@ def test_processes_list_and_kill_integration(tmp_path: Path) -> None:
         if child.poll() is None:
             processes.terminate_process_tree(child.pid)
             child.wait(timeout=5)
+
+
+def test_processes_help_uses_mustache_placeholders(capsys: pytest.CaptureFixture[str]) -> None:
+    """Help text writes placeholders as ``{{name}}``, never as sample paths or single braces."""
+    from support_python.tools import processes as processes_tool
+
+    assert processes_tool.main(["help", "--verbose"]) == 0
+    out = capsys.readouterr().out
+    assert "processes kill {{pid}}... [options]" in out
+    assert "processes list --cwd {{project-root}}" in out
+    assert "/path/to/" not in out

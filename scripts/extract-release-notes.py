@@ -7,7 +7,7 @@ unless a changelog path is given.
 
 Usage:
   python scripts/extract-release-notes.py 2.0.1
-  python scripts/extract-release-notes.py v2.0.1 path/to/CHANGELOG.md
+  python scripts/extract-release-notes.py v2.0.1 {{changelog-path}}
 """
 
 from __future__ import annotations

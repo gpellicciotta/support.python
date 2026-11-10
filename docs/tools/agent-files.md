@@ -32,7 +32,7 @@ Default digest and skills paths match `agent-digest` and resolve under `repo-roo
 A missing skills directory means no skills.
 When the digest is missing, `sync` and `check` exit 1 with a hint:
 ```bash
-agent-digest generate <PATH>... --digest agent-digest.md --skills-dir agent-skills
+agent-digest generate {{path}}... --digest agent-digest.md --skills-dir agent-skills
 agent-files sync
 ```
 
@@ -67,19 +67,19 @@ All relative paths in `.agent-files.json` resolve against `repo-root`.
 }
 ```
 
-| Field                | Type            | Default                         | Purpose                                              |
-| :------------------- | :-------------- | :------------------------------ | :--------------------------------------------------- |
-| `repo-root`          | `string`        | Config directory or Git root    | Base directory for relative paths and review runs    |
-| `digest-path`        | `string`        | `{{repo-root}}/agent-digest.md` | Existing Markdown digest synced into target files    |
-| `skills-dir`         | `string`        | `{{repo-root}}/agent-skills`    | Source directory containing `<skill>/SKILL.md` trees |
-| `marker`             | `string`        | `dev-guidelines`                | Identifier for guarded block comments                |
-| `marker-begin`       | `string`        | Derived from `marker`           | Explicit opening guarded block line                  |
-| `marker-end`         | `string`        | Derived from `marker`           | Explicit closing guarded block line                  |
-| `manifest-source`    | `string`        | `dev-guidelines`                | Ownership tag written into the skills manifest       |
-| `manifest-name`      | `string`        | `.dev-guidelines-skills.json`   | Manifest filename inside each target skills folder   |
-| `legacy-skill-names` | `array<string>` | Built-in legacy list or `[]`    | Bootstrap skill names owned before manifest creation |
-| `replace-tools`      | `boolean`       | `false`                         | Replace default tools instead of merging `tools`     |
-| `tools`              | `array<object>` | Built-in tool registry          | Additional or overridden tool registry entries       |
+| Field                | Type            | Default                         | Purpose                                                |
+| :------------------- | :-------------- | :------------------------------ | :----------------------------------------------------- |
+| `repo-root`          | `string`        | Config directory or Git root    | Base directory for relative paths and review runs      |
+| `digest-path`        | `string`        | `{{repo-root}}/agent-digest.md` | Existing Markdown digest synced into target files      |
+| `skills-dir`         | `string`        | `{{repo-root}}/agent-skills`    | Source directory containing `{{skill}}/SKILL.md` trees |
+| `marker`             | `string`        | `dev-guidelines`                | Identifier for guarded block comments                  |
+| `marker-begin`       | `string`        | Derived from `marker`           | Explicit opening guarded block line                    |
+| `marker-end`         | `string`        | Derived from `marker`           | Explicit closing guarded block line                    |
+| `manifest-source`    | `string`        | `dev-guidelines`                | Ownership tag written into the skills manifest         |
+| `manifest-name`      | `string`        | `.dev-guidelines-skills.json`   | Manifest filename inside each target skills folder     |
+| `legacy-skill-names` | `array<string>` | Built-in legacy list or `[]`    | Bootstrap skill names owned before manifest creation   |
+| `replace-tools`      | `boolean`       | `false`                         | Replace default tools instead of merging `tools`       |
+| `tools`              | `array<object>` | Built-in tool registry          | Additional or overridden tool registry entries         |
 
 ---
 

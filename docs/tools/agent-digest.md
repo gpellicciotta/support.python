@@ -8,17 +8,17 @@ Implemented in [agent_digest.py](../../src/support_python/tools/agent_digest.py)
 ## Command-Line Interface
 Run actions through the `agent-digest` console script in [agent_digest.py](../../src/support_python/tools/agent_digest.py):
 ```bash
-agent-digest generate <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--dry-run]
-agent-digest check <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--skill-index FILE] [--format text|json]
+agent-digest generate {{path}}... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--dry-run]
+agent-digest check {{path}}... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--skill-index FILE] [--format text|json]
 agent-digest help [--verbose]
 agent-digest version
 ```
 
 | Option               | Default             | Purpose                                                            |
 | :------------------- | :------------------ | :----------------------------------------------------------------- |
-| `<PATH>...`          | Required            | One or more Markdown files or directories to process               |
+| `{{path}}...`        | Required            | One or more Markdown files or directories to process               |
 | `--digest PATH`      | `./agent-digest.md` | Output Markdown digest path (e.g. `guidelines/agent-digest.md`)    |
-| `--skills-dir PATH`  | `./agent-skills`    | Output directory containing `<name>/SKILL.md` skill trees          |
+| `--skills-dir PATH`  | `./agent-skills`    | Output directory containing `{{name}}/SKILL.md` skill trees        |
 | `--link-base URL`    | Derived from Git    | Base URL for repo links outside the digest and skills folders      |
 | `--max-words N`      | `20`                | Maximum word count per directive sentence                          |
 | `--max-bytes N`      | `20480`             | Maximum UTF-8 byte size for the generated digest                   |
@@ -32,8 +32,8 @@ Standard logging options (`--log-file PATH`, `--log-level LEVEL`, `--debug`, `--
 ---
 
 ## Input Collection and Ordering
-`agent-digest` resolves `<PATH>...` arguments into an ordered source file list using seven deterministic rules:
-1. Process `<PATH>` arguments in the exact order given on the command line.
+`agent-digest` resolves `{{path}}...` arguments into an ordered source file list using seven deterministic rules:
+1. Process `{{path}}` arguments in the exact order given on the command line.
 2. Add file arguments directly; reject missing paths or non-`.md` file arguments with exit code `2`.
 3. Recursively collect `*.md` files inside directory arguments, sorted by relative POSIX path.
 4. Skip any directory whose name starts with `.` during recursive traversal.
@@ -60,10 +60,10 @@ skill:
 ```
 
 - Files without a `skill` block are core guidelines and merge into the `--digest` output file.
-- Files with a `skill` block generate `<skills-dir>/<name>/SKILL.md` with blockquote (`>`) lines removed.
+- Files with a `skill` block generate `{{skills-dir}}/{{name}}/SKILL.md` with blockquote (`>`) lines removed.
 - Top-level keys are restricted to `index` and `skill`.
 - `skill` keys are restricted to `name`, `description`, and `references`.
-- `skill.references` optionally lists extra files that `generate` copies into `<skills-dir>/<name>/`.
+- `skill.references` optionally lists extra files that `generate` copies into `{{skills-dir}}/{{name}}/`.
 - Each reference is a POSIX path relative to the guideline file's directory, and keeps that path inside the skill.
 - A reference must not be empty, absolute, use backslashes, contain `..` that leaves the directory, repeat, or name `SKILL.md`.
 - Invalid references fail with exit code `1` and name the guideline file; a missing source file also fails `generate` with exit code `1`.
@@ -75,10 +75,10 @@ skill:
 
 ## Link Rewriting
 `agent-digest` rewrites Markdown links outside code fences for core digest content and derived skill files:
-- Links targeting a skill-bearing input file rewrite to ``the `<name>` skill``.
-- Relative or `https://github.com/...` links whose target ends in `/skills/<name>/SKILL.md` rewrite to ``the `<name>` skill``.
+- Links targeting a skill-bearing input file rewrite to ``the `{{name}}` skill``.
+- Relative or `https://github.com/...` links whose target ends in `/skills/{{name}}/SKILL.md` rewrite to ``the `{{name}}` skill``.
 - Links targeting another digest-bound core guideline collapse to plain link text (`[text](other.md)` becomes `text`).
-- Links inside a derived skill targeting `<skills-dir>/<name>/...` or one of its listed references rewrite to a path relative to the linking file.
+- Links inside a derived skill targeting `{{skills-dir}}/{{name}}/...` or one of its listed references rewrite to a path relative to the linking file.
 - Remaining relative repository links rewrite against `--link-base` when a base URL is provided or derived from Git.
 - When no `--link-base` is given and Git origin or branch metadata is unavailable, repository links remain relative.
 
@@ -86,13 +86,13 @@ skill:
 
 ## Validation Rules in `check`
 `agent-digest check` verifies generated files and source rules in a single pass:
-- Derived `<skills-dir>/<name>/SKILL.md` files and the `--digest` file match regenerated output on disk.
+- Derived `{{skills-dir}}/{{name}}/SKILL.md` files and the `--digest` file match regenerated output on disk.
 - The `--digest` file stays within `--max-bytes` UTF-8 bytes.
 - Every directive sentence in the generated digest and derived skills contains at most `--max-words` words.
 - YAML front-matter keys are restricted to `index` and `skill`, with only `name`, `description`, and `references` under `skill`.
-- Every listed reference exists in the source tree, and its copy under `<skills-dir>/<name>/` exists and matches regenerated output.
+- Every listed reference exists in the source tree, and its copy under `{{skills-dir}}/{{name}}/` exists and matches regenerated output.
 - When `--skill-index FILE` is provided, that file links to every skill-bearing input file.
-- Every non-`SKILL.md` file under `<skills-dir>/<name>/` is listed under `skill.references` (no unlisted files).
+- Every non-`SKILL.md` file under `{{skills-dir}}/{{name}}/` is listed under `skill.references` (no unlisted files).
 - Every listed reference is linked from its companion `SKILL.md` (no orphan files).
 - The generated digest contains no relative Markdown links.
 - Derived `SKILL.md` files contain no links escaping the skill directory (`../`, `/`, or `\`).

@@ -27,20 +27,20 @@ support-python @ git+https://github.com/gpellicciotta/support.python.git@v2.0.0
 ## Commands
 Every tool now runs under its own name; `support-python` and the wrapper scripts are gone.
 
-| v1.x command                                      | v2.0.0 replacement                                                 |
-| :------------------------------------------------ | :----------------------------------------------------------------- |
-| `support-python lint markdown [PATH...]`          | `lint-markdown check [PATH...]`                                    |
-| `support-python lint markdown --fix [PATH...]`    | `lint-markdown fix [PATH...]`                                      |
-| `support-python agent-files ACTION`               | `agent-files ACTION`                                               |
-| `support-python backup ACTION`                    | `git-repository-backup ACTION`                                     |
-| `support-python greet`                            | Removed, with no replacement                                       |
-| `support-python --version` / `--help`             | `TOOL version` / `TOOL help` on each standalone tool               |
-| `python -m support_python`                        | Removed, with no replacement                                       |
-| `python scripts/processes.py ACTION`              | `processes ACTION`                                                 |
-| `python scripts/lint-markdown.py ACTION`          | `lint-markdown ACTION`                                             |
-| `python scripts/agent-files.py ACTION`            | `agent-files ACTION`                                               |
-| `python scripts/backup-git-repos.py ACTION`       | `git-repository-backup ACTION`                                     |
-| dev-guidelines `scripts/generate-agent-digest.py` | `agent-digest generate <PATH>...` / `agent-digest check <PATH>...` |
+| v1.x command                                      | v2.0.0 replacement                                                     |
+| :------------------------------------------------ | :--------------------------------------------------------------------- |
+| `support-python lint markdown [PATH...]`          | `lint-markdown check [PATH...]`                                        |
+| `support-python lint markdown --fix [PATH...]`    | `lint-markdown fix [PATH...]`                                          |
+| `support-python agent-files ACTION`               | `agent-files ACTION`                                                   |
+| `support-python backup ACTION`                    | `git-repository-backup ACTION`                                         |
+| `support-python greet`                            | Removed, with no replacement                                           |
+| `support-python --version` / `--help`             | `TOOL version` / `TOOL help` on each standalone tool                   |
+| `python -m support_python`                        | Removed, with no replacement                                           |
+| `python scripts/processes.py ACTION`              | `processes ACTION`                                                     |
+| `python scripts/lint-markdown.py ACTION`          | `lint-markdown ACTION`                                                 |
+| `python scripts/agent-files.py ACTION`            | `agent-files ACTION`                                                   |
+| `python scripts/backup-git-repos.py ACTION`       | `git-repository-backup ACTION`                                         |
+| dev-guidelines `scripts/generate-agent-digest.py` | `agent-digest generate {{path}}...` / `agent-digest check {{path}}...` |
 
 [extract-release-notes.py](../scripts/extract-release-notes.py), [migrate-namespace.py](../scripts/migrate-namespace.py), and [reset-history.py](../scripts/reset-history.py) now act on the current directory's repository.
 `migrate-namespace.py finish` also publishes the frozen section as release notes.
@@ -62,8 +62,8 @@ Dry runs and JSON output are available on these actions in v2.0.0:
 | `agent-files`           | `sync` regenerates `guidelines/agent-digest.md` | Run `agent-digest generate` first; a missing digest exits `1` |
 | `agent-files`           | Digest `guidelines/agent-digest.md`             | `./agent-digest.md`, or `--digest PATH` / `digest_path`       |
 | `agent-files`           | Skills directory `skills/`                      | `./agent-skills`, or `--skills-dir PATH` / `skills_dir`       |
-| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate <PATH>...` / `check <PATH>...`                      |
-| `agent-digest`          | `validate`                                      | `check <PATH>...`                                             |
+| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate {{path}}...` / `check {{path}}...`                  |
+| `agent-digest`          | `validate`                                      | `check {{path}}...`                                           |
 | `agent-digest`          | Output `guidelines/agent-digest.md`, `skills/`  | `--digest PATH` and `--skills-dir PATH`                       |
 | `lint-markdown`         | `check --fix`                                   | `fix`, with `fix --dry-run` to preview                        |
 | `processes`             | `list --format table`                           | `list --format text`; `table` now exits `2`                   |

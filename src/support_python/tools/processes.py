@@ -25,8 +25,8 @@ EXAMPLES = [
     "processes kill 1234 5678",
     "processes kill 1234 --force",
     "processes kill 1234 5678 --dry-run",
-    "processes list --cwd /path/to/workdir",
-    "processes list --open-path /path/to/file.txt --format json",
+    "processes list --cwd {{project-root}}",
+    "processes list --open-path {{file}} --format json",
     "processes list --descendants-of 1234",
 ]
 EXIT_CODES = {
@@ -130,7 +130,7 @@ def build_harness() -> ToolHarness:
         "terminate processes by PID",
         handler=run_kill,
         detail=KILL_DETAIL,
-        usage_suffix="{pid}... [options]",
+        usage_suffix="{{pid}}... [options]",
         configure_parser=configure_kill_parser,
     )
     harness.add_action(

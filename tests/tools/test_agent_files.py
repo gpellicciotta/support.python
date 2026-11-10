@@ -433,7 +433,7 @@ class HarnessErrorFormattingTests(unittest.TestCase):
                     self.assertEqual(len(error_lines), 1, err)
                     self.assertTrue(error_lines[0].startswith("**[ERROR]** "), error_lines[0])
                     self.assertIn(str(root / "missing-digest.md"), error_lines[0])
-                    self.assertIn("agent-digest generate <PATH>...", err)
+                    self.assertIn("agent-digest generate {{path}}...", err)
                     self.assertFalse(fake_tool.target_file.exists())
 
 

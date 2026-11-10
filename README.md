@@ -28,26 +28,26 @@ This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packa
 On GitHub pushes and pull requests, [python-package.yml](.github/workflows/python-package.yml) builds the same artifacts after lint and tests.
 
 ## Install
-This project is distributed via Git and GitHub Releases; replace `<version>` with a released version such as `2.0.0`.
+This project is distributed via Git and GitHub Releases; replace `{{version}}` with a released version such as `2.0.0`.
 
 Install the command-line tools globally; `pipx` and `uv tool` give them an isolated environment:
 
 ```bash
-pipx install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
-uv tool install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
-pip install --user "git+https://github.com/gpellicciotta/support.python.git@v<version>"
-python scripts/install-from-github-release.py <version> --global
+pipx install "git+https://github.com/gpellicciotta/support.python.git@v{{version}}"
+uv tool install "git+https://github.com/gpellicciotta/support.python.git@v{{version}}"
+pip install --user "git+https://github.com/gpellicciotta/support.python.git@v{{version}}"
+python scripts/install-from-github-release.py {{version}} --global
 ```
 
 Install the library into a virtual environment, or declare it in a downstream `pyproject.toml`:
 
 ```bash
-python -m pip install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
+python -m pip install "git+https://github.com/gpellicciotta/support.python.git@v{{version}}"
 ```
 
 ```toml
 dependencies = [
-    "support-python @ git+https://github.com/gpellicciotta/support.python.git@v<version>",
+    "support-python @ git+https://github.com/gpellicciotta/support.python.git@v{{version}}",
 ]
 ```
 

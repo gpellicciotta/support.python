@@ -20,24 +20,24 @@ Conversely, AI agents require token-dense, imperative directives and progressive
 1. **Size Budget for Core Digest**:
    Enforce a hard size budget of 20 KiB (`20,480` bytes) on `agent-digest.md`, validated in CI and checked by `agent-digest validate` (originally dev-guidelines' `generate-agent-digest.py validate`).
 2. **Mechanical Skill Derivation (1:1)**:
-   Derive agent skills mechanically from human guideline documents using YAML frontmatter in `guidelines/<name>.md`:
+   Derive agent skills mechanically from human guideline documents using YAML frontmatter in `guidelines/{{name}}.md`:
    ```yaml
    ---
    skill:
-     name: <name>
+     name: {{name}}
      description: >-
        Actionable description of the skill and clear triggering conditions.
    ---
    ```
-   Each guideline with `skill:` frontmatter produces `skills/<name>/SKILL.md` with identical naming (1:1 correspondence).
+   Each guideline with `skill:` frontmatter produces `skills/{{name}}/SKILL.md` with identical naming (1:1 correspondence).
 3. **Automatic Rationale Stripping**:
    Strip all markdown blockquotes (`>`) when generating skills and digest content, preserving human rationales in guideline docs while maximizing signal density for agents.
 4. **Link Normalization and Installed Context**:
    Rewrite markdown links during generation so installed skills and the core digest never contain broken relative references:
-   - Sibling guidelines defining a skill become `the `<name>` skill` with backticks and no link.
+   - Sibling guidelines defining a skill become `the `{{name}}` skill` with backticks and no link.
    - Sibling guidelines without a skill become link text only.
-   - References within the same skill directory become skill-relative links (`<path>`).
-   - Repository file references become canonical GitHub links: `[filename](https://github.com/gpellicciotta/dev-guidelines/blob/main/<repo-relative-path>)`.
+   - References within the same skill directory become skill-relative links (`{{path}}`).
+   - Repository file references become canonical GitHub links: `[filename](https://github.com/gpellicciotta/dev-guidelines/blob/main/{{repo-relative-path}})`.
    - Absolute `http` and `https` links remain unchanged.
 
 5. **Separation of Invariants vs. On-Demand Skills**:

@@ -32,10 +32,10 @@ past = format_past_epoch(ts, now_ts=ts + seconds)
 - `parse_date_or_datetime(text)` parses `YYYY-MM-DD`, `YYYY-MM-DD[T ]HH:MM[:SS]`, or a `YYYY-MM-DD` prefix into a naive `datetime`, or `None`.
 - `parse_duration_to_seconds(dur_str, default_unit="s")` parses single or compound units (`d`, `h`, `m`, `s`, `ms`) and bare numbers into seconds.
   It returns `None` for invalid or negative input.
-- `format_duration(seconds)` formats durations as `<sec.f>s`, `<m>m <ss>s`, `<h>h <mm>m <ss>s`, or `<d>d <hh>h` (clamping negatives to `0.0s`).
-- `format_short_duration(seconds)` formats durations as `<secs>s` under 2 minutes, `<m>m` under 1 hour, `<h>h <m>m` under 1 day, or `<d>d <h>h`.
-- `format_epoch(ts, now_ts=None)` formats a target timestamp as `YYYY-MM-DD HH:MM:SS (in <duration>)`.
-- `format_past_epoch(ts, now_ts=None)` formats a past timestamp as `YYYY-MM-DD HH:MM (<short_duration> ago)`.
+- `format_duration(seconds)` formats durations as `{{s.f}}s`, `{{m}}m {{ss}}s`, `{{h}}h {{mm}}m {{ss}}s`, or `{{d}}d {{hh}}h` (clamping negatives to `0.0s`).
+- `format_short_duration(seconds)` formats durations as `{{s}}s` under 2 minutes, `{{m}}m` under 1 hour, `{{h}}h {{m}}m` under 1 day, or `{{d}}d {{h}}h`.
+- `format_epoch(ts, now_ts=None)` formats a target timestamp as `YYYY-MM-DD HH:MM:SS (in {{duration}})`.
+- `format_past_epoch(ts, now_ts=None)` formats a past timestamp as `YYYY-MM-DD HH:MM ({{short-duration}} ago)`.
 
 ## Task rate limiter
 `TaskRateLimiter` pairs with the duration helpers for wait-duration formatting:

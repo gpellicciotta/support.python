@@ -1405,7 +1405,7 @@ def build_harness() -> DigestHarness:
         detail="Collects Markdown files from each PATH, orders them by front-matter 'index' then\n"
         "argument and path order, writes derived skills to --skills-dir, and writes the digest to --digest.\n"
         "With --dry-run, reports which files would be created or updated and writes nothing.",
-        usage_suffix="<PATH>... [options]",
+        usage_suffix="{{path}}... [options]",
         configure_parser=configure_generate_parser,
     )
     harness.add_action(
@@ -1426,7 +1426,7 @@ def build_harness() -> DigestHarness:
         "and --skills-dir on disk, while validating front-matter keys, word and byte budgets,\n"
         "orphan reference files, link constraints, and optional --skill-index coverage.\n"
         "With --format json, prints one JSON document with the digest and skill statuses and every issue.",
-        usage_suffix="<PATH>... [options]",
+        usage_suffix="{{path}}... [options]",
         configure_parser=configure_check_parser,
     )
     return harness

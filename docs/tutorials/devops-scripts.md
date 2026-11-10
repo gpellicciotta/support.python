@@ -89,7 +89,7 @@ repo = parse_github_repo("git@github.com:owner/name.git")  # "owner/name"
 `ReleasePipeline` runs the whole release from the repository root and returns 0 or 1:
 - It checks every precondition before any change: a clean tree, the main branch, an authenticated `gh`, and fresh tags.
 - It also requires no existing tag or GitHub release, and non-empty release notes.
-- It then runs the quality check and asks the user to type `release v<X>` unless `assume_yes` is set.
+- It then runs the quality check and asks the user to type `release v{{version}}` unless `assume_yes` is set.
 - Next it freezes the `-pre` version, tags, pushes, and publishes a GitHub release with assets.
 - An optional `build` hook runs after the freeze commit and before tagging; `assets` is then resolved after it.
 - That way the assets carry the release version, and a failed build stops before anything is tagged or pushed.
@@ -145,7 +145,7 @@ if __name__ == "__main__":
 ```
 
 ### PythonProject
-`PythonProject` runs ruff, pytest, and build through `<root>/.venv` and exits 1 with a bootstrap hint when it is missing.
+`PythonProject` runs ruff, pytest, and build through `{{project-root}}/.venv` and exits 1 with a bootstrap hint when it is missing.
 
 ### GradleProject
 `GradleProject` runs `gradlew.bat` on Windows and `./gradlew` elsewhere, adding `--console=plain` (`gradle_options`):
@@ -187,10 +187,10 @@ An `action` and the `verify` callback receive a `DeployContext` with `project`, 
 `deploy [--dry-run] [--yes] [--skip-ci-check]` checks these preconditions before running anything:
 - The working tree is clean, including untracked files.
 - The version has no `-pre` suffix.
-- Tag `v<version>` exists on `origin` and points at HEAD.
-- `gh run list --commit <HEAD>` shows a successful completed run and no failed one (skip with `--skip-ci-check`).
+- Tag `v{{version}}` exists on `origin` and points at HEAD.
+- `gh run list --commit {{head-commit}}` shows a successful completed run and no failed one (skip with `--skip-ci-check`).
 
-It then asks for the typed confirmation `deploy v<version>` unless `--yes` is given.
+It then asks for the typed confirmation `deploy v{{version}}` unless `--yes` is given.
 It runs the steps in order, stops at the first failure, then runs `verify`; any failure exits 1.
 `--dry-run` checks the preconditions and logs the plan without prompting or running a step.
 Without `set_deploy`, `deploy` is neither listed nor accepted:
@@ -227,7 +227,7 @@ Options follow the auth, counters.server, and todos.server scripts they replace:
 Behavior rules:
 - `db proxy` needs `proxy`; the other `db` sub-actions need `mysql`.
 - `db_targets` (default `("local", "testdb")`) sets the `--load-target` and `--target` choices.
-- Each target is `local`, `testdb` (loads into `<db_name>_test`), or a `<name>_test` alias loading into that database.
+- Each target is `local`, `testdb` (loads into `{{db-name}}_test`), or a `{{name}}_test` alias loading into that database.
 - Any other `db_targets` entry raises `ValueError`.
 - `server start` starts MySQL first unless `--memory-db` or `--testdb` is given, or no `mysql` manager was passed.
 - `testdb_env_file` enables `server start --testdb`, which runs the server with that environment file.

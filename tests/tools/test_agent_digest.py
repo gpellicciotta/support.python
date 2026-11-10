@@ -547,7 +547,7 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
                 self.assertIn(f"Detailed Action Description: {action}", out)
-                self.assertIn(f"Usage:\n  agent-digest {action} <PATH>...", out)
+                self.assertIn(f"Usage:\n  agent-digest {action} {{{{path}}}}...", out)
                 for other_action in ("generate", "check"):
                     if other_action != action:
                         self.assertNotIn(f"Detailed Action Description: {other_action}", out)

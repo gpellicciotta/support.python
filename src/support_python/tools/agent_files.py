@@ -879,7 +879,7 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
     if not digest:
         logger.error(
             f"digest not found or empty at {digest_path}; create it with "
-            f"'agent-digest generate <PATH>... --digest {digest_path} --skills-dir {skills_dir}'",
+            f"'agent-digest generate {{{{path}}}}... --digest {digest_path} --skills-dir {skills_dir}'",
             origin=TOOL_NAME,
         )
         return 1
