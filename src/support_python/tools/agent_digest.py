@@ -23,6 +23,13 @@ from support_python.git import get_current_branch, get_repo_root, run_git_comman
 from support_python.logging import CliLogger
 from support_python.tools.agent_files import find_project_root
 
+
+def _write_lf(path: Path, text: str) -> None:
+    """Write ``text`` as UTF-8 with LF line endings; ``Path.write_text`` accepts ``newline`` only from Python 3.10."""
+    with path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(text)
+
+
 TOOL_NAME = "agent-digest"
 TOOL_VERSION = PROJECT_VERSION
 
@@ -892,7 +899,7 @@ def action_generate(
             report_planned_write(skill_path, skill_content, f"{len(skill_content.splitlines())} lines", logger, repo_root)
         else:
             skill_dir.mkdir(parents=True, exist_ok=True)
-            skill_path.write_text(skill_content, encoding="utf-8", newline="\n")
+            _write_lf(skill_path, skill_content)
             logger.info(f"Generated {display_path(skill_path, repo_root)} ({len(skill_content.splitlines())} lines).")
         for rel, data in sorted(reference_copies.get(skill_name, {}).items()):
             target = skill_dir / rel
@@ -916,7 +923,7 @@ def action_generate(
         report_planned_write(digest_out, digest_text, digest_detail, logger, repo_root)
     else:
         digest_out.parent.mkdir(parents=True, exist_ok=True)
-        digest_out.write_text(digest_text, encoding="utf-8", newline="\n")
+        _write_lf(digest_out, digest_text)
         logger.info(f"Generated {display_path(digest_out, repo_root)} ({digest_detail}).")
     if not is_valid:
         logger.error(f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes).")
