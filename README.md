@@ -251,6 +251,34 @@ server_mgr = LocalServerManager(port=8080)
 server_mgr.start(background=True)
 ```
 
+`support_python.devops.release` holds stdlib-only release helpers, also re-exported from `support_python.devops`.
+`read_version`/`write_version` use the first of `pyproject.toml`, `gradle.properties`, and `package.json` that declares a version.
+They keep line endings and write atomically. The CHANGELOG.md helpers follow the `-pre` and `[status]` heading convention:
+
+```python
+from pathlib import Path
+
+from support_python.devops import (
+    extract_release_notes,
+    freeze_changelog,
+    next_dev_version,
+    open_dev_changelog,
+    parse_github_repo,
+    read_version,
+    release_version,
+    write_version,
+)
+
+root = Path(".")
+changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+release = release_version(read_version(root))  # "1.2.3-pre" -> "1.2.3"
+notes = extract_release_notes(changelog, release)  # ValueError when missing or empty
+changelog = freeze_changelog(changelog, release, "released: 2026-11-09")  # "## v1.2.3 [released: 2026-11-09]"
+changelog = open_dev_changelog(changelog, next_dev_version(release, "minor"))  # "## v1.3.0-pre" after the first "---"
+write_version(root, next_dev_version(release, "minor"))
+repo = parse_github_repo("git@github.com:owner/name.git")  # "owner/name"
+```
+
 ## View Capture Engine and Static Server
 
 `support_python.capture` provides browser screenshot automation (`ViewCaptureEngine`) and visual UI tour

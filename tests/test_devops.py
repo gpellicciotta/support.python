@@ -55,6 +55,18 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "LocalServerManager",
             "LocalMailManager",
             "LocalVerifier",
+            "VersionFile",
+            "VERSION_FILES",
+            "find_version_file",
+            "read_version",
+            "write_version",
+            "release_version",
+            "next_dev_version",
+            "changelog_top_version",
+            "extract_release_notes",
+            "freeze_changelog",
+            "open_dev_changelog",
+            "parse_github_repo",
         ]
         self.assertCountEqual(devops_pkg.__all__, expected_all)
 

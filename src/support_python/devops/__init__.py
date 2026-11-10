@@ -2,11 +2,27 @@
 
 Provides subprocess step runners and streaming helpers in :mod:`support_python.devops.steps`
 and reusable managers for Docker, MySQL, Cloud SQL proxy, Java application server processes,
-email template testing, and endpoint verification in :mod:`support_python.devops.services`.
+email template testing, and endpoint verification in :mod:`support_python.devops.services`,
+plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers in
+:mod:`support_python.devops.release`.
 """
 
 from __future__ import annotations
 
+from .release import (
+    VERSION_FILES,
+    VersionFile,
+    changelog_top_version,
+    extract_release_notes,
+    find_version_file,
+    freeze_changelog,
+    next_dev_version,
+    open_dev_changelog,
+    parse_github_repo,
+    read_version,
+    release_version,
+    write_version,
+)
 from .services import (
     CloudSqlProxyManager,
     LocalDockerManager,
@@ -37,4 +53,16 @@ __all__ = [
     "LocalServerManager",
     "LocalMailManager",
     "LocalVerifier",
+    "VersionFile",
+    "VERSION_FILES",
+    "find_version_file",
+    "read_version",
+    "write_version",
+    "release_version",
+    "next_dev_version",
+    "changelog_top_version",
+    "extract_release_notes",
+    "freeze_changelog",
+    "open_dev_changelog",
+    "parse_github_repo",
 ]

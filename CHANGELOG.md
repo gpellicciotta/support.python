@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.19-pre
+## v2.0.20-pre
+- DevEx: Added `support_python.devops.release` with version-file, CHANGELOG.md freeze/reopen, release-notes, and GitHub-origin helpers ([release.py](src/support_python/devops/release.py)).
 - CLI: Let `lint-markdown` load extra rules from plugins listed under the config `plugins` key or `--plugin`, and added a `rules` action listing every rule and its source ([plugins.py](src/support_python/markdown/plugins.py), [lint_markdown.py](src/support_python/tools/lint_markdown.py), [lint-markdown.md](docs/tools/lint-markdown.md)).
 - CLI: **[breaking]** Made `agent-files` install an existing `./agent-digest.md` and `./agent-skills` without regenerating them, exiting 1 with an `agent-digest generate` hint when the digest is missing ([agent_files.py](src/support_python/tools/agent_files.py), [agent-files.md](docs/tools/agent-files.md)).
 - CLI: **[breaking]** Renamed `processes list --format table` to `--format text`, added `kill --dry-run`, and kept JSON `stdout` log-free ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md)).
