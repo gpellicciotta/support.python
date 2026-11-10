@@ -78,9 +78,9 @@ Standards and procedures for testing software reliably across unit, integration,
 - Enforce a zero-tolerance gate failing on console.error output, unhandled exceptions, or rejected promises.
 - Fail verification on any request failing at the network level or returning HTTP 400 or higher.
 - Exempt expected errors or status codes by documenting them with rationale in the task verification section.
-- Verify UI components in light and dark modes across responsive viewports specified in [playwright-recipes.md](../skills/testing-guidelines/references/playwright-recipes.md).
+- Verify UI components in light and dark modes across responsive viewports specified in [playwright-recipes.md](references/playwright-recipes.md).
 - In interactive sessions, leave the development server running and report its URL and PID in the completion message.
 - In autonomous loops and unattended runs, stop the development server using `plan processes kill` before ending the turn.
-- Use the harness in [playwright-recipes.md](../skills/testing-guidelines/references/playwright-recipes.md) for automated UI checks.
+- Use the harness in [playwright-recipes.md](references/playwright-recipes.md) for automated UI checks.
 
 > Writing code and passing unit tests is insufficient for frontend components; visual rendering in a browser is mandatory.
