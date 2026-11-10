@@ -26,5 +26,6 @@ Every description notes that it needs the released support-python v2.0.0.
 - Integration test: none (no code changes; the completion check verifies the documents and consumer task files)
 
 Completion check: `lint-markdown check --offline docs/migration-v2.md CLAUDE.md README.md docs/index.md CHANGELOG.md`
-exits 0, and `plan tasks validate --project ../<repo>` passes for each consumer.
+reports no issue outside frozen or released CHANGELOG sections, and `plan tasks validate --project ../<repo>` passes for each consumer.
+- Frozen sections are immutable: the six MD014 links in `## v1.3.0` to files moved by T0025, T0026, and T0034 are accepted as-is.
 Size estimate: 5 files, 300 lines, excluding consumer planning files.

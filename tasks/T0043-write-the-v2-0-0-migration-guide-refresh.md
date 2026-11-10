@@ -5,19 +5,19 @@ session: claude-20261110-6243cc
 needs: []
 branch: task/T0043-write-the-v2-0-0-migration-guide-refresh
 worktree: .plan/work/T0043-write-the-v2-0-0-migration-guide-refresh
-status: suspended
-started_at: "2026-11-10T04:44:13Z"
+status: active
+started_at: "2026-11-10T05:02:11Z"
 ended_at: —
 review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 953.4, input: 268, output: 76438, cache_read: 13811478, cache_write: 261272}
+  worker: {turns: 4, duration_s: 1441.0, input: 320, output: 89682, cache_read: 18033180, cache_write: 303486}
   review: {turns: 2, duration_s: 543.4, input: 144, output: 33494, cache_read: 5199706, cache_write: 160674}
 review_status: rejected
 review_round: 1
 reviewed_by: "@claude-2"
-work_duration: 767.7
+work_duration: 1036.5
 ---
 # T0043: Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories
 
@@ -32,7 +32,7 @@ Record one Backlog task per consumer repository in the technical spec with `plan
 - [x] **[Doc]**       Write docs/migration-v2.md covering every breaking change in the v2.0.0-pre CHANGELOG section.
 - [x] **[Doc]**       Refresh CLAUDE.md, and link the guide from README.md, docs/index.md, and CHANGELOG.md.
 - [x] **[Implement]** Create the consumer Backlog tasks with plan tasks create --project, using the spec's wording.
-- [ ] **[Verify]**    Run lint-markdown check --offline on the changed documents and plan tasks validate per consumer.
+- [x] **[Verify]**    Run lint-markdown check --offline on the changed documents and plan tasks validate per consumer.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -74,4 +74,11 @@ Record one Backlog task per consumer repository in the technical spec with `plan
 
 - [2026-11-10] **[Implement]**
   Touched undeclared pyproject.toml for the required version bump; recount is 6 files and 250 lines, under the typical line.
+
+- [2026-11-10] **[Decided]**
+  Orchestrator amended the completion check: frozen CHANGELOG sections stay immutable, so the six v1.3.0 moved-file links are accepted.
+  - Verified: all six lint issues sit in the frozen v1.3.0 section.
+
+- [2026-11-10] **[Verify]**
+  The amended completion check passes: all six lint issues sit in frozen v1.3.0 lines 54 to 58, and consumer validation is unchanged.
 

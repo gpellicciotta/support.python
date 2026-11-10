@@ -99,4 +99,8 @@ CHANGELOG.md:58:123: MD014 [valid-relative-links] Relative link 'src/support_pyt
 exit=1
 ```
 The other four declared files pass.
-The user's decision on this conflict is pending; the task stays suspended until it arrives.
+The orchestrator amended the completion check in the technical spec, keeping frozen sections immutable.
+The check now passes when no issue appears outside frozen or released CHANGELOG sections.
+A rerun on `56ea281` matches the output above.
+All six issues sit on lines 54 to 58, inside `## v1.3.0 [2026-11-07]` (lines 53 to 73).
+The other four files report no issue, so the amended check passes.
