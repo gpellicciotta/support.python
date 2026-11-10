@@ -15,7 +15,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Sequence, Set, Tuple
+from typing import Any, Dict, List, Sequence, Set, Tuple
 
 from support_python.cli import PROJECT_VERSION, ToolHarness
 from support_python.git import get_current_branch, get_repo_root, run_git_command
@@ -686,6 +686,17 @@ def format_violations(violations: List[Tuple[int, int, str]], scope: str) -> str
     return "\n".join(lines)
 
 
+def report_planned_write(path: Path, content: str, detail: str, logger: CliLogger, repo_root: Path | None = None) -> None:
+    """Log whether a dry run would create, update, or leave ``path`` unchanged when writing ``content``."""
+    shown = display_path(path, repo_root)
+    if not path.exists():
+        logger.info(f"Would create {shown} ({detail}).")
+    elif path.read_text(encoding="utf-8") != content:
+        logger.info(f"Would update {shown} ({detail}).")
+    else:
+        logger.info(f"{shown} is up to date.")
+
+
 def action_generate(
     paths: Sequence[Path | str],
     digest_path: Path | str = DEFAULT_DIGEST_PATH,
@@ -694,8 +705,13 @@ def action_generate(
     max_words: int = DEFAULT_MAX_WORDS,
     max_bytes: int = MAX_DIGEST_BYTES,
     logger: CliLogger | None = None,
+    *,
+    dry_run: bool = False,
 ) -> int:
-    """Generate the digest file and all derived skills from the given input paths."""
+    """Generate the digest file and all derived skills from the given input paths.
+
+    With ``dry_run``, report which files would be created or updated and write nothing.
+    """
     logger = logger or CliLogger()
     digest_out = Path(digest_path)
     skills_out = Path(skills_dir)
@@ -724,8 +740,11 @@ def action_generate(
     )
     for skill_name, skill_content in sorted(skills.items()):
         skill_dir = skills_out / skill_name
-        skill_dir.mkdir(parents=True, exist_ok=True)
         skill_path = skill_dir / "SKILL.md"
+        if dry_run:
+            report_planned_write(skill_path, skill_content, f"{len(skill_content.splitlines())} lines", logger, repo_root)
+            continue
+        skill_dir.mkdir(parents=True, exist_ok=True)
         skill_path.write_text(skill_content, encoding="utf-8", newline="\n")
         logger.info(f"Generated {display_path(skill_path, repo_root)} ({len(skill_content.splitlines())} lines).")
 
@@ -736,10 +755,14 @@ def action_generate(
         link_base=link_base,
         repo_root=repo_root,
     )
-    digest_out.parent.mkdir(parents=True, exist_ok=True)
-    digest_out.write_text(digest_text, encoding="utf-8", newline="\n")
     is_valid, byte_count, limit = check_size_budget(digest_text, max_bytes)
-    logger.info(f"Generated {display_path(digest_out, repo_root)} ({len(digest_text.splitlines())} lines, {byte_count} bytes).")
+    digest_detail = f"{len(digest_text.splitlines())} lines, {byte_count} bytes"
+    if dry_run:
+        report_planned_write(digest_out, digest_text, digest_detail, logger, repo_root)
+    else:
+        digest_out.parent.mkdir(parents=True, exist_ok=True)
+        digest_out.write_text(digest_text, encoding="utf-8", newline="\n")
+        logger.info(f"Generated {display_path(digest_out, repo_root)} ({digest_detail}).")
     if not is_valid:
         logger.error(f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes).")
         return 1
@@ -755,11 +778,26 @@ def action_check(
     max_bytes: int = MAX_DIGEST_BYTES,
     skill_index: Path | str | None = None,
     logger: CliLogger | None = None,
+    *,
+    output_format: str = "text",
 ) -> int:
-    """Check digest and derived skills freshness, front-matter, skill coverage, budgets, and links."""
+    """Check digest and derived skills freshness, front-matter, skill coverage, budgets, and links.
+
+    With ``output_format="json"``, also emit one JSON document listing the digest, skill statuses, and issues.
+    """
     logger = logger or CliLogger()
     digest_out = Path(digest_path)
     skills_out = Path(skills_dir)
+    is_json = output_format == "json"
+    if is_json:
+        logger.json_output = True
+    issues: List[Dict[str, Any]] = []
+
+    def fail(check: str, path: Path | None, message: str, root: Path | None = None) -> None:
+        """Log an error and record it as a JSON issue whose message is the error's first line."""
+        logger.error(message)
+        shown = display_path(path, root) if path is not None else None
+        issues.append({"check": check, "path": shown, "message": message.splitlines()[0].rstrip(":")})
 
     try:
         input_files = collect_input_files(paths, digest_path=digest_out, skills_dir=skills_out)
@@ -767,7 +805,9 @@ def action_check(
         logger.error(str(exc))
         return 2
     except FrontmatterError as exc:
-        logger.error(str(exc))
+        fail("frontmatter", None, str(exc))
+        if is_json:
+            logger.emit_json({"ok": False, "digest": None, "skills": [], "issues": issues}, indent=2)
         return 1
 
     repo_root = find_project_root(Path(paths[0]))
@@ -787,26 +827,38 @@ def action_check(
             if fm:
                 unknown_top = set(fm.keys()) - allowed_top_keys
                 if unknown_top:
-                    logger.error(f"Unknown front-matter key(s) in {filepath.name}: {sorted(unknown_top)}")
+                    fail(
+                        "frontmatter", filepath, f"Unknown front-matter key(s) in {filepath.name}: {sorted(unknown_top)}", repo_root
+                    )
                     has_error = True
                 if "skill" in fm:
                     if not isinstance(fm["skill"], dict):
-                        logger.error(f"Invalid 'skill:' front-matter in {filepath.name}: expected mapping")
+                        fail(
+                            "frontmatter",
+                            filepath,
+                            f"Invalid 'skill:' front-matter in {filepath.name}: expected mapping",
+                            repo_root,
+                        )
                         has_error = True
                     else:
                         unknown_skill = set(fm["skill"].keys()) - allowed_skill_keys
                         if unknown_skill:
-                            logger.error(f"Unknown key(s) under 'skill:' in {filepath.name}: {sorted(unknown_skill)}")
+                            fail(
+                                "frontmatter",
+                                filepath,
+                                f"Unknown key(s) under 'skill:' in {filepath.name}: {sorted(unknown_skill)}",
+                                repo_root,
+                            )
                             has_error = True
         except Exception as exc:
-            logger.error(f"Error parsing frontmatter in {filepath.name}: {exc}")
+            fail("frontmatter", filepath, f"Error parsing frontmatter in {filepath.name}: {exc}", repo_root)
             has_error = True
 
     # 2. Skill coverage check when --skill-index FILE is given
     if skill_index is not None:
         idx_path = Path(skill_index)
         if not idx_path.is_file():
-            logger.error(f"Skill index file does not exist: {idx_path}")
+            fail("skill-index", idx_path, f"Skill index file does not exist: {idx_path}", repo_root)
             has_error = True
         else:
             idx_content = idx_path.read_text(encoding="utf-8")
@@ -821,7 +873,12 @@ def action_check(
                 if fm and "skill" in fm and isinstance(fm["skill"], dict):
                     fname = filepath.name
                     if not any(token in idx_content for token in (f"({fname})", f"({fname}#", f"/{fname})", f"/{fname}#")):
-                        logger.error(f"Skill guideline '{fname}' is not linked from {display_path(idx_path, repo_root)}")
+                        fail(
+                            "skill-index",
+                            idx_path,
+                            f"Skill guideline '{fname}' is not linked from {display_path(idx_path, repo_root)}",
+                            repo_root,
+                        )
                         has_error = True
 
     # 3. Check skills freshness against disk
@@ -834,17 +891,23 @@ def action_check(
     )
     logger.debug_msg(f"Comparing {len(skills)} derived skill(s) under {display_path(skills_out, repo_root)}.")
     stale_skills = 0
+    skill_statuses: List[Dict[str, Any]] = []
     for skill_name, expected_skill in sorted(skills.items()):
         skill_path = skills_out / skill_name / "SKILL.md"
+        status = "up-to-date"
         if not skill_path.exists():
-            logger.error(f"{display_path(skill_path, repo_root)} does not exist.")
+            status = "missing"
+            fail("missing-skill", skill_path, f"{display_path(skill_path, repo_root)} does not exist.", repo_root)
             stale_skills += 1
-            continue
-        current_skill = skill_path.read_text(encoding="utf-8")
-        if current_skill != expected_skill:
-            logger.error(format_stale_report(skill_path, current_skill, expected_skill, max_lines=30, repo_root=repo_root))
-            stale_skills += 1
-        elif logger.verbose:
+        else:
+            current_skill = skill_path.read_text(encoding="utf-8")
+            if current_skill != expected_skill:
+                status = "stale"
+                report = format_stale_report(skill_path, current_skill, expected_skill, max_lines=30, repo_root=repo_root)
+                fail("stale-skill", skill_path, report, repo_root)
+                stale_skills += 1
+        skill_statuses.append({"name": skill_name, "path": display_path(skill_path, repo_root), "status": status})
+        if status == "up-to-date" and logger.verbose:
             logger.info(f"{display_path(skill_path, repo_root)} is up to date.")
     if stale_skills:
         has_error = True
@@ -863,8 +926,11 @@ def action_check(
                 if subfile.is_file() and subfile.name != "SKILL.md":
                     rel_subfile = subfile.relative_to(skill_dir).as_posix()
                     if f"]({rel_subfile})" not in skill_text and f"]({rel_subfile}#" not in skill_text:
-                        logger.error(
-                            f"Orphan reference file '{rel_subfile}' in skill '{skill_dir.name}' is not linked from SKILL.md"
+                        fail(
+                            "orphan-file",
+                            subfile,
+                            f"Orphan reference file '{rel_subfile}' in skill '{skill_dir.name}' is not linked from SKILL.md",
+                            repo_root,
                         )
                         has_error = True
 
@@ -881,7 +947,7 @@ def action_check(
                         norm_target = os.path.normpath(target).replace("\\", "/")
                         if norm_target.startswith("../") or target.startswith(("/", "\\")):
                             reported_escaping.add((skill_dir.name, target))
-                            logger.error(f"Escaping link in skill '{skill_dir.name}': {target}")
+                            fail("escaping-link", skill_file, f"Escaping link in skill '{skill_dir.name}': {target}", repo_root)
                             has_error = True
 
     # 5. Digest freshness, size budget, sentence word budget, and relative links
@@ -894,29 +960,38 @@ def action_check(
     )
     is_valid_size, byte_count, limit = check_size_budget(expected_digest, max_bytes)
     if not is_valid_size:
-        logger.error(f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes).")
+        fail(
+            "digest-size", digest_out, f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes).", repo_root
+        )
         has_error = True
 
+    digest_status = "up-to-date"
     if not digest_out.exists():
-        logger.error(f"{display_path(digest_out, repo_root)} does not exist.")
+        digest_status = "missing"
+        fail("missing-digest", digest_out, f"{display_path(digest_out, repo_root)} does not exist.", repo_root)
         has_error = True
     else:
         current_digest = digest_out.read_text(encoding="utf-8")
         current_valid_size, current_bytes, _ = check_size_budget(current_digest, max_bytes)
         if not current_valid_size and is_valid_size:
-            logger.error(
-                f"{display_path(digest_out, repo_root)} ({current_bytes} bytes) exceeds the hard budget limit ({limit} bytes)."
+            fail(
+                "digest-size",
+                digest_out,
+                f"{display_path(digest_out, repo_root)} ({current_bytes} bytes) exceeds the hard budget limit ({limit} bytes).",
+                repo_root,
             )
             has_error = True
         if current_digest != expected_digest:
-            logger.error(format_stale_report(digest_out, current_digest, expected_digest, repo_root=repo_root))
+            digest_status = "stale"
+            report = format_stale_report(digest_out, current_digest, expected_digest, repo_root=repo_root)
+            fail("stale-digest", digest_out, report, repo_root)
             has_error = True
         elif is_valid_size:
             logger.info(f"{display_path(digest_out, repo_root)} is up to date and within budget ({byte_count} bytes).")
 
     digest_violations = find_budget_violations(expected_digest, max_words=max_words)
     if digest_violations:
-        logger.error(format_violations(digest_violations, "digest"))
+        fail("word-budget", digest_out, format_violations(digest_violations, "digest"), repo_root)
         has_error = True
 
     in_code = False
@@ -929,14 +1004,16 @@ def action_check(
         for m in re.finditer(r"\[([^\]]+)\]\(([^)]+)\)", line):
             target = m.group(2).strip().split()[0]
             if not target.startswith(("http://", "https://", "mailto:", "#")):
-                logger.error(f"Relative markdown link in digest: {target}")
+                fail("relative-link", digest_out, f"Relative markdown link in digest: {target}", repo_root)
                 has_error = True
 
     # 6. Derived skills word budget and escaping links
     for skill_name, skill_content in sorted(skills.items()):
         violations = find_budget_violations(skill_content, max_words=max_words)
         if violations:
-            logger.error(format_violations(violations, f"skill {skill_name}"))
+            fail(
+                "word-budget", skills_out / skill_name / "SKILL.md", format_violations(violations, f"skill {skill_name}"), repo_root
+            )
             has_error = True
 
         in_code = False
@@ -950,15 +1027,27 @@ def action_check(
                 target = m.group(2).strip().split()[0]
                 if not target.startswith(("http://", "https://", "mailto:", "#")):
                     if target.startswith(("../", "/", "\\")) and (skill_name, target) not in reported_escaping:
-                        logger.error(f"Escaping link in skill '{skill_name}': {target}")
+                        fail(
+                            "escaping-link",
+                            skills_out / skill_name / "SKILL.md",
+                            f"Escaping link in skill '{skill_name}': {target}",
+                            repo_root,
+                        )
                         has_error = True
 
     if not has_error:
         logger.info(
             f"All directive sentences satisfy the {max_words}-word budget and digest size is within {limit} bytes ({byte_count} bytes)."
         )
-        return 0
-    return 1
+    if is_json:
+        digest_info = {
+            "path": display_path(digest_out, repo_root),
+            "status": digest_status,
+            "bytes": byte_count,
+            "max_bytes": limit,
+        }
+        logger.emit_json({"ok": not has_error, "digest": digest_info, "skills": skill_statuses, "issues": issues}, indent=2)
+    return 1 if has_error else 0
 
 
 def configure_paths_parser(parser: argparse.ArgumentParser) -> None:
@@ -973,6 +1062,18 @@ def configure_paths_parser(parser: argparse.ArgumentParser) -> None:
         return ns
 
     parser.parse_args = parse_args  # type: ignore[method-assign]
+
+
+def configure_generate_parser(parser: argparse.ArgumentParser) -> None:
+    """Configure the PATH arguments and the '--dry-run' option for 'generate'."""
+    configure_paths_parser(parser)
+    parser.add_argument("--dry-run", action="store_true", help="report which files would be created or updated without writing")
+
+
+def configure_check_parser(parser: argparse.ArgumentParser) -> None:
+    """Configure the PATH arguments and the '--format' option for 'check'."""
+    configure_paths_parser(parser)
+    ToolHarness.add_format_option(parser)
 
 
 class DigestHarness(ToolHarness):
@@ -993,6 +1094,8 @@ class DigestHarness(ToolHarness):
             config["Skills dir"] = Path(self.args.skills_dir).as_posix()
             config["Max words"] = self.args.max_words
             config["Max bytes"] = self.args.max_bytes
+            if action == "generate":
+                config["Dry run"] = str(self.args.dry_run).lower()
         super().log_startup(logger, action, extra={**config, **(extra or {})})
 
     def run(self, argv: Sequence[str] | None = None, extra_startup: dict | None = None) -> int:
@@ -1098,11 +1201,13 @@ def build_harness() -> DigestHarness:
             max_words=args.max_words,
             max_bytes=args.max_bytes,
             logger=logger,
+            dry_run=args.dry_run,
         ),
         detail="Collects Markdown files from each PATH, orders them by front-matter 'index' then\n"
-        "argument and path order, writes derived skills to --skills-dir, and writes the digest to --digest.",
+        "argument and path order, writes derived skills to --skills-dir, and writes the digest to --digest.\n"
+        "With --dry-run, reports which files would be created or updated and writes nothing.",
         usage_suffix="<PATH>... [options]",
-        configure_parser=configure_paths_parser,
+        configure_parser=configure_generate_parser,
     )
     harness.add_action(
         "check",
@@ -1116,12 +1221,14 @@ def build_harness() -> DigestHarness:
             max_bytes=args.max_bytes,
             skill_index=args.skill_index,
             logger=logger,
+            output_format=args.format,
         ),
         detail="Regenerates the digest and derived skills in memory and compares them against --digest\n"
         "and --skills-dir on disk, while validating front-matter keys, word and byte budgets,\n"
-        "orphan reference files, link constraints, and optional --skill-index coverage.",
+        "orphan reference files, link constraints, and optional --skill-index coverage.\n"
+        "With --format json, prints one JSON document with the digest and skill statuses and every issue.",
         usage_suffix="<PATH>... [options]",
-        configure_parser=configure_paths_parser,
+        configure_parser=configure_check_parser,
     )
     return harness
 

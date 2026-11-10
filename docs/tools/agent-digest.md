@@ -8,8 +8,8 @@ Implemented in [agent_digest.py](../../src/support_python/tools/agent_digest.py)
 ## Command-Line Interface
 Run actions through the `agent-digest` console script in [agent_digest.py](../../src/support_python/tools/agent_digest.py):
 ```bash
-agent-digest generate <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N]
-agent-digest check <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--skill-index FILE]
+agent-digest generate <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--dry-run]
+agent-digest check <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--skill-index FILE] [--format text|json]
 agent-digest help [--verbose]
 agent-digest version
 ```
@@ -23,6 +23,8 @@ agent-digest version
 | `--max-words N`      | `20`                | Maximum word count per directive sentence                          |
 | `--max-bytes N`      | `20480`             | Maximum UTF-8 byte size for the generated digest                   |
 | `--skill-index FILE` | None                | Index Markdown file that must link to every skill source (`check`) |
+| `--dry-run`          | Off                 | Report planned writes without writing anything (`generate`)        |
+| `--format FORMAT`    | `text`              | Print the `check` result as `text` or one `json` document          |
 
 Standard logging options (`--log-file PATH`, `--log-level LEVEL`, `--debug`, `--verbose`) apply to `generate` and `check`.
 
@@ -82,6 +84,33 @@ skill:
 - Every non-`SKILL.md` file under `<skills-dir>/<name>/` is linked from its companion `SKILL.md` (no orphan files).
 - The generated digest contains no relative Markdown links.
 - Derived `SKILL.md` files contain no links escaping the skill directory (`../`, `/`, or `\`).
+
+---
+
+## Dry Run in `generate`
+`agent-digest generate --dry-run` builds every output in memory and writes nothing:
+- Each output file logs `Would create {{path}}`, `Would update {{path}}`, or `{{path}} is up to date.`
+- The digest byte budget still applies, so an oversized digest exits `1`.
+
+---
+
+## JSON Output in `check`
+`agent-digest check --format json` prints one JSON document on `stdout` for exit codes `0` and `1`:
+```json
+{
+  "ok": false,
+  "digest": {"path": "guidelines/agent-digest.md", "status": "stale", "bytes": 1234, "max_bytes": 20480},
+  "skills": [{"name": "python-guidelines", "path": "skills/python-guidelines/SKILL.md", "status": "up-to-date"}],
+  "issues": [{"check": "stale-digest", "path": "guidelines/agent-digest.md", "message": "guidelines/agent-digest.md is out of date"}]
+}
+```
+
+- `ok` is `true` exactly when the exit code is `0`.
+- `digest.status` and `skills[].status` take `up-to-date`, `stale`, or `missing`; `digest.bytes` is the regenerated size.
+- `digest` is `null` when input collection fails on invalid front-matter.
+- `issues[].check` names the failed validation: `frontmatter`, `skill-index`, `missing-skill`, `stale-skill`, `orphan-file`, `escaping-link`, `digest-size`, `missing-digest`, `stale-digest`, `word-budget`, or `relative-link`.
+- `issues[].path` is the offending file, or `null` when no single file applies; `issues[].message` is the error's first line.
+- Log messages, including stale-file diffs, go to `stderr`; exit code `2` errors print nothing on `stdout`.
 
 ---
 

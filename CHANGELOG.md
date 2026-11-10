@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.40-pre
+## v2.0.41-pre
+- CLI: Added `--dry-run` to `agent-digest generate` and `--format text|json` to `agent-digest check`, whose JSON document lists digest and skill statuses and every issue, as [ADR-0003](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) requires ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
 - CLI: Added a shared JSON output mode: `CliLogger.json_output` sends every stdout-bound log message to stderr, `CliLogger.emit_json` prints one JSON document, and `ToolHarness.add_format_option` registers `--format text|json`, enabling the mode for `json` ([logging.py](src/support_python/logging.py), [cli.py](src/support_python/cli.py)).
 - CLI: Switched `agent-files`, `lint-markdown`, `processes`, and `git-repository-backup` to the shared JSON mode, removing `StderrRoutingLogger`, `_JsonAwareLogger`, `LintMarkdownHarness`, `JsonModeLogger`, and `ProcessesHarness`; with `--format json`, `agent-files`, `lint-markdown`, and `git-repository-backup` now show their INFO lines and banners on stderr instead of dropping them, and JSON documents are unchanged.
 - CLI: Fixed `ToolHarness` help option labels of 22 or more characters running into their help text; the option column now clears the longest label by two spaces and stays aligned ([cli.py](src/support_python/cli.py)).

@@ -696,6 +696,189 @@ class TestGenerateAgentDigestEndToEnd(unittest.TestCase):
         self.assertIn("Starting agent-digest v", result.stdout)
         self.assertRegex(result.stdout, r"Finished agent-digest check in \d+\.\ds with status: succeeded")
 
+    def test_installed_check_json_keeps_stdout_pure(self) -> None:
+        import json
+
+        result = self.run_script(
+            "check",
+            "guidelines",
+            "--digest",
+            "guidelines/agent-digest.md",
+            "--skills-dir",
+            "skills",
+            "--link-base",
+            DEV_GUIDELINES_LINK_BASE,
+            "--format",
+            "json",
+            "--verbose",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        doc = json.loads(result.stdout)
+        self.assertTrue(doc["ok"])
+        self.assertEqual(doc["digest"]["path"], "guidelines/agent-digest.md")
+        self.assertTrue(doc["skills"])
+        self.assertIn("Starting agent-digest v", result.stderr)
+        self.assertRegex(result.stderr, r"Finished agent-digest check in \d+\.\ds with status: succeeded")
+
+    def test_installed_generate_dry_run_writes_nothing(self) -> None:
+        result = self.run_script("generate", "guidelines", "--digest", "dry-out.md", "--skills-dir", "dry-skills", "--dry-run")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Would create dry-out.md", result.stdout)
+        self.assertFalse((self.repo_root / "dry-out.md").exists())
+        self.assertFalse((self.repo_root / "dry-skills").exists())
+
+
+class TestGenerateDryRun(unittest.TestCase):
+    def test_dry_run_on_fresh_sources_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, _, _ = make_sources(root)
+            digest_path, skills_dir = root / "out" / "agent-digest.md", root / "out" / "skills"
+            code, out, err = run_main(
+                ["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--dry-run"]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertFalse((root / "out").exists())
+            self.assertIn("Would create", out)
+            self.assertIn("agent-digest.md", out)
+            self.assertIn("sample-guidelines/SKILL.md", out)
+            self.assertNotIn("Generated ", out)
+
+    def test_dry_run_reports_up_to_date_then_would_update(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            argv = ["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)]
+            self.assertEqual(run_main(argv)[0], 0)
+
+            code, out, err = run_main([*argv, "--dry-run"])
+            self.assertEqual(code, 0, err)
+            self.assertIn("agent-digest.md is up to date.", out)
+            self.assertIn("sample-guidelines/SKILL.md is up to date.", out)
+            self.assertNotIn("Would ", out)
+
+            general = src_dir / "general-guidelines.md"
+            general.write_text(general.read_text(encoding="utf-8") + "- Extra rule.\n", encoding="utf-8")
+            before = digest_path.read_text(encoding="utf-8")
+            code, out, err = run_main([*argv, "--dry-run"])
+            self.assertEqual(code, 0, err)
+            self.assertIn("Would update", out)
+            self.assertEqual(digest_path.read_text(encoding="utf-8"), before)
+
+    def test_dry_run_still_enforces_byte_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            code, _, err = run_main(
+                [
+                    "generate",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--max-bytes",
+                    "10",
+                    "--dry-run",
+                ]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("exceeds the hard budget limit", err)
+            self.assertFalse(digest_path.exists())
+            self.assertFalse(skills_dir.exists())
+
+    def test_dry_run_appears_in_startup_banner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            code, out, _ = run_main(
+                ["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--dry-run", "-v"]
+            )
+            self.assertEqual(code, 0)
+            self.assertIn("- Dry run: true", out)
+
+
+class TestCheckJsonFormat(unittest.TestCase):
+    def _check(self, src_dir: Path, digest_path: Path, skills_dir: Path, *extra: str) -> tuple[int, str, str]:
+        return run_main(
+            ["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--format", "json", *extra]
+        )
+
+    def test_fresh_output_reports_ok_document(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / ".git").mkdir()
+            src_dir, digest_path, skills_dir = make_sources(root)
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            code, out, err = self._check(src_dir, digest_path, skills_dir, "--verbose")
+            self.assertEqual(code, 0, err)
+            doc = json.loads(out)
+            self.assertEqual(out, json.dumps(doc, indent=2) + "\n")
+            self.assertEqual(
+                doc,
+                {
+                    "ok": True,
+                    "digest": {
+                        "path": "guidelines/agent-digest.md",
+                        "status": "up-to-date",
+                        "bytes": len(digest_path.read_bytes()),
+                        "max_bytes": generate_agent_digest.MAX_DIGEST_BYTES,
+                    },
+                    "skills": [{"name": "sample-guidelines", "path": "skills/sample-guidelines/SKILL.md", "status": "up-to-date"}],
+                    "issues": [],
+                },
+            )
+            self.assertIn("Starting agent-digest v", err)
+            self.assertIn("is up to date", err)
+
+    def test_failures_become_issues(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            digest_path.write_text("stale digest\n", encoding="utf-8")
+            shutil.rmtree(skills_dir / "sample-guidelines")
+            index = root / "index.md"
+            index.write_text("# Index\n", encoding="utf-8")
+            code, out, err = self._check(src_dir, digest_path, skills_dir, "--skill-index", str(index))
+            self.assertEqual(code, 1)
+            doc = json.loads(out)
+            self.assertFalse(doc["ok"])
+            self.assertEqual(doc["digest"]["status"], "stale")
+            self.assertEqual(doc["skills"][0]["status"], "missing")
+            checks = {issue["check"] for issue in doc["issues"]}
+            self.assertEqual(checks, {"stale-digest", "missing-skill", "skill-index"})
+            stale = next(issue for issue in doc["issues"] if issue["check"] == "stale-digest")
+            self.assertTrue(stale["path"].endswith("agent-digest.md"))
+            self.assertTrue(stale["message"].endswith("agent-digest.md is out of date"))
+            self.assertNotIn("\n", stale["message"])
+            self.assertIn("**[ERROR]**", err)
+            self.assertIn("agent-digest.md is out of date:", err)
+
+    def test_missing_path_exits_two_with_empty_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            code, out, err = self._check(root / "missing", root / "d.md", root / "skills")
+            self.assertEqual(code, 2)
+            self.assertEqual(out, "")
+            self.assertIn("Path does not exist", err)
+
+    def test_text_format_prints_no_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            code, out, _ = run_main(
+                ["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--format", "text"]
+            )
+            self.assertEqual(code, 0)
+            self.assertNotIn("{", out)
+            self.assertIn("is up to date", out)
+
 
 if __name__ == "__main__":
     unittest.main()
