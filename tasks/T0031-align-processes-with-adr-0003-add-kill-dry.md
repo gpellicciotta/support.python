@@ -5,17 +5,20 @@ session: claude-20261110-f5c3f8
 needs: []
 branch: task/T0031-align-processes-with-adr-0003-add-kill-dry
 worktree: .plan/work/T0031-align-processes-with-adr-0003-add-kill-dry
-status: active
+status: completed
 started_at: "2026-11-10T01:17:13Z"
-ended_at: —
+ended_at: "2026-11-10T01:28:24Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 992.4, input: 200, output: 40100, cache_read: 7688420, cache_write: 176028}
-work_duration: 484.4
-review_status: pending
+  review: {turns: 2, duration_s: 263.4, input: 8, output: 5646, cache_read: 257028, cache_write: 6834}
+work_duration: 671.3
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: 836b38a657d0090d31e6772226d38c17d48daffa
 ---
 # T0031: Align processes with ADR-0003: add kill --dry-run and rename the table output format to text
 
@@ -31,7 +34,7 @@ Write `docs/tools/processes.md`.
 - [x] **[Implement]** Add kill --dry-run and rename the table format value to text.
 - [x] **[Verify]**    Run the full suite and the installed integration scenario from the technical spec.
 - [x] **[Doc]**       Write docs/tools/processes.md, and update README.md, docs/index.md, and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-09] **[Doc]**
@@ -65,4 +68,11 @@ Write `docs/tools/processes.md`.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 approved by @claude-2: The work meets all three goals and matches the technical spec and ADR-0003.
+  - Findings: [review-findings-1.md](T0031-align-processes-with-adr-0003-add-kill-dry/review-findings-1.md).
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 
