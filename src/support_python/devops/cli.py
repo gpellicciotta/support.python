@@ -13,7 +13,7 @@ import argparse
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
-from ..cli import ToolHarness
+from ..cli import COPYRIGHT, ToolHarness
 from ..logging import CliLogger
 from .deploy import DeployContext, DeployPipeline, DeployStep
 from .projects import Project
@@ -49,7 +49,14 @@ class DevopsCli:
         harness: Underlying :class:`~support_python.cli.ToolHarness`.
     """
 
-    def __init__(self, project: Project, *, name: str = "devops", description: Optional[str] = None) -> None:
+    def __init__(
+        self,
+        project: Project,
+        *,
+        name: str = "devops",
+        description: Optional[str] = None,
+        copyright: str = COPYRIGHT,
+    ) -> None:
         self.project = project
         self._default_description = description is None
         self._deploy_enabled = False
@@ -59,7 +66,12 @@ class DevopsCli:
         except (FileNotFoundError, ValueError):
             version = "0.0.0+unknown"
         self.harness = ToolHarness(
-            name, description or DEFAULT_DESCRIPTION, version=version, exit_codes=EXIT_CODES, repo_dir=project.root
+            name,
+            description or DEFAULT_DESCRIPTION,
+            version=version,
+            copyright=copyright,
+            exit_codes=EXIT_CODES,
+            repo_dir=project.root,
         )
         test_example = [f"{name} test {project.test_selection_example}"] if project.test_selection_example else []
         self.harness.set_examples([f"{name} check", *test_example, f"{name} versions", f"{name} release --dry-run"])

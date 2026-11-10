@@ -403,6 +403,22 @@ class CaptureCliTests(unittest.TestCase):
         self.assertEqual(code, 2)
         mock_run_capture.assert_not_called()
 
+    def test_capture_app_config_default_author_is_empty(self) -> None:
+        cfg = CaptureAppConfig(app_name="Default App")
+        self.assertEqual(cfg.author, "")
+
+    def test_cli_version_and_help_without_author_omits_copyright(self) -> None:
+        cfg = CaptureAppConfig(
+            app_name="Empty Author App",
+            cli_name="empty-capture",
+            version="1.0.0",
+            author="",
+        )
+        harness = build_capture_harness(cfg)
+        with patch("support_python.cli.resolve_build_metadata", return_value="abc1234"):
+            self.assertEqual(harness.format_version(), "empty-capture v1.0.0+abc1234")
+            self.assertTrue(harness.format_help().startswith("empty-capture v1.0.0+abc1234\n\nEmpty Author App"))
+
     def test_cli_version_action_uses_harness_banner(self) -> None:
         for argv in (["version"], ["--version"]):
             with self.subTest(argv=argv):

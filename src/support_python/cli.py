@@ -2,7 +2,7 @@
 
 Implements the standard version/help/exit-code template from the CLI guideline
 (action-oriented commands, `-h`/`--help`, `--version`, `-v`/`--verbose`, `--debug`,
-a `{prog} v{version} - Copyright (c) {author}` header, and exit-codes listing).
+a `{prog} v{version}` header with optional ` - Copyright (c) {author}` suffix, and exit-codes listing).
 """
 
 from __future__ import annotations
@@ -24,11 +24,11 @@ from .logging import CliLogger
 from .terminal import configure_utf8_output
 from .version import get_package_version, get_project_version
 
-#: Default copyright author name string used in CLI banners.
-APP_AUTHOR: str = "Giovanni Pellicciotta"
+#: Default copyright author name string used in CLI banners. Consumers should pass their own author name.
+APP_AUTHOR: str = ""
 
-#: Default full copyright notice string used in CLI banners.
-COPYRIGHT: str = f"Copyright (c) {APP_AUTHOR}"
+#: Default full copyright notice string used in CLI banners. Consumers should pass their own copyright notice.
+COPYRIGHT: str = ""
 
 #: Default project version string resolved from package metadata or pyproject.toml.
 PROJECT_VERSION: str = get_package_version("support-python")
@@ -264,7 +264,8 @@ class ToolHarness:
     def format_version(self) -> str:
         """Return single-line formatted version banner per CLI guidelines."""
         ver = re.sub(r"rc0$", "-pre", self.version)
-        return f"{self.name} v{get_full_version(ver, cwd=self.repo_dir)} - {self.copyright}"
+        base = f"{self.name} v{get_full_version(ver, cwd=self.repo_dir)}"
+        return f"{base} - {self.copyright}" if self.copyright else base
 
     def _standard_option_rows(self) -> list[tuple[str, str]]:
         return [

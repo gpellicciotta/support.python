@@ -257,7 +257,17 @@ class HarnessTests(DevopsCliTestCase):
     def test_version_banner_shows_name_and_project_version(self) -> None:
         code, out, _ = run_cli(self.cli(venv=False), "version")
         self.assertEqual(code, 0)
-        self.assertTrue(out.startswith("devops v1.2.0-pre"), out)
+        self.assertEqual(out.strip(), "devops v1.2.0-pre")
+
+    def test_devops_cli_forwards_copyright(self) -> None:
+        make_repo(self.root, venv=False)
+        cli = DevopsCli(
+            PythonProject(self.root, runner=self.runner),
+            copyright="Copyright (c) Custom Author",
+        )
+        code, out, _ = run_cli(cli, "version")
+        self.assertEqual(code, 0)
+        self.assertEqual(out.strip(), "devops v1.2.0-pre - Copyright (c) Custom Author")
 
     def test_help_lists_the_standard_actions(self) -> None:
         code, out, _ = run_cli(self.cli(venv=False), "help", "--verbose")

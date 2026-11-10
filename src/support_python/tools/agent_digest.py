@@ -22,6 +22,7 @@ from support_python.cli import PROJECT_VERSION, ToolHarness
 from support_python.git import get_current_branch, get_repo_root, run_git_command
 from support_python.logging import CliLogger
 from support_python.tools.agent_files import find_project_root
+from support_python.tools import TOOLS_COPYRIGHT
 
 
 def _write_lf(path: Path, text: str) -> None:
@@ -1343,6 +1344,7 @@ def build_harness() -> DigestHarness:
         name=TOOL_NAME,
         description="Deterministic generator and validator for agent digest Markdown files and derived skills.",
         version=TOOL_VERSION,
+        copyright=TOOLS_COPYRIGHT,
         exit_codes={
             0: "success (generate: written within budget; check: up to date and all validations passed)",
             1: "stale digest or skill, validation or budget failure, invalid front-matter, or runtime error",

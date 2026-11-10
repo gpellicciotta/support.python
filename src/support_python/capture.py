@@ -896,7 +896,7 @@ def build_capture_harness(config: CaptureAppConfig) -> ToolHarness:
         name=config.cli_name,
         description=f"{config.app_name}\nUnified visual view capture and UI screenshot automation CLI.",
         version=config.version or "0.0.0",
-        copyright=f"Copyright (c) {config.author}",
+        copyright=f"Copyright (c) {config.author}" if config.author else "",
         exit_codes=dict(STANDARD_CAPTURE_EXIT_CODES),
         examples=[
             f"{config.cli_name} capture sign-in --mobile",

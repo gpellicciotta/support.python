@@ -13,6 +13,7 @@ from ..logging import CliLogger
 from .. import processes
 from ..processes import list_processes, safe_kill
 from ..tables import render_output
+from support_python.tools import TOOLS_COPYRIGHT
 
 TOOL_NAME = "processes"
 TOOL_VERSION: str = PROJECT_VERSION
@@ -129,6 +130,7 @@ def build_harness() -> ToolHarness:
         name=TOOL_NAME,
         description=DESCRIPTION,
         version=TOOL_VERSION,
+        copyright=TOOLS_COPYRIGHT,
         exit_codes=EXIT_CODES,
         examples=EXAMPLES,
         fallback_action="kill",

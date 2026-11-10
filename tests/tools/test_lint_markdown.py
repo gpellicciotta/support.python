@@ -13,10 +13,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from support_python.cli import COPYRIGHT, ToolHarness, get_full_version
+from support_python.cli import ToolHarness, get_full_version
 from support_python.logging import CliLogger, format_severity_indicator
 from support_python.markdown.lint import MarkdownLinter
-from support_python.tools import lint_markdown
+from support_python.tools import TOOLS_COPYRIGHT, lint_markdown
 
 SRC_DIR = Path(__file__).resolve().parents[2] / "src"
 _MODULE_PATH = SRC_DIR / "support_python" / "tools" / "lint_markdown.py"
@@ -36,10 +36,10 @@ class TestCLIAndMain(unittest.TestCase):
         for argv in (["version"], ["--version"]):
             code, out, _ = run_main(argv)
             self.assertEqual(code, 0, argv)
-            self.assertEqual(out, f"lint-markdown v{get_full_version()} - {COPYRIGHT}\n")
+            self.assertEqual(out, f"lint-markdown v{get_full_version()} - {TOOLS_COPYRIGHT}\n")
 
     def test_help_screens_start_with_version_header(self) -> None:
-        header = f"lint-markdown v{get_full_version()} - {COPYRIGHT}\n"
+        header = f"lint-markdown v{get_full_version()} - {TOOLS_COPYRIGHT}\n"
         for argv in (["help"], ["help", "--verbose"], ["-h"], ["--help"], ["check", "--help"]):
             code, out, _ = run_main(argv)
             self.assertEqual(code, 0, argv)

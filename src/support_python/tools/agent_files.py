@@ -31,6 +31,7 @@ from support_python.logging import (  # noqa: E402
     CliLogger,
     format_severity_indicator as format_severity_indicator,
 )
+from support_python.tools import TOOLS_COPYRIGHT
 from support_python.tools.agent_files_config import (
     DEFAULT_DIGEST_RELPATH,
     DEFAULT_LEGACY_SKILL_NAMES,
@@ -1084,6 +1085,7 @@ def build_harness() -> SyncHarness:
         name=TOOL_NAME,
         description="Sync this repository's guidelines digest and skills into installed AI coding tools.",
         version=TOOL_VERSION,
+        copyright=TOOLS_COPYRIGHT,
         exit_codes={
             0: "success (check: no tool has pending changes)",
             1: "a tool failed, the digest is missing, a runtime error occurred, or (check) changes are pending",

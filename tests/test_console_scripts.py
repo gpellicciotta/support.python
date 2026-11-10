@@ -81,6 +81,13 @@ def test_agent_files_banner_and_usage_name() -> None:
     assert "update-global-agent-files" not in help_text
 
 
+def test_tools_copyright_defined_and_not_exported_from_root() -> None:
+    from support_python.tools import TOOLS_COPYRIGHT
+
+    assert TOOLS_COPYRIGHT == "Copyright (c) Giovanni Pellicciotta"
+    assert not hasattr(support_python, "TOOLS_COPYRIGHT")
+
+
 def test_each_tool_harness_version_banner() -> None:
     expected_banners = [
         (processes.build_harness(), "processes v"),
@@ -90,7 +97,9 @@ def test_each_tool_harness_version_banner() -> None:
         (git_repository_backup.build_harness(), "git-repository-backup v"),
     ]
     for harness, prefix in expected_banners:
-        assert harness.format_version().startswith(prefix)
+        banner = harness.format_version()
+        assert banner.startswith(prefix)
+        assert banner.endswith(" - Copyright (c) Giovanni Pellicciotta")
 
 
 @pytest.mark.parametrize(
@@ -103,11 +112,12 @@ def test_each_tool_harness_version_banner() -> None:
         ("git-repository-backup", "git-repository-backup v"),
     ],
 )
-def test_console_script_version_action(script_name: str, expected_prefix: str) -> None:
-    result = run_console_script(script_name, "version")
+@pytest.mark.parametrize("flag", ["version", "--version"])
+def test_console_script_version_action(script_name: str, expected_prefix: str, flag: str) -> None:
+    result = run_console_script(script_name, flag)
     assert result.returncode == 0, result.stderr
     assert result.stdout.startswith(expected_prefix)
-    assert " - Copyright (c) Giovanni Pellicciotta" in result.stdout
+    assert result.stdout.strip().endswith(" - Copyright (c) Giovanni Pellicciotta")
 
 
 def test_agent_files_console_script_lists_tools() -> None:

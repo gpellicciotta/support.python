@@ -28,6 +28,8 @@ _ORIGINAL_ENV: dict[str, str | None] = {
 
 # Directories inside .plan reserved for orchestrator runtime, sessions, and worktrees
 EXCLUDED_PLAN_DIRS: set[str] = {"work", "sessions", "logs", "tmp", "__pycache__", ".git"}
+# Directories inside .claude/skills reserved for external tool sync runtime
+EXCLUDED_SKILLS_DIRS: set[str] = {"synced"}
 
 # Create session temporary home directory immediately so module-level imports see it
 _SESSION_TEMP_HOME: Path = Path(tempfile.mkdtemp(prefix="support-python-test-home-")).resolve()
@@ -104,7 +106,8 @@ def take_snapshot(
                 except OSError:
                     pass
             elif target.is_dir():
-                for root, _, files in os.walk(target):
+                for root, dirs, files in os.walk(target):
+                    dirs[:] = [d for d in dirs if d not in EXCLUDED_SKILLS_DIRS]
                     for file_name in files:
                         fp = Path(root) / file_name
                         try:

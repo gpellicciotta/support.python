@@ -8,8 +8,9 @@ These modules give every command-line tool the same action-oriented interface, l
 
 All symbols are re-exported from `support_python`.
 
-## Action-oriented CLI harness, tables, and token storage
 - `support_python.cli` provides `ToolHarness`/`Action`: registered actions with handlers, a fallback action, an exit-code table, and startup/exit banners.
+  `APP_AUTHOR` and `COPYRIGHT` default to empty strings, so banners show `{name} v{version}` without a copyright suffix.
+  Pass `copyright` to `ToolHarness` to include ` - {copyright}` in banners.
   A `fallback_action` runs when the first argument names no action, as in `tool --url x` or `tool target`.
   Leading options keep a named action: `tool --verbose list` runs `list`.
   `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.

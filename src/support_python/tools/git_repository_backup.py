@@ -24,10 +24,11 @@ import sys
 import tempfile
 from typing import Any, Callable, Sequence
 
-from support_python.cli import COPYRIGHT, PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
+from support_python.cli import PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
 from support_python.config import normalize_config_keys  # noqa: E402
 from support_python.env import user_config_path  # noqa: E402
 from support_python.logging import CliLogger  # noqa: E402
+from support_python.tools import TOOLS_COPYRIGHT
 
 TOOL_NAME = "git-repository-backup"
 LEGACY_TOOL_NAME = "backup-git-repos"
@@ -84,7 +85,7 @@ class RestoreSource:
 
 def get_version_banner() -> str:
     """Return single-line formatted version string."""
-    return f"{TOOL_NAME} v{get_full_version(TOOL_VERSION)} - {COPYRIGHT}"
+    return f"{TOOL_NAME} v{get_full_version(TOOL_VERSION)} - {TOOLS_COPYRIGHT}"
 
 
 def format_exit_codes() -> str:
@@ -1047,7 +1048,13 @@ class BackupHarness(ToolHarness):
 
 def build_harness() -> BackupHarness:
     """Construct the CLI harness with the backup, list, restore, and set-password actions."""
-    harness = BackupHarness(name=TOOL_NAME, description=DESCRIPTION, version=TOOL_VERSION, exit_codes=EXIT_CODES)
+    harness = BackupHarness(
+        name=TOOL_NAME,
+        description=DESCRIPTION,
+        version=TOOL_VERSION,
+        copyright=TOOLS_COPYRIGHT,
+        exit_codes=EXIT_CODES,
+    )
     harness.add_global_argument("--config", type=str, default=None, help="JSON config file.")
     harness.add_global_argument("--root", action="append", default=None, help="Directory to scan for repos.")
     harness.add_global_argument("--depth", type=int, default=None, help="Maximum scan depth below each root.")

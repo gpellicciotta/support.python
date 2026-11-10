@@ -17,6 +17,7 @@ from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LEGACY_CON
 from support_python.markdown.profiles import read_plugin_entries, resolve_config_file
 from support_python.markdown.registry import RuleRegistry
 from support_python.tables import format_table
+from support_python.tools import TOOLS_COPYRIGHT
 
 TOOL_NAME = "lint-markdown"
 TOOL_VERSION: str = PROJECT_VERSION
@@ -27,7 +28,9 @@ SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [
 
 def report_argument_error(message: str) -> NoReturn:
     """Log an argument error with the standard severity indicator, then exit with code 2."""
-    early_logger = ToolHarness(name=TOOL_NAME, description=DESCRIPTION, version=TOOL_VERSION)._extract_early_logger(sys.argv[1:])
+    early_logger = ToolHarness(
+        name=TOOL_NAME, description=DESCRIPTION, version=TOOL_VERSION, copyright=TOOLS_COPYRIGHT
+    )._extract_early_logger(sys.argv[1:])
     early_logger.error(f"{message}\nUsage: {SHORT_USAGE}; run '{TOOL_NAME} help' for details.")
     early_logger.close()
     sys.exit(2)
@@ -272,6 +275,7 @@ def build_harness() -> ToolHarness:
         name=TOOL_NAME,
         description=DESCRIPTION,
         version=TOOL_VERSION,
+        copyright=TOOLS_COPYRIGHT,
         exit_codes={
             1: "lint violations found, or an operational error occurred",
             2: "invalid arguments, syntax errors, or nonexistent paths",

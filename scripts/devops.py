@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from support_python.devops import DevopsCli, PythonProject  # noqa: E402
+from support_python.tools import TOOLS_COPYRIGHT  # noqa: E402
 
 if __name__ == "__main__":
-    sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())
+    sys.exit(DevopsCli(PythonProject(REPO_ROOT), copyright=TOOLS_COPYRIGHT).run())

@@ -158,6 +158,9 @@ Removed names and their replacements:
 
 Kept names changed behavior; update tests that assert exact output:
 - `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.
+- `APP_AUTHOR` and `COPYRIGHT` default to `""`, omitting the ` - {copyright}` banner suffix when empty.
+  Pass `copyright` to `ToolHarness` or `DevopsCli` to set a custom copyright banner.
+  The five bundled tools and [devops.py](../scripts/devops.py) keep their banner through `TOOLS_COPYRIGHT`.
 - `format_log_message` and `CliLogger` stamp UTC times and keep blank lines inside multi-line messages.
 - `CliLogger.log_start` opens with `Starting {{name}} v{{version}} with configuration:`, as `ToolHarness` does.
 - `ToolHarness` in v2.0.0 runs its fallback action only when the first argument is not an option.

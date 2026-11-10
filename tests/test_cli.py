@@ -356,6 +356,25 @@ class ToolHarnessUnitTests(unittest.TestCase):
                 harness = ToolHarness("demo", "Demo.", version=ver)
                 self.assertTrue(harness.format_version().startswith(f"demo v{ver}"))
 
+    def test_default_banner_omits_copyright_suffix(self) -> None:
+        from support_python.cli import APP_AUTHOR, COPYRIGHT, ToolHarness
+
+        self.assertEqual(APP_AUTHOR, "")
+        self.assertEqual(COPYRIGHT, "")
+
+        with patch("support_python.cli.resolve_build_metadata", return_value="unknown"):
+            harness = ToolHarness("plain-tool", "Plain description.", version="1.0.0")
+            self.assertEqual(harness.format_version(), "plain-tool v1.0.0")
+            self.assertTrue(harness.format_help().startswith("plain-tool v1.0.0\n\nPlain description."))
+
+    def test_explicit_copyright_keeps_suffix(self) -> None:
+        from support_python.cli import ToolHarness
+
+        with patch("support_python.cli.resolve_build_metadata", return_value="unknown"):
+            harness = ToolHarness("custom-tool", "Custom description.", version="1.0.0", copyright="Copyright (c) Someone")
+            self.assertEqual(harness.format_version(), "custom-tool v1.0.0 - Copyright (c) Someone")
+            self.assertTrue(harness.format_help().startswith("custom-tool v1.0.0 - Copyright (c) Someone\n\nCustom description."))
+
 
 class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
     def test_demo_cli_subprocess_end_to_end(self) -> None:
@@ -407,13 +426,14 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
 
             res_help = run_cli("help", "--verbose")
             self.assertEqual(res_help.returncode, 0)
-            self.assertIn("subproc-demo v1.0.0 - Copyright (c) Giovanni Pellicciotta", res_help.stdout)
+            self.assertTrue(res_help.stdout.startswith("subproc-demo v1.0.0\n"))
+            self.assertNotIn("Copyright", res_help.stdout)
             self.assertNotIn(f"+{other_hash}", res_help.stdout)
             self.assertIn("Exit codes:", res_help.stdout)
 
             res_ver = run_cli("--version")
             self.assertEqual(res_ver.returncode, 0)
-            self.assertEqual(res_ver.stdout.strip(), "subproc-demo v1.0.0 - Copyright (c) Giovanni Pellicciotta")
+            self.assertEqual(res_ver.stdout.strip(), "subproc-demo v1.0.0")
 
             res_work = run_cli("work", "--name", "Tester", "--log-file", str(log_path))
             self.assertEqual(res_work.returncode, 0)
