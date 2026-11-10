@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.25-pre
+## v2.0.26-pre
+- DevEx: Added a `deploy` action to `DevopsCli` via `set_deploy`, checking a clean tree, a released version, its `origin` tag at HEAD, and CI, then confirming, running `DeployStep`s, and verifying ([deploy.py](src/support_python/devops/deploy.py), [cli.py](src/support_python/devops/cli.py)).
 - DevEx: Added `NodeProject`, running npm lint, format, test, build, and pack scripts and releasing the packed `dist/*.tgz` tarballs ([projects.py](src/support_python/devops/projects.py)).
 - DevEx: Added `GradleProject`, running overridable Gradle wrapper tasks and optionally delegating `devops release` to a Gradle task via the new `Project.release` hook ([projects.py](src/support_python/devops/projects.py), [cli.py](src/support_python/devops/cli.py)).
 - DevEx: Added `DevopsCli` with lint, format, test, build, check, clean, versions, and release actions over `Project`/`PythonProject` adapters, and rebuilt [devops.py](scripts/devops.py) on them ([cli.py](src/support_python/devops/cli.py), [projects.py](src/support_python/devops/projects.py)).

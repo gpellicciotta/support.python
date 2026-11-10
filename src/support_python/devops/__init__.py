@@ -8,12 +8,14 @@ plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers, the t
 :mod:`support_python.devops.release`. :class:`Project`, :class:`PythonProject`,
 :class:`GradleProject`, and :class:`NodeProject` in :mod:`support_python.devops.projects` adapt a
 repository's build, and :class:`DevopsCli` in :mod:`support_python.devops.cli` exposes them as the
-standard ``devops`` actions.
+standard ``devops`` actions. :class:`DeployStep`, :class:`DeployContext`, and :class:`DeployPipeline` in
+:mod:`support_python.devops.deploy` back its optional ``deploy`` action.
 """
 
 from __future__ import annotations
 
 from .cli import DevopsCli
+from .deploy import DeployContext, DeployPipeline, DeployStep
 from .projects import GradleProject, NodeProject, Project, PythonProject
 from .release import (
     VERSION_FILES,
@@ -82,4 +84,7 @@ __all__ = [
     "GradleProject",
     "NodeProject",
     "DevopsCli",
+    "DeployStep",
+    "DeployContext",
+    "DeployPipeline",
 ]

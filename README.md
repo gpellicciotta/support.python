@@ -377,6 +377,29 @@ if __name__ == "__main__":
     sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())
 ```
 
+`set_deploy(steps, verify=None, require_ci=True, environment="production")` adds a `deploy` action.
+Each `DeployStep` has a `name` and exactly one of `command` (run through the project runner) or `action`.
+An `action` and the `verify` callback receive a `DeployContext` with `project`, `version`, `logger`, and `dry_run`.
+`deploy [--dry-run] [--yes] [--skip-ci-check]` checks these preconditions before running anything:
+- The working tree is clean, including untracked files.
+- The version has no `-pre` suffix.
+- Tag `v<version>` exists on `origin` and points at HEAD.
+- `gh run list --commit <HEAD>` shows a successful completed run and no failed one (skip with `--skip-ci-check`).
+
+It then asks for the typed confirmation `deploy v<version>` unless `--yes` is given.
+It runs the steps in order, stops at the first failure, then runs `verify`; any failure exits 1.
+`--dry-run` checks the preconditions and logs the plan without prompting or running a step.
+Without `set_deploy`, `deploy` is neither listed nor accepted:
+
+```python
+cli = DevopsCli(PythonProject(REPO_ROOT))
+cli.set_deploy(
+    [DeployStep("push image", command=["docker", "push", IMAGE]), DeployStep("migrate", action=run_migrations)],
+    verify=check_live_version,
+)
+sys.exit(cli.run())
+```
+
 ## View Capture Engine and Static Server
 
 `support_python.capture` provides browser screenshot automation (`ViewCaptureEngine`) and visual UI tour

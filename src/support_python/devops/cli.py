@@ -1,19 +1,22 @@
 """Standard ``devops`` command line for a repository, built on :class:`~support_python.cli.ToolHarness`.
 
 :class:`DevopsCli` exposes the operations of a :class:`~support_python.devops.projects.Project` as the
-actions lint, format, test, build, check, clean, versions, and release, plus help and version. A consumer's
-``scripts/devops.py`` stays thin: ``sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())``.
+actions lint, format, test, build, check, clean, versions, and release, plus help and version.
+:meth:`DevopsCli.set_deploy` adds a ``deploy`` action. A consumer's ``scripts/devops.py`` stays thin:
+``sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())``.
 """
 
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
 from ..cli import ToolHarness
 from ..logging import CliLogger
+from .deploy import DeployContext, DeployPipeline, DeployStep
 from .projects import Project
-from .release import ReleasePipeline, changelog_top_version, read_version
+from .release import ReleasePipeline, capture_command, changelog_top_version, read_version
 
 #: Default description shown in the help screen.
 DEFAULT_DESCRIPTION = "Runs the lint, format, test, build, check, clean, versions, and release operations of this project."
@@ -56,6 +59,61 @@ class DevopsCli:
     def add_action(self, name: str, summary: str, handler: Callable[..., int], **kwargs: Any) -> None:
         """Register a project-specific action; ``kwargs`` go to :meth:`~support_python.cli.ToolHarness.add_action`."""
         self.harness.add_action(name, summary, handler, **kwargs)
+
+    def set_deploy(
+        self,
+        steps: Sequence[DeployStep],
+        verify: Optional[Callable[[DeployContext], bool]] = None,
+        require_ci: bool = True,
+        environment: str = "production",
+        *,
+        query: Callable[[Sequence[str], Path], tuple[int, str]] = capture_command,
+        input_fn: Callable[[str], str] = input,
+    ) -> None:
+        """Enable the ``deploy`` action, which runs a :class:`~support_python.devops.deploy.DeployPipeline`.
+
+        Args:
+            steps: Project-local deploy steps, run in order and stopping at the first failure.
+            verify: Optional post-deploy verification; returning ``False`` makes ``deploy`` exit 1.
+            require_ci: Require a successful CI run for HEAD; ``--skip-ci-check`` overrides it per run.
+            environment: Target environment named in the plan and the confirmation.
+            query: Runs the read-only precondition queries as ``query(argv, root)``.
+            input_fn: Prompt function used for the typed confirmation.
+        """
+        steps = tuple(steps)
+
+        def handler(args: argparse.Namespace, logger: CliLogger) -> int:
+            self.project.logger = logger
+            pipeline = DeployPipeline(
+                project=self.project,
+                steps=steps,
+                logger=logger,
+                verify=verify,
+                require_ci=require_ci and not args.skip_ci_check,
+                environment=environment,
+                dry_run=args.dry_run,
+                assume_yes=args.yes,
+                query=query,
+                input_fn=input_fn,
+            )
+            return pipeline.run()
+
+        names = ", ".join(step.name for step in steps) or "none"
+        self.harness.add_action(
+            "deploy",
+            f"check the preconditions, confirm, and deploy the released version to {environment}",
+            handler,
+            detail=(
+                f"Deploy the released version to {environment} after checking for a clean working tree, a version\n"
+                "without -pre, a v<version> tag on origin at HEAD, and a successful CI run for HEAD.\n"
+                f"Steps: {names}{'; then the post-deploy verification' if verify is not None else ''}."
+            ),
+            usage_suffix="[--dry-run] [--yes] [--skip-ci-check]",
+            configure_parser=_configure_deploy,
+        )
+        example = f"{self.harness.name} deploy --dry-run"
+        if example not in self.harness.examples:
+            self.harness.examples.append(example)
 
     def run(self, argv: Optional[Sequence[str]] = None) -> int:
         """Run the command line in ``argv`` (default ``sys.argv[1:]``) and return its exit code."""
@@ -151,6 +209,12 @@ def _configure_release(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--dry-run", action="store_true", help="log the planned steps without changing anything")
     parser.add_argument("--skip-checks", action="store_true", help="skip the `check` quality check")
     parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
+
+
+def _configure_deploy(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--dry-run", action="store_true", help="check the preconditions and log the plan without deploying")
+    parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
+    parser.add_argument("--skip-ci-check", action="store_true", help="skip the CI check for HEAD")
 
 
 __all__ = ["DEFAULT_DESCRIPTION", "DevopsCli", "EXIT_CODES"]
