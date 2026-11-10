@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2786.6, input: 764052, output: 172938, cache_read: 11212854}
+work_duration: 1405.9
 ---
 # T0020: Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check
 
@@ -53,4 +56,14 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 
 - [2026-11-10] **[Verify]**
   Verified 136 passed tests across test_agent_digest.py, test_agent_files.py, and test_console_scripts.py, ruff check/format clean, lint-markdown clean across docs, and zero-diff agent-digest check on dev-guidelines.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-10] **[Read]**
+  Read agent_digest.py, agent_files.py, test_agent_digest.py, test_agent_files.py, cli.py, logging.py, git.py, and dev-guidelines layout constants.
+
+- [2026-11-10] **[Doc]**
+  Authored docs/tools/agent-digest.md and updated README.md, docs/index.md, CHANGELOG.md, and validation-proof.md.
 
