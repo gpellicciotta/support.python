@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1090.2, input: 184, output: 64274, cache_read: 9710632, cache_write: 261740}
+work_duration: 557.4
 ---
 # T0032: Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself
 
@@ -45,4 +48,20 @@ Keep explicit `--digest`, `--skills-dir`, and config keys working.
   - Files touched: 6.
   - Lines touched: 381.
   - Reopenings: 0.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-10] **[Read]**
+  Read agent-files digest generator use, stale-source checks, and the dev-guidelines digest and skills path defaults in agent_files.py and agent_files_config.py.
+
+- [2026-11-10] **[Implement]**
+  Authored failing tests for no generator import, agent-digest.md and agent-skills defaults, config-directory resolution, and the missing-digest hint.
+
+- [2026-11-10] **[Verify]**
+  Red phase: 13 agent-files tests failed before implementation; output recorded in validation-proof.md.
+
+- [2026-11-10] **[Doc]**
+  Updated docs/tools/agent-files.md, README.md, and CHANGELOG.md for the new defaults and the agent-digest generate prerequisite.
 
