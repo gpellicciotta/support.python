@@ -145,7 +145,9 @@ class CliLoggerTests(unittest.TestCase):
             logger.log_start("mytool", "1.0.0", ["mytool", "--flag"], {"key": "value"})
             logger.log_end("done")
             content = log_path.read_text(encoding="utf-8")
-            self.assertIn("Starting mytool v1.0.0", content)
+            self.assertRegex(
+                content, r"Starting mytool v1\.0\.0 with configuration:\n\s+- Full command line given : mytool --flag\n"
+            )
             self.assertIn("Completed execution in", content)
             self.assertIn("done", content)
 
