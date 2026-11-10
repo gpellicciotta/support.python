@@ -12,7 +12,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.48-pre
+## v2.0.49-pre
 - CLI: Made `agent-files` and `lint-markdown` name unknown configuration keys in kebab-case (including the offending tool for tool definitions), and send key-clash warnings through the tool's own logger ([config.py](src/support_python/config.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py), [profiles.py](src/support_python/markdown/profiles.py)).
 - CLI: Made `agent-files`, `lint-markdown`, and `git-repository-backup` accept configuration keys in kebab-case or snake_case with identical effect, via the new shared `normalize_config_keys`; a file setting both spellings uses the kebab-case value and logs one warning, and docs now show kebab-case keys ([config.py](src/support_python/config.py), [agent-files.md](docs/tools/agent-files.md), [lint-markdown.md](docs/tools/lint-markdown.md)).
 - CLI: Made `lint-markdown` rule `MD011` allow up to two trailing spaces, so Markdown hard line breaks pass; it still flags three or more spaces and any trailing tab, and `fix` now trims longer runs to two spaces instead of stripping all trailing whitespace ([rules.py](src/support_python/markdown/rules.py), [lint.py](src/support_python/markdown/lint.py), [lint-markdown.md](docs/tools/lint-markdown.md)).
