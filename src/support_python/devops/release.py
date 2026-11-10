@@ -1,17 +1,25 @@
-"""Release helpers for version files, CHANGELOG.md headings, release notes, and GitHub origins.
+"""Release helpers for version files, CHANGELOG.md headings, release notes, GitHub origins, and a release pipeline.
 
 Version files are read and written byte-faithfully, so their line endings survive. The CHANGELOG.md
 helpers work on text and keep the newline style they find; they follow this repository's preamble,
 where a version under development carries ``-pre`` and a frozen one carries a ``[status]`` tag.
+:class:`ReleasePipeline` combines them into a dry-runnable freeze, tag, push, publish, and reopen flow.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import Callable, Sequence
 
 from ..files import atomic_write_text
+from ..git import parse_status_porcelain
+from ..logging import CliLogger
+from .steps import EXIT_COMMAND_NOT_FOUND, run_step_command
 
 
 @dataclass(frozen=True)
@@ -207,3 +215,274 @@ def parse_github_repo(remote_url: str) -> str:
     if not match:
         raise ValueError(f"Cannot parse a GitHub repository from remote URL: {remote_url}")
     return match.group(1)
+
+
+def confirm_typed(summary: Sequence[str], phrase: str, *, input_fn: Callable[[str], str] = input) -> bool:
+    """Print ``summary`` and return whether the user typed ``phrase``, ignoring surrounding whitespace.
+
+    End of input or an interrupt at the prompt counts as declining.
+    """
+    for line in summary:
+        print(line)
+    try:
+        answer = input_fn(f"Type '{phrase}' to continue: ")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return False
+    return answer.strip() == phrase
+
+
+def capture_command(argv: Sequence[str], cwd: Path) -> tuple[int, str]:
+    """Run a read-only query command and return its exit code with stdout, or with stderr when it fails.
+
+    A missing executable returns :data:`~support_python.devops.steps.EXIT_COMMAND_NOT_FOUND`.
+    """
+    args = [str(arg) for arg in argv]
+    try:
+        result = subprocess.run(
+            args,
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+    except FileNotFoundError:
+        return EXIT_COMMAND_NOT_FOUND, f"Executable not found on PATH: {args[0]}"
+    except OSError as exc:
+        return 1, f"Failed to start {args[0]}: {exc}"
+    if result.returncode == 0:
+        return 0, result.stdout
+    return result.returncode, (result.stderr or result.stdout).strip()
+
+
+#: A planned pipeline step: its description and the action performing it, which returns success.
+_Step = tuple[str, Callable[[], bool]]
+
+
+@dataclass
+class ReleasePipeline:
+    """Release the project under ``root``: freeze, tag, push, publish a GitHub release, and reopen development.
+
+    ``root`` must be the repository root, holding ``CHANGELOG.md`` and a supported version file, with an
+    ``origin`` remote on GitHub. Every precondition runs before any change. Read-only commands run through
+    ``query``; every command with side effects runs through ``runner``.
+
+    Attributes:
+        root: Repository root.
+        logger: Logger receiving progress, planned steps, and errors.
+        quality_check: Optional check run before any change; returning ``False`` aborts the release.
+        assets: Optional callable returning files to attach, resolved after the quality check; relative paths
+            are taken from ``root``.
+        main_branch: Branch releases are cut from and pushed to.
+        dry_run: Log every planned edit and command without running the quality check, prompting, or changing
+            anything. Read-only precondition queries, including ``git fetch``, still run.
+        assume_yes: Skip the typed confirmation.
+        runner: Runs a side-effecting command as ``runner(argv, root, logger)`` and returns its exit code.
+        query: Runs a read-only command as ``query(argv, root)`` and returns its exit code and output.
+        input_fn: Prompt function used for the typed confirmation.
+        today: Returns the release date written into the CHANGELOG.md status tag.
+    """
+
+    root: Path
+    logger: CliLogger
+    quality_check: Callable[[], bool] | None = None
+    assets: Callable[[], Sequence[Path]] | None = None
+    main_branch: str = "main"
+    dry_run: bool = False
+    assume_yes: bool = False
+    runner: Callable[[Sequence[str], Path, CliLogger], int] = run_step_command
+    query: Callable[[Sequence[str], Path], tuple[int, str]] = capture_command
+    input_fn: Callable[[str], str] = input
+    today: Callable[[], date] = date.today
+
+    def run(self) -> int:
+        """Run the pipeline.
+
+        Returns:
+            0 when released or when a dry run completes; 1 when a precondition, the quality check, the
+            confirmation, or a step fails. A failed step leaves earlier steps in place.
+        """
+        root = Path(self.root)
+        try:
+            version_path, entry, _, match = _resolve(root)
+        except (FileNotFoundError, ValueError) as exc:
+            return self._fail(str(exc))
+        current = match.group(1).strip()
+        release = release_version(current)
+        try:
+            next_version = next_dev_version(release)
+        except ValueError as exc:
+            return self._fail(str(exc))
+        tag = f"v{release}"
+        freeze = current != release
+        version_name = version_path.relative_to(root).as_posix()
+
+        self.logger.info(f"Release version: {tag}")
+        self.logger.info(f"Next version: v{next_version}")
+        self.logger.info(f"Dry run: {self.dry_run}")
+
+        notes = self._check_preconditions(root, release, tag, version_name if freeze else None)
+        if notes is None:
+            return 1
+        if self.quality_check is not None:
+            if self.dry_run:
+                self.logger.info("[dry-run] Skipping the quality check.")
+            elif not self.quality_check():
+                return self._fail("Quality check failed; nothing was changed.")
+        assets = [root / Path(asset) for asset in self.assets()] if self.assets is not None else []
+        missing = [str(asset) for asset in assets if not asset.is_file()]
+        if missing and not self.dry_run:
+            return self._fail(f"Release assets not found: {', '.join(missing)}")
+
+        steps = self._plan(root, entry, version_name, release, next_version, tag, notes, assets, freeze)
+        if self.dry_run:
+            for description, _ in steps:
+                self.logger.info(f"[dry-run] {description}")
+            self.logger.info("[dry-run] No changes were made.")
+            return 0
+        if not self.assume_yes:
+            summary = [f"About to release {tag}:", *(f"  {description}" for description, _ in steps)]
+            if not confirm_typed(summary, f"release {tag}", input_fn=self.input_fn):
+                return self._fail("Release not confirmed; nothing was changed.")
+        for description, action in steps:
+            self.logger.info(description)
+            if not action():
+                return self._fail(f"Step failed: {description}. Earlier steps were not rolled back.")
+        self.logger.info(f"Released {tag}{self._release_url(root, tag)}.")
+        return 0
+
+    def _fail(self, message: str) -> int:
+        self.logger.error(message)
+        return 1
+
+    def _check_preconditions(self, root: Path, release: str, tag: str, freeze_file: str | None) -> str | None:
+        """Return the release notes when every precondition holds; otherwise log the failure and return ``None``."""
+
+        def fail(message: str) -> None:
+            self.logger.error(message)
+
+        code, out = self.query(["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"], root)
+        if code != 0:
+            return fail(f"Could not read the git status: {out}")
+        allowed = {freeze_file, "CHANGELOG.md"} if freeze_file else set()
+        dirty = sorted({entry["path"] for entry in parse_status_porcelain(out)} - allowed)
+        if dirty:
+            return fail(f"Uncommitted changes in: {', '.join(dirty)}; commit or stash them before releasing.")
+
+        code, out = self.query(["git", "branch", "--show-current"], root)
+        branch = out.strip()
+        if code != 0 or branch != self.main_branch:
+            return fail(f"Releases must be cut from branch '{self.main_branch}' (currently on '{branch}').")
+
+        if self.query(["gh", "--version"], root)[0] != 0:
+            return fail("The 'gh' CLI is not installed; see https://cli.github.com/.")
+        if self.query(["gh", "auth", "status"], root)[0] != 0:
+            return fail("The 'gh' CLI is not authenticated; run 'gh auth login' before releasing.")
+
+        code, out = self.query(["git", "fetch", "origin", self.main_branch, "--tags"], root)
+        if code != 0:
+            return fail(f"Could not fetch origin/{self.main_branch}: {out}")
+        code, out = self.query(["git", "ls-remote", "--tags", "origin", f"refs/tags/{tag}"], root)
+        if code != 0:
+            return fail(f"Could not list the tags on origin: {out}")
+        if out.strip():
+            return fail(f"Tag '{tag}' already exists on origin.")
+        if self.query(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], root)[0] == 0:
+            return fail(f"Tag '{tag}' already exists locally; delete it or release another version.")
+        if self.query(["gh", "release", "view", tag], root)[0] == 0:
+            return fail(f"GitHub release '{tag}' already exists.")
+
+        try:
+            text = _read_raw(root / "CHANGELOG.md")
+        except OSError as exc:
+            return fail(f"Could not read CHANGELOG.md: {exc}")
+        lines = text.splitlines()
+        heading = next((v for v in (release, f"{release}-pre") if any(_heading(v).match(line) for line in lines)), release)
+        try:
+            return extract_release_notes(text, heading)
+        except ValueError as exc:
+            return fail(str(exc))
+
+    def _plan(
+        self,
+        root: Path,
+        entry: VersionFile,
+        version_name: str,
+        release: str,
+        next_version: str,
+        tag: str,
+        notes: str,
+        assets: Sequence[Path],
+        freeze: bool,
+    ) -> list[_Step]:
+        status = f"released: {self.today().isoformat()}"
+        changed = ["CHANGELOG.md", version_name]
+        steps: list[_Step] = []
+        if freeze:
+            steps += [
+                self._edit(root, "CHANGELOG.md", f"## v{release} [{status}]", lambda text: freeze_changelog(text, release, status)),
+                self._set_version(root, entry, version_name, release),
+                self._command(root, ["git", "add", *changed]),
+                self._command(root, ["git", "commit", "-m", f"Released version {release}."]),
+            ]
+        steps += [
+            self._command(root, ["git", "tag", tag]),
+            self._command(root, ["git", "push", "origin", self.main_branch]),
+            self._command(root, ["git", "push", "origin", tag]),
+            self._publish(root, tag, notes, assets),
+            self._edit(root, "CHANGELOG.md", f"## v{next_version}", lambda text: open_dev_changelog(text, next_version)),
+            self._set_version(root, entry, version_name, next_version),
+            self._command(root, ["git", "add", *changed]),
+            self._command(root, ["git", "commit", "-m", f"Started version {next_version} after the {release} release."]),
+            self._command(root, ["git", "push", "origin", self.main_branch]),
+        ]
+        return steps
+
+    def _command(self, root: Path, argv: list[str]) -> _Step:
+        return subprocess.list2cmdline(argv), lambda: self.runner(argv, root, self.logger) == 0
+
+    def _edit(self, root: Path, name: str, change: str, transform: Callable[[str], str]) -> _Step:
+        def action() -> bool:
+            path = root / name
+            try:
+                atomic_write_text(path, transform(_read_raw(path)), newline="")
+            except (OSError, ValueError) as exc:
+                self.logger.error(f"Could not update {name}: {exc}")
+                return False
+            return True
+
+        return f"edit {name}: {change}", action
+
+    def _set_version(self, root: Path, entry: VersionFile, name: str, version: str) -> _Step:
+        def action() -> bool:
+            try:
+                write_version(root, version)
+            except (OSError, ValueError) as exc:
+                self.logger.error(f"Could not update {name}: {exc}")
+                return False
+            return True
+
+        return f"edit {name}: {entry.template.format(version=version)}", action
+
+    def _publish(self, root: Path, tag: str, notes: str, assets: Sequence[Path]) -> _Step:
+        def argv(notes_file: str) -> list[str]:
+            return ["gh", "release", "create", tag, "--title", tag, "--notes-file", notes_file, *map(str, assets)]
+
+        def action() -> bool:
+            with TemporaryDirectory(prefix="release-notes-") as tmp:
+                notes_file = Path(tmp) / "notes.md"
+                notes_file.write_text(notes, encoding="utf-8")
+                return self.runner(argv(str(notes_file)), root, self.logger) == 0
+
+        return subprocess.list2cmdline(argv("<notes-file>")), action
+
+    def _release_url(self, root: Path, tag: str) -> str:
+        code, out = self.query(["git", "remote", "get-url", "origin"], root)
+        if code != 0:
+            return ""
+        try:
+            return f": https://github.com/{parse_github_repo(out)}/releases/tag/{tag}"
+        except ValueError:
+            return ""

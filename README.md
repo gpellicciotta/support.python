@@ -279,6 +279,35 @@ write_version(root, next_dev_version(release, "minor"))
 repo = parse_github_repo("git@github.com:owner/name.git")  # "owner/name"
 ```
 
+`ReleasePipeline` runs the whole release from the repository root and returns 0 or 1.
+It checks every precondition before any change: a clean tree, the main branch, an authenticated `gh`, and fresh tags.
+It also requires no existing tag or GitHub release, and non-empty release notes.
+It then runs the quality check and asks the user to type `release v<X>` unless `assume_yes` is set.
+Next it freezes the `-pre` version, tags, pushes, and publishes a GitHub release with assets.
+Finally it reopens the next patch `-pre` version and pushes it.
+`dry_run` logs every planned edit and command without prompting or changing anything.
+Side-effecting commands go through `runner` (default `run_step_command`); read-only queries go through `query`:
+
+```python
+import sys
+from pathlib import Path
+
+from support_python import CliLogger
+from support_python.devops import ReleasePipeline, run_step_command
+
+root = Path(".")
+pipeline = ReleasePipeline(
+    root=root,
+    logger=CliLogger(),
+    quality_check=lambda: run_step_command([sys.executable, "-m", "pytest", "-q"], root) == 0,
+    assets=lambda: sorted((root / "dist").glob("*")),
+    dry_run="--dry-run" in sys.argv,
+)
+sys.exit(pipeline.run())
+```
+
+`confirm_typed(summary, phrase)` prints the summary lines and returns whether the user typed `phrase` exactly.
+
 ## View Capture Engine and Static Server
 
 `support_python.capture` provides browser screenshot automation (`ViewCaptureEngine`) and visual UI tour

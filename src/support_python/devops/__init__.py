@@ -3,7 +3,8 @@
 Provides subprocess step runners and streaming helpers in :mod:`support_python.devops.steps`
 and reusable managers for Docker, MySQL, Cloud SQL proxy, Java application server processes,
 email template testing, and endpoint verification in :mod:`support_python.devops.services`,
-plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers in
+plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers, the typed
+:func:`confirm_typed` prompt, and the dry-runnable :class:`ReleasePipeline` in
 :mod:`support_python.devops.release`.
 """
 
@@ -11,8 +12,11 @@ from __future__ import annotations
 
 from .release import (
     VERSION_FILES,
+    ReleasePipeline,
     VersionFile,
+    capture_command,
     changelog_top_version,
+    confirm_typed,
     extract_release_notes,
     find_version_file,
     freeze_changelog,
@@ -65,4 +69,7 @@ __all__ = [
     "freeze_changelog",
     "open_dev_changelog",
     "parse_github_repo",
+    "confirm_typed",
+    "capture_command",
+    "ReleasePipeline",
 ]

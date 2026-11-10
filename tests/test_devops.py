@@ -67,6 +67,9 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "freeze_changelog",
             "open_dev_changelog",
             "parse_github_repo",
+            "confirm_typed",
+            "capture_command",
+            "ReleasePipeline",
         ]
         self.assertCountEqual(devops_pkg.__all__, expected_all)
 
