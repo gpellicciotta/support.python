@@ -152,6 +152,30 @@ class ToolHarnessUnitTests(unittest.TestCase):
         self.assertIn("demo-tool v2.0.0", out.getvalue())
         self.assertIn("Usage:", out.getvalue())
 
+    def test_leading_options_use_each_actions_arity_and_skip_action_names(self) -> None:
+        harness = self._make_harness(fallback_action="run")
+        listed: list[object] = []
+
+        def configure_list(parser) -> None:
+            parser.add_argument("--maybe", nargs="?", const="yes")
+            parser.add_argument("--filter")
+
+        harness.add_action(
+            "list", "list targets", lambda args, logger: listed.append(args.filter) or 0, configure_parser=configure_list
+        )
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(harness.run(["--filter", "prod", "list"]), 0)
+            self.assertEqual(harness.run(["--maybe", "--log-level", "DEBUG", "list"]), 0)
+            self.assertEqual(harness.run(["--maybe", "list"]), 0)
+        self.assertEqual(listed, ["prod", None, None])
+
+    def test_leading_global_values_keep_the_help_target(self) -> None:
+        harness = self._make_harness(fallback_action="run")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(harness.run(["--log-level", "DEBUG", "help", "run"]), 0)
+        self.assertIn("Executes the full workflow against the selected target.", out.getvalue())
+
     def test_leading_option_with_an_invalid_value_still_exits_two(self) -> None:
         import contextlib
 

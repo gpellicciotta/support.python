@@ -286,18 +286,38 @@ class ToolHarness:
 
         The first non-option token after the leading options selects the action when it names one
         (``--verbose list``); otherwise the whole command line goes to the fallback action (``--url x``).
-        Option values are skipped using the fallback action's parser.
+        Option arities come from the fallback action's parser, then from the other actions' parsers.
+        An option with an optional or variable number of values never takes an action name as its value.
+        Leading options move after the target of ``help`` and ``version``, which ignore them.
         """
         if not self.fallback_action or self.fallback_action not in self._actions:
             return args
         if not args[0].startswith("-") or args[0] in ("-h", "--help", "--version"):
             return args
-        options = self._build_parser(self.fallback_action)._option_string_actions
+        names = {*self._actions, "version", "help"}
+        options: dict[str, argparse.Action] = {}
+        for action_name in (self.fallback_action, *self._actions):
+            for flag, option in self._build_parser(action_name)._option_string_actions.items():
+                options.setdefault(flag, option)
         i = 0
         while i < len(args) and args[i].startswith("-") and args[i] != "--":
             option = options.get(args[i])
-            i += 2 if option is not None and option.nargs != 0 else 1
-        if i < len(args) and args[i] in {*self._actions, "version", "help"}:
+            i += 1
+            nargs = option.nargs if option is not None else 0
+            if nargs is None:
+                nargs = 1
+            if isinstance(nargs, int):
+                i += nargs
+            elif nargs == argparse.REMAINDER:
+                i = len(args)
+            else:
+                while i < len(args) and not args[i].startswith("-") and args[i] not in names:
+                    i += 1
+                    if nargs == "?":
+                        break
+        if i < len(args) and args[i] in names:
+            if args[i] in ("help", "version"):
+                return [args[i], *args[i + 1 :], *args[:i]]
             return [args[i], *args[:i], *args[i + 1 :]]
         return [self.fallback_action, *args]
 
