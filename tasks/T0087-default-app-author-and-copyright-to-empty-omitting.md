@@ -1,11 +1,12 @@
 ---
 id: T0087
-owner: ~
+owner: "@gemini"
+session: antigravity-20261110-d2076b
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0087-default-app-author-and-copyright-to-empty-omitting
+worktree: .plan/work/T0087-default-app-author-and-copyright-to-empty-omitting
+status: active
+started_at: "2026-11-10T21:25:09Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,10 +22,10 @@ The five bundled tools and this repository's devops script keep their current ba
 `DevopsCli` gains a `copyright` argument so consumers can set their own banner.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read cli.py, capture.py, devops/cli.py, and every place that builds or asserts a banner.
-- [ ] **[Implement]** Write failing tests for the empty default banner, explicit copyrights, and bundled tool banners.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Empty the defaults, add `TOOLS_COPYRIGHT`, wire it into the tools, and add the `DevopsCli` argument.
+- [x] **[Read]**      Read cli.py, capture.py, devops/cli.py, and every place that builds or asserts a banner.
+- [x] **[Implement]** Write failing tests for the empty default banner, explicit copyrights, and bundled tool banners.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Empty the defaults, add `TOOLS_COPYRIGHT`, wire it into the tools, and add the `DevopsCli` argument.
 - [ ] **[Verify]**    Run `python scripts/devops.py check`, recording verbatim output in validation-proof.md.
 - [ ] **[Doc]**       Update cli-harness-and-logging.md, migration-v2.md, and CHANGELOG.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
