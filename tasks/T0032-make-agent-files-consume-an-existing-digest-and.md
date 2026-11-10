@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1090.2, input: 184, output: 64274, cache_read: 9710632, cache_write: 261740}
+  worker: {turns: 4, duration_s: 1141.6, input: 204, output: 66570, cache_read: 11229760, cache_write: 273704}
 work_duration: 557.4
+review_status: pending
+review_round: 1
 ---
 # T0032: Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself
 
@@ -64,4 +66,7 @@ Keep explicit `--digest`, `--skills-dir`, and config keys working.
 
 - [2026-11-10] **[Doc]**
   Updated docs/tools/agent-files.md, README.md, and CHANGELOG.md for the new defaults and the agent-digest generate prerequisite.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
