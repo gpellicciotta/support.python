@@ -348,6 +348,19 @@ It reads the version from `gradle.properties` and releases `build/libs/*.jar` an
 With `release_task`, `release` asks for the typed confirmation, then runs that task with `release_args` instead of `ReleasePipeline`.
 `release --dry-run` runs the task with Gradle's own `--dry-run` and no prompt.
 For example, `GradleProject(REPO_ROOT, release_task="doFullRelease", release_args=["-PreleaseConfirmed=yes"])`.
+`NodeProject` runs npm scripts, resolving `npm` through `resolve_executable` so Windows finds `npm.cmd`:
+
+| Action   | npm commands                                                            |
+|----------|-------------------------------------------------------------------------|
+| `lint`   | `npm run lint`                                                          |
+| `format` | `npm run format`                                                        |
+| `test`   | `npm test`, plus `-- ITEM...` with selection items                      |
+| `build`  | `npm run build` when defined, then `npm pack --pack-destination dist`   |
+| `check`  | lint, test, then build                                                  |
+| `clean`  | removes `dist/`                                                         |
+
+A script missing from `package.json` fails with an error naming it.
+`build` clears `dist/` first; the version lives in `package.json`, and `release` attaches `dist/*.tgz`.
 Commands go through an injectable `runner` (default `run_step_command`), and `add_action` adds project-specific actions.
 A consumer's devops script stays as thin as this repository's own [devops.py](scripts/devops.py):
 

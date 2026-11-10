@@ -3,11 +3,13 @@
 A :class:`Project` exposes the standard operations of one repository: lint, format, test, build, clean,
 check, and the files to attach to a release. Every command runs through an injectable ``runner``, so tests
 can stub it. :class:`PythonProject` runs ruff, pytest, and build through the repository's own ``.venv``;
-:class:`GradleProject` runs Gradle tasks through the repository's own Gradle wrapper.
+:class:`GradleProject` runs Gradle tasks through the repository's own Gradle wrapper; :class:`NodeProject` runs
+npm scripts.
 """
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 from abc import ABC, abstractmethod
@@ -16,7 +18,7 @@ from typing import Callable, Optional, Sequence
 
 from ..logging import CliLogger
 from .release import confirm_typed, read_version, release_version
-from .steps import run_step_command
+from .steps import resolve_executable, run_step_command
 
 #: Runs a command as ``runner(argv, cwd, logger)`` and returns its exit code.
 Runner = Callable[[Sequence[str], Path, Optional[CliLogger]], int]
@@ -237,4 +239,74 @@ class GradleProject(Project):
         return self.run_command([str(self.wrapper), *self.gradle_options, *args])
 
 
-__all__ = ["GradleProject", "Project", "PythonProject", "Runner"]
+class NodeProject(Project):
+    """An npm project with its scripts and version in ``package.json``.
+
+    npm resolves through :func:`~support_python.devops.steps.resolve_executable`, so Windows finds ``npm.cmd``.
+    ``build`` runs the ``build`` script when ``package.json`` defines one, then packs the tarball into ``dist/``.
+    """
+
+    @property
+    def dist_dir(self) -> Path:
+        return self.root / "dist"
+
+    def lint(self) -> bool:
+        return self._npm_script("lint")
+
+    def format(self) -> bool:
+        return self._npm_script("format")
+
+    def test(self, selection: Sequence[str] = ()) -> bool:
+        """Run ``npm test``, passing ``selection`` to the test script after ``--``."""
+        return self._has_script("test") and self._npm("test", *(["--", *selection] if selection else []))
+
+    def build(self) -> bool:
+        scripts = self._scripts()
+        if scripts is None:
+            return False
+        self.remove_tree(self.dist_dir)
+        if "build" in scripts and not self._npm("run", "build"):
+            return False
+        self.dist_dir.mkdir(exist_ok=True)
+        return self._npm("pack", "--pack-destination", "dist")
+
+    def clean(self) -> bool:
+        self.remove_tree(self.dist_dir)
+        return True
+
+    def release_assets(self) -> list[Path]:
+        return sorted(self.dist_dir.glob("*.tgz"))
+
+    def _scripts(self) -> Optional[dict]:
+        manifest = self.root / "package.json"
+        try:
+            scripts = json.loads(manifest.read_text(encoding="utf-8")).get("scripts", {})
+        except FileNotFoundError:
+            self.logger.error(f"package.json missing at {manifest}.")
+            return None
+        except (ValueError, AttributeError) as exc:
+            self.logger.error(f"Cannot read the scripts of {manifest}: {exc}")
+            return None
+        return scripts if isinstance(scripts, dict) else {}
+
+    def _has_script(self, name: str) -> bool:
+        scripts = self._scripts()
+        if scripts is None:
+            return False
+        if name not in scripts:
+            self.logger.error(f"npm script '{name}' is not defined in package.json.")
+            return False
+        return True
+
+    def _npm_script(self, name: str) -> bool:
+        return self._has_script(name) and self._npm("run", name)
+
+    def _npm(self, *args: str) -> bool:
+        npm = resolve_executable("npm")
+        if npm is None:
+            self.logger.error("npm not found on PATH; install Node.js with npm first.")
+            return False
+        return self.run_command([npm, *args])
+
+
+__all__ = ["GradleProject", "NodeProject", "Project", "PythonProject", "Runner"]

@@ -5,15 +5,16 @@ and reusable managers for Docker, MySQL, Cloud SQL proxy, Java application serve
 email template testing, and endpoint verification in :mod:`support_python.devops.services`,
 plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers, the typed
 :func:`confirm_typed` prompt, and the dry-runnable :class:`ReleasePipeline` in
-:mod:`support_python.devops.release`. :class:`Project`, :class:`PythonProject`, and
-:class:`GradleProject` in :mod:`support_python.devops.projects` adapt a repository's build, and :class:`DevopsCli` in
-:mod:`support_python.devops.cli` exposes them as the standard ``devops`` actions.
+:mod:`support_python.devops.release`. :class:`Project`, :class:`PythonProject`,
+:class:`GradleProject`, and :class:`NodeProject` in :mod:`support_python.devops.projects` adapt a
+repository's build, and :class:`DevopsCli` in :mod:`support_python.devops.cli` exposes them as the
+standard ``devops`` actions.
 """
 
 from __future__ import annotations
 
 from .cli import DevopsCli
-from .projects import GradleProject, Project, PythonProject
+from .projects import GradleProject, NodeProject, Project, PythonProject
 from .release import (
     VERSION_FILES,
     ReleasePipeline,
@@ -79,5 +80,6 @@ __all__ = [
     "Project",
     "PythonProject",
     "GradleProject",
+    "NodeProject",
     "DevopsCli",
 ]
