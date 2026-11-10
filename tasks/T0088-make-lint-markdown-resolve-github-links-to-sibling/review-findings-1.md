@@ -3,7 +3,7 @@ task: T0088
 round: 1
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-10T22:58:48Z
+reviewed_at: 2026-11-10T23:05:15Z
 reviewed_commit: "6b45964"
 base_commit: "000b072"
 branch: task/T0088-make-lint-markdown-resolve-github-links-to-sibling
