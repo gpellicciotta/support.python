@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1433.0, input: 156, output: 79484, cache_read: 6862910, cache_write: 207992}
+work_duration: 728.8
 ---
 # T0036: Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development
 
@@ -49,4 +52,17 @@ Run commands through an injectable runner defaulting to `run_step_command`.
   - Files touched: 6.
   - Lines touched: 680.
   - Reopenings: 0.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-10] **[Read]**
+  Read template.python's release() flow and the T0035 release helpers; extract_release_notes needs the -pre heading passed explicitly.
+
+- [2026-11-10] **[Verify]**
+  Red phase: the new test module failed collection with ImportError for ReleasePipeline, recorded in validation-proof.md.
+
+- [2026-11-10] **[Doc]**
+  Documented ReleasePipeline and confirm_typed in README.md and added a v2.0.20-pre CHANGELOG.md entry.
 
