@@ -5,15 +5,16 @@ session: antigravity-20261110-6e06c7
 needs: []
 branch: task/T0073-fail-the-test-run-when-a-test-writes
 worktree: .plan/work/T0073-fail-the-test-run-when-a-test-writes
-status: active
+status: completed
 started_at: "2026-11-10T18:53:37Z"
-ended_at: —
+ended_at: "2026-11-10T19:35:19Z"
 review: none
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 4, duration_s: 4645.0, input: 2422516, output: 174472, cache_read: 43644788}
-work_duration: 2362.6
+  worker: {turns: 6, duration_s: 4865.0, input: 2992064, output: 186620, cache_read: 50443698}
+work_duration: 2500.9
+completion-commit: d54483ee6827f12c2dcb057b07da8f478e5c7ad5
 ---
 # T0073: Fail the test run when a test writes into the real home directory or the repository's own .plan directory
 
@@ -60,4 +61,7 @@ Fix every test the guard catches.
   - Files touched: 4
   - Lines touched: 333
   - Reopenings: 0
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 
