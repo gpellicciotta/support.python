@@ -4,11 +4,10 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
-- [-] T0096 [reason: Kept publish.yml: docs/devops.md relies on it to replace local assets with a clean CI build and to cover manual releases.] Remove publish.yml, since ReleasePipeline already attaches the wheel and sdist to the GitHub release.
-- [x] T0095 Name the deploy action and enabled service groups in the DevopsCli default description.
+- [x] T0099 Make ToolHarness run its fallback action when the command line starts with an option, moving run_capture_cli's reordering into the harness.
+- [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
+- [ ] T0097 Derive version build metadata from the support.python checkout, not an enclosing repository.
 - [ ] T0094 Let run_capture_cli accept app-specific options and pass their values to the capture and tour handlers.
-- [x] T0091 Make DevopsCli help summaries and examples come from the project adapter, so GradleProject help describes Gradle tasks.
-- [x] T0089 Replace the stale update-global-agent-files.py text in the agent-files guarded block marker, still recognizing existing blocks.
 - [ ] T0088 Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none.
 - [ ] T0087 Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs.
 - [ ] T0086 [needs: T0084] Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers.
@@ -38,7 +37,4 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
-- [ ] T0097 Derive version build metadata from the support.python checkout, not an enclosing repository.
-- [-] T0093 [reason: ReleasePipeline accepts frozen versions for resumed releases; release tasks such as doFullRelease own the -pre precondition.] Make GradleProject.release refuse a version without -pre before the confirmation, as ReleasePipeline does.
-- [x] T0092 Let project adapters supply the DevopsCli exit-code text, dropping the virtual environment wording for Gradle and npm projects.
-- [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
+- [ ] T0098 Make ToolHarness version output show the -pre suffix instead of the PEP 440 rc0 form from package metadata.
