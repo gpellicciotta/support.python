@@ -84,12 +84,25 @@ def _local_package() -> str:
         raise ValueError(f"Cannot read pyproject.toml ({exc}); pass --package name") from exc
 
 
+def version_line() -> str:
+    """Returns `{name} v{version} - {copyright}`, reading the version from the pyproject.toml beside scripts/."""
+    version = "unknown"
+    try:
+        text = (Path(__file__).resolve().parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+        match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+        version = match.group(1) if match else version
+    except OSError:
+        pass
+    return f"{PROG} v{version} - Copyright (c) Giovanni Pellicciotta"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROG,
         description="Install a released wheel of a Python project from its GitHub release.",
         epilog=EXIT_CODES,
     )
+    parser.add_argument("--version", action="version", version=version_line())
     parser.add_argument("version", help="release version to install, with or without a leading 'v' (e.g. 1.2.3)")
     parser.add_argument("--repo", metavar="OWNER/NAME", help="GitHub repository (default: git origin of the current directory)")
     parser.add_argument("--package", metavar="NAME", help="package name (default: [project] name in ./pyproject.toml)")

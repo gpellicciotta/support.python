@@ -91,7 +91,7 @@ class TestRepoScripts(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((backups / "acme-lib-mirror.git" / "HEAD").exists())
 
-        result = self.script("reset-history.py", "reinit", "--backup-dir", str(backups), "--version", "1.0.0", stdin="reinit\n")
+        result = self.script("reset-history.py", "reinit", "--backup-dir", str(backups), "--new-version", "1.0.0", stdin="reinit\n")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(git(self.repo, "rev-list", "--count", "HEAD"), "1")
         self.assertEqual(git(self.repo, "branch", "--show-current"), "main")

@@ -44,9 +44,16 @@ from support_python.devops.release import (  # noqa: E402
     write_version,
 )
 from support_python.git import get_current_branch, get_default_branch, get_github_repo, get_remote_url, get_repo_root  # noqa: E402
+from support_python.version import get_project_version  # noqa: E402
 
 #: Root of the Git repository containing the current directory; set by main().
 ROOT = Path.cwd()
+
+
+def version_line(prog: str) -> str:
+    """Returns the standard `{name} v{version} - {copyright}` line for --version."""
+    return f"{prog} v{get_project_version(Path(__file__).resolve().parent)} - Copyright (c) Giovanni Pellicciotta"
+
 
 SELF = "scripts/migrate-namespace.py"
 # plan owns .plan and PLAN.md; the changelog is edited by hand below; the scripts must not rewrite themselves
@@ -236,7 +243,7 @@ def update_changelog_for_rewrite(args: argparse.Namespace, version: str) -> None
 
 def cmd_rewrite(args: argparse.Namespace) -> None:
     require_clean_branch(args.branch)
-    version = args.version or next_major(current_version())
+    version = args.new_version or next_major(current_version())
     rename_dirs(args.old, args.new)
     print(f"rewrote {rewrite_text(args)} files")
     set_version(f"{version}-pre")
@@ -346,11 +353,12 @@ def cmd_finish(args: argparse.Namespace) -> None:
 def main() -> int:
     global ROOT
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", action="version", version=version_line("migrate-namespace"))
     parser.add_argument("--old", required=True, help="word to replace")
     parser.add_argument("--new", required=True, help="replacement word")
     parser.add_argument("--repo-name", help="new GitHub repo name (default: the old name with the word replaced)")
     parser.add_argument("--replace", action="append", default=[], metavar="OLD=NEW", help="extra exact replacement, repeatable")
-    parser.add_argument("--version", help="new version for 'rewrite' (default: next major, X.0.0)")
+    parser.add_argument("--new-version", help="new version for 'rewrite' (default: next major, X.0.0)")
     parser.add_argument("--branch", help="release branch (default: origin's default branch)")
     parser.add_argument("--build-command", help="command run by 'build' (default: scripts/devops.py check)")
     parser.add_argument("--publish-command", help="command run by 'publish' after CI is green")

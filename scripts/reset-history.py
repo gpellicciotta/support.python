@@ -33,6 +33,7 @@ if _SRC.is_dir():
 
 from support_python.devops.release import confirm_typed, write_version  # noqa: E402
 from support_python.git import get_current_branch, get_default_branch, get_github_repo, get_remote_url, get_repo_root  # noqa: E402
+from support_python.version import get_project_version  # noqa: E402
 
 #: Root of the Git repository containing the current directory; set by main().
 REPO_ROOT = Path.cwd()
@@ -40,6 +41,11 @@ REPO_ROOT = Path.cwd()
 EXCLUDED_SCRIPTS = ("scripts/reset-history.py", "scripts/migrate-namespace.py")
 DEFAULT_VERSION = "1.0.0"
 DEFAULT_ENTRY = "- Initial release."
+
+
+def version_line(prog: str) -> str:
+    """Returns the standard `{name} v{version} - {copyright}` line for --version."""
+    return f"{prog} v{get_project_version(Path(__file__).resolve().parent)} - Copyright (c) Giovanni Pellicciotta"
 
 
 def die(message: str) -> None:
@@ -242,14 +248,14 @@ def cmd_reinit(args: argparse.Namespace) -> None:
     )
     entry = Path(args.entry_file).read_text(encoding="utf-8") if args.entry_file else DEFAULT_ENTRY
     reset_plan()
-    reset_changelog_and_version(args.version, entry)
+    reset_changelog_and_version(args.new_version, entry)
     run(["git", "checkout", "--orphan", "fresh"])
     run(["git", "rm", "-r", "-q", "--cached", "--ignore-unmatch", *EXCLUDED_SCRIPTS])
     exclude = REPO_ROOT / ".git" / "info" / "exclude"
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
     exclude.write_text(existing + "".join(f"/{s}\n" for s in EXCLUDED_SCRIPTS if f"/{s}" not in existing), encoding="utf-8")
     run(["git", "add", "-A"])
-    run(["git", "commit", "-m", f"Started the repository fresh at version {args.version}-pre from the current codebase."])
+    run(["git", "commit", "-m", f"Started the repository fresh at version {args.new_version}-pre from the current codebase."])
     run(["git", "branch", "-M", args.branch])
     for branch in run(["git", "branch", "--format=%(refname:short)"], capture=True).splitlines():
         if branch != args.branch:
@@ -268,6 +274,7 @@ def cmd_reinit(args: argparse.Namespace) -> None:
 def main() -> int:
     global REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--version", action="version", version=version_line("reset-history"))
     parser.add_argument("--branch", default=None, help="branch to keep (default: origin's default branch)")
     sub = parser.add_subparsers(dest="step", required=True)
     step = sub.add_parser("backup")
@@ -278,7 +285,7 @@ def main() -> int:
         step.add_argument("--backup-dir", required=True, help="the DIR given to 'backup'")
         step.set_defaults(fn=fn)
         if name == "reinit":
-            step.add_argument("--version", default=DEFAULT_VERSION, help="fresh start version (default: %(default)s)")
+            step.add_argument("--new-version", default=DEFAULT_VERSION, help="fresh start version (default: %(default)s)")
             step.add_argument("--entry-file", help=f"file with the initial CHANGELOG bullets (default: '{DEFAULT_ENTRY}')")
         else:
             step.add_argument("--drop-secrets", action="store_true", help="do not prompt for Actions secrets; drop them all")
