@@ -4,6 +4,13 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
+- [ ] T0089 Replace the stale update-global-agent-files.py text in the agent-files guarded block marker, still recognizing existing blocks.
+- [ ] T0088 Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none.
+- [ ] T0087 Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs.
+- [ ] T0086 [needs: T0084] Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers.
+- [ ] T0085 [needs: T0084] Require an explicit salt and AES key in the crypto helpers, removing STANDARD_SALT and DEFAULT_AES_KEY_HEX.
+- [ ] T0084 [needs: T0083] Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map.
+- [ ] T0083 Add a declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer.
 - [ ] T0065 [protocol: adhoc] Make every tool's --version report the installed support-python version instead of the current directory's project version.
 - [ ] T0066 [protocol: adhoc] Make agent-files sync --dry-run --no-prune report kept stale skills instead of removals.
 - [ ] T0067 [protocol: adhoc] Retry lint-markdown external link checks with GET when HEAD returns 404, as webawesome.com does.
@@ -25,5 +32,6 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
+- [ ] T0090 [needs: T0085] Make decrypt_property_value fail clearly when the cryptography package is missing instead of returning the ciphertext.
 - [ ] T0082 Add a typed confirmation with --yes to processes kill, or document why it is exempt from that CLI rule.
 - [ ] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
