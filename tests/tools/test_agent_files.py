@@ -424,13 +424,16 @@ class HarnessErrorFormattingTests(unittest.TestCase):
             with (
                 mock.patch.object(sync_mod, "DIGEST_PATH", root / "missing-digest.md"),
                 mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
-                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
             ):
-                code, _, err = _run_main(["check", "--log-file", str(root / "sync.log")])
-        self.assertEqual(code, 1)
-        error_lines = [line for line in err.splitlines() if "agent-digest.md not found" in line]
-        self.assertEqual(len(error_lines), 1)
-        self.assertTrue(error_lines[0].startswith("**[ERROR]** "), error_lines[0])
+                for action in ("check", "sync"):
+                    code, _, err = _run_main([action, "--log-file", str(root / "sync.log")])
+                    self.assertEqual(code, 1, action)
+                    error_lines = [line for line in err.splitlines() if "digest not found" in line]
+                    self.assertEqual(len(error_lines), 1, err)
+                    self.assertTrue(error_lines[0].startswith("**[ERROR]** "), error_lines[0])
+                    self.assertIn(str(root / "missing-digest.md"), error_lines[0])
+                    self.assertIn("agent-digest generate <PATH>...", err)
+                    self.assertFalse(fake_tool.target_file.exists())
 
 
 class DefaultLogFileTests(unittest.TestCase):
@@ -447,7 +450,6 @@ class DefaultLogFileTests(unittest.TestCase):
                     mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
                     mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                     mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
-                    mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 ):
                     code, out, _ = _run_main(["check"])
             finally:
@@ -473,53 +475,43 @@ class EntryPointTests(unittest.TestCase):
         self.assertIn("--dry-run", result.stdout)
 
 
-class EnsureDigestTests(unittest.TestCase):
-    def test_ensure_digest_warns_on_diff_when_out_of_date(self) -> None:
+class NoDigestGenerationTests(unittest.TestCase):
+    def test_module_exposes_no_digest_generator_hooks(self) -> None:
+        self.assertFalse(hasattr(sync_mod, "get_digest_generator"))
+        self.assertFalse(hasattr(sync_mod, "ensure_digest"))
+
+    def test_sync_and_check_never_import_agent_digest_or_rewrite_digest(self) -> None:
+        script = (
+            "import json, sys\n"
+            "from support_python.tools import agent_files as m\n"
+            "m.TOOLS = [m.Tool('fake-tool', 'nonexistent-fake-cmd-xyz', m.Path(sys.argv[1]), lambda p, t, to: [])]\n"
+            "codes = [m.main(['check']), m.main(['sync']), m.main(['check'])]\n"
+            "print(json.dumps({'codes': codes, 'imported': 'support_python.tools.agent_digest' in sys.modules}))\n"
+        )
         with tempfile.TemporaryDirectory() as tmp_dir:
-            digest_path = Path(tmp_dir) / "agent-digest.md"
-            digest_path.write_text("old digest", encoding="utf-8")
-            log_path = Path(tmp_dir) / "test.log"
-            logger = sync_mod.StderrRoutingLogger(log_path)
-
-            mock_generator = mock.Mock()
-            mock_generator.build_digest.return_value = "new digest"
-
-            orig_path = sync_mod.DIGEST_PATH
-            sync_mod.DIGEST_PATH = digest_path
-            try:
-                with mock.patch.object(sync_mod, "get_digest_generator", return_value=mock_generator):
-                    result = sync_mod.ensure_digest("check", logger)
-            finally:
-                sync_mod.DIGEST_PATH = orig_path
-                logger.close()
-
-            self.assertEqual(result, "old digest")
-            log_content = log_path.read_text(encoding="utf-8")
-            self.assertIn("is out of date compared to source guidelines", log_content)
-
-    def test_ensure_digest_regenerates_on_update_when_out_of_date(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            digest_path = Path(tmp_dir) / "agent-digest.md"
-            digest_path.write_text("old digest", encoding="utf-8")
-            log_path = Path(tmp_dir) / "test.log"
-            logger = sync_mod.StderrRoutingLogger(log_path)
-
-            mock_generator = mock.Mock()
-            mock_generator.build_digest.return_value = "new digest"
-
-            orig_path = sync_mod.DIGEST_PATH
-            sync_mod.DIGEST_PATH = digest_path
-            try:
-                with mock.patch.object(sync_mod, "get_digest_generator", return_value=mock_generator):
-                    result = sync_mod.ensure_digest("sync", logger)
-            finally:
-                sync_mod.DIGEST_PATH = orig_path
-                logger.close()
-
-            self.assertEqual(result, "new digest")
-            self.assertEqual(digest_path.read_text(encoding="utf-8"), "new digest")
-            log_content = log_path.read_text(encoding="utf-8")
-            self.assertIn("Regenerated agent-digest.md from source guidelines", log_content)
+            root = Path(tmp_dir).resolve()
+            (root / ".git").mkdir()
+            # A Markdown source next to the digest that a generator would fold in; agent-files must ignore it.
+            (root / "notes").mkdir()
+            (root / "notes" / "rules.md").write_text("# Rules\n\n## Directives\n- Always regenerate.\n", encoding="utf-8")
+            digest_path = root / "agent-digest.md"
+            digest_path.write_text("Hand-written digest.\n", encoding="utf-8")
+            target = root / "targets" / "AGENTS.md"
+            result = subprocess.run(
+                [sys.executable, "-c", script, str(target)],
+                cwd=root,
+                env={**os.environ, "PYTHONPATH": str(SRC_DIR)},
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=60,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = json.loads(result.stdout.strip().splitlines()[-1])
+            self.assertEqual(report, {"codes": [1, 0, 0], "imported": False})
+            self.assertEqual(digest_path.read_text(encoding="utf-8"), "Hand-written digest.\n")
+            self.assertIn("Hand-written digest.", target.read_text(encoding="utf-8"))
+            self.assertFalse((root / "agent-skills").exists())
 
 
 class SkillDiscoveryTests(unittest.TestCase):
@@ -951,7 +943,6 @@ class DryRunCliTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
                 mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                 mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
-                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 contextlib.redirect_stdout(io.StringIO()) as out,
             ):
                 exit_code = sync_mod.main(["sync", "--dry-run", "--log-file", str(root / "sync.log")])
@@ -1248,7 +1239,6 @@ class HiddenTargetFileTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
                 mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                 mock.patch.object(sync_mod, "TOOLS", [tool]),
-                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
                 contextlib.redirect_stdout(io.StringIO()) as out,
             ):
                 exit_code = sync_mod.main(["sync", "--log-file", str(root / "sync.log")])
@@ -1262,16 +1252,12 @@ class HiddenTargetFileTests(unittest.TestCase):
 
 
 class RepoRootResolutionTests(unittest.TestCase):
-    def test_resolves_repo_root_digest_skills_and_generator_from_working_directory(self) -> None:
-        from support_python.tools import agent_digest
-
+    def test_resolves_default_digest_and_skills_dir_under_repo_root_from_working_directory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             repo_root = Path(tmp_dir).resolve()
             (repo_root / ".git").mkdir()
-            digest_file = repo_root / "guidelines" / "agent-digest.md"
-            digest_file.parent.mkdir(parents=True)
-            digest_file.write_text("Dynamic repo digest.", encoding="utf-8")
-            skill_file = repo_root / "skills" / "sample-skill" / "SKILL.md"
+            (repo_root / "agent-digest.md").write_text("Dynamic repo digest.", encoding="utf-8")
+            skill_file = repo_root / "agent-skills" / "sample-skill" / "SKILL.md"
             skill_file.parent.mkdir(parents=True)
             skill_file.write_text("---\nname: sample-skill\n---\n", encoding="utf-8")
             nested_dir = repo_root / "nested" / "sub"
@@ -1282,31 +1268,24 @@ class RepoRootResolutionTests(unittest.TestCase):
             try:
                 self.assertEqual(sync_mod.find_project_root(), repo_root)
                 self.assertEqual(sync_mod._resolve_repo_root(), repo_root)
+                self.assertEqual(sync_mod._resolve_digest_path(), repo_root / "agent-digest.md")
+                self.assertEqual(sync_mod._resolve_skills_dir(), repo_root / "agent-skills")
                 self.assertEqual(sync_mod.load_digest(), "Dynamic repo digest.")
                 skills = sync_mod.get_available_skills()
                 self.assertEqual([s.name for s in skills], ["sample-skill"])
-                self.assertFalse((repo_root / "scripts" / "generate-agent-digest.py").exists())
-                generator = sync_mod.get_digest_generator()
-                self.assertIs(generator, agent_digest)
-                self.assertEqual(generator.find_project_root(Path.cwd()), repo_root)
-                self.assertFalse(hasattr(generator, "SOURCE_FILES"))
             finally:
                 os.chdir(original_cwd)
 
-    def test_check_and_sync_repo_root_regenerate_digest_from_unrelated_cwd(self) -> None:
-        fixture_root = Path(__file__).resolve().parents[1] / "fixtures" / "agent_digest"
+    def test_check_and_sync_repo_root_install_existing_digest_from_unrelated_cwd(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
-            copy_dir = root / "guidelines-copy"
-            shutil.copytree(fixture_root, copy_dir)
-            (copy_dir / ".git").mkdir()
-
-            digest_file = copy_dir / "guidelines" / "agent-digest.md"
-            skill_file = copy_dir / "skills" / "python-guidelines" / "SKILL.md"
-            expected_digest = digest_file.read_text(encoding="utf-8")
-            expected_skill = skill_file.read_text(encoding="utf-8")
-            digest_file.write_text("Stale digest content.\n", encoding="utf-8")
-            skill_file.write_text("Stale skill content.\n", encoding="utf-8")
+            project = root / "project"
+            (project / ".git").mkdir(parents=True)
+            digest_file = project / "agent-digest.md"
+            digest_file.write_text("Existing digest content.\n", encoding="utf-8")
+            skill_file = project / "agent-skills" / "sample-skill" / "SKILL.md"
+            skill_file.parent.mkdir(parents=True)
+            skill_file.write_text("---\nname: sample-skill\n---\nExisting skill.\n", encoding="utf-8")
 
             cwd_repo = root / "unrelated-repo"
             (cwd_repo / ".git").mkdir(parents=True)
@@ -1326,18 +1305,17 @@ class RepoRootResolutionTests(unittest.TestCase):
             os.chdir(cwd_repo)
             try:
                 with mock.patch.object(sync_mod, "TOOLS", [fake_tool]):
-                    _, check_out, check_err = _run_main(["check", "--repo-root", str(copy_dir)])
-                    self.assertIn(
-                        "agent-digest.md is out of date compared to source guidelines (run 'agent-digest' or 'agent-files sync' to synchronize)",
-                        check_out + check_err,
-                    )
-                    self.assertEqual(digest_file.read_text(encoding="utf-8"), "Stale digest content.\n")
+                    check_code, check_out, check_err = _run_main(["check", "--repo-root", str(project)])
+                    self.assertEqual(check_code, 1, check_out + check_err)
+                    self.assertNotIn("out of date", check_out + check_err)
 
-                    sync_code, sync_out, sync_err = _run_main(["sync", "--repo-root", str(copy_dir)])
+                    sync_code, sync_out, sync_err = _run_main(["sync", "--repo-root", str(project)])
                     self.assertEqual(sync_code, 0, sync_out + sync_err)
-                    self.assertIn("Regenerated agent-digest.md from source guidelines", sync_out + sync_err)
-                    self.assertEqual(digest_file.read_text(encoding="utf-8"), expected_digest)
-                    self.assertEqual(skill_file.read_text(encoding="utf-8"), expected_skill)
+                    self.assertNotIn("Regenerated", sync_out + sync_err)
+                    self.assertIn("Existing digest content.", target_md.read_text(encoding="utf-8"))
+                    self.assertTrue((target_skills / "sample-skill" / "SKILL.md").is_file())
+                    self.assertEqual(digest_file.read_text(encoding="utf-8"), "Existing digest content.\n")
+                    self.assertEqual(skill_file.read_text(encoding="utf-8"), "---\nname: sample-skill\n---\nExisting skill.\n")
                     self.assertEqual([p.relative_to(cwd_repo) for p in cwd_repo.rglob("*")], [Path(".git")])
             finally:
                 os.chdir(original_cwd)
@@ -1356,7 +1334,6 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
                 mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                 mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
-                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
             ):
                 list_out = io.StringIO()
                 with contextlib.redirect_stdout(list_out):
@@ -1435,7 +1412,6 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                 mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
                 mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
                 mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
-                mock.patch.object(sync_mod, "get_digest_generator", return_value=None),
             ):
                 code_pending, out_pending, err_pending = _run_main(["check", "--format", "json"])
                 self.assertEqual(code_pending, 1, err_pending)
@@ -1478,14 +1454,27 @@ class AgentFilesConfigTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
             cfg = cfg_mod.load_agent_files_config(repo_root=root)
-            self.assertEqual((cfg.repo_root, cfg.digest_path), (root, root / "guidelines" / "agent-digest.md"))
-            self.assertEqual((cfg.skills_dir, cfg.marker), (root / "skills", "dev-guidelines"))
+            self.assertEqual((cfg.repo_root, cfg.digest_path), (root, root / "agent-digest.md"))
+            self.assertEqual((cfg.skills_dir, cfg.marker), (root / "agent-skills", "dev-guidelines"))
             self.assertEqual((cfg.marker_begin, cfg.marker_end), (sync_mod.MARKER_BEGIN, sync_mod.MARKER_END))
             self.assertEqual((cfg.manifest_source, cfg.manifest_name), ("dev-guidelines", ".dev-guidelines-skills.json"))
             self.assertEqual(cfg.legacy_skill_names, ("plan-task-usage", "ui-verification"))
             reg = cfg_mod.ToolRegistry(cfg.tools)
             for name in ("claude", "claude-code", "antigravity", "codex", "codex-cli"):
                 self.assertIsNotNone(reg.get(name), name)
+
+    def test_default_paths_resolve_against_config_directory_when_config_sets_no_paths(self) -> None:
+        from support_python.tools import agent_files_config as cfg_mod
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            cfg_dir = Path(tmp_dir).resolve() / "config-home"
+            cfg_dir.mkdir()
+            cfg_file = cfg_dir / ".agent-files.json"
+            cfg_file.write_text(json.dumps({"marker": "only-marker"}), encoding="utf-8")
+            cfg = cfg_mod.load_agent_files_config(cfg_file)
+            self.assertEqual((cfg.digest_path, cfg.skills_dir), (cfg_dir / "agent-digest.md", cfg_dir / "agent-skills"))
+            flagged = cfg_mod.load_agent_files_config(cfg_file, digest_path="d/x.md", skills_dir="s")
+            self.assertEqual((flagged.digest_path, flagged.skills_dir), (cfg_dir / "d" / "x.md", cfg_dir / "s"))
 
     def test_config_discovery_prefers_dotfile_and_warns_on_legacy(self) -> None:
         from support_python.tools import agent_files_config as cfg_mod
@@ -1565,7 +1554,8 @@ class AgentFilesConfigTests(unittest.TestCase):
             )
             help_code, help_out, _ = _run_main(["help"])
             self.assertEqual(help_code, 0)
-            self.assertIn("  --digest PATH          guidelines digest file path override", help_out)
+            self.assertIn("  --digest PATH          digest file to install (default: ./agent-digest.md)", help_out)
+            self.assertIn("  --skills-dir PATH      skills directory to install (default: ./agent-skills)", help_out)
             code, out, err = _run_main(
                 [
                     "sync",
@@ -1622,10 +1612,9 @@ class SecondProjectMarkerAndManifestTests(unittest.TestCase):
             }
 
             dg_root = root / "dev-guidelines"
-            (dg_root / "guidelines").mkdir(parents=True)
-            (dg_root / "guidelines" / "agent-digest.md").write_text("Dev guidelines digest content.", encoding="utf-8")
-            (dg_root / "skills" / "dg-skill").mkdir(parents=True)
-            (dg_root / "skills" / "dg-skill" / "SKILL.md").write_text("---\nname: dg-skill\n---\nDG\n", encoding="utf-8")
+            (dg_root / "agent-skills" / "dg-skill").mkdir(parents=True)
+            (dg_root / "agent-digest.md").write_text("Dev guidelines digest content.", encoding="utf-8")
+            (dg_root / "agent-skills" / "dg-skill" / "SKILL.md").write_text("---\nname: dg-skill\n---\nDG\n", encoding="utf-8")
             dg_cfg = dg_root / ".agent-files.json"
             dg_cfg.write_text(json.dumps({"tools": [tool_entry], "replace_tools": True}), encoding="utf-8")
 
@@ -1689,10 +1678,9 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
     def test_added_registry_entry_is_listed_and_synced_like_builtin_tools(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
-            (root / "guidelines").mkdir(parents=True)
-            (root / "guidelines" / "agent-digest.md").write_text("Registry test digest.", encoding="utf-8")
-            (root / "skills" / "reg-skill").mkdir(parents=True)
-            (root / "skills" / "reg-skill" / "SKILL.md").write_text("---\nname: reg-skill\n---\nBody\n", encoding="utf-8")
+            (root / "agent-skills" / "reg-skill").mkdir(parents=True)
+            (root / "agent-digest.md").write_text("Registry test digest.", encoding="utf-8")
+            (root / "agent-skills" / "reg-skill" / "SKILL.md").write_text("---\nname: reg-skill\n---\nBody\n", encoding="utf-8")
             custom_target, custom_skills = root / "custom_home" / "CURSOR.md", root / "custom_home" / "skills"
             cfg_file = root / "agent-files.json"
             cfg_file.write_text(
@@ -1728,10 +1716,13 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
     def test_installed_agent_files_sync_and_check_integration(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir).resolve()
-            for d in (root / ".git", root / "guidelines", root / "skills" / "int-skill"):
+            for d in (root / ".git", root / "notes"):
                 d.mkdir(parents=True)
-            (root / "guidelines" / "agent-digest.md").write_text("Integration fixture digest.", encoding="utf-8")
-            (root / "skills" / "int-skill" / "SKILL.md").write_text("---\nname: int-skill\n---\nSkill\n", encoding="utf-8")
+            (root / "notes" / "rules.md").write_text("# Integration Rules\n\n## Rules\n- Keep it short.\n", encoding="utf-8")
+            (root / "notes" / "int-skill.md").write_text(
+                "---\nskill:\n  name: int-skill\n  description: Integration skill.\n---\n# Integration Skill\n\n- Do it.\n",
+                encoding="utf-8",
+            )
             target_file, target_skills = root / "targets" / "CLAUDE.md", root / "targets" / "skills"
             tool_cfg = {
                 "name": "claude-code",
@@ -1744,10 +1735,29 @@ class ToolRegistryAndAddedToolTests(unittest.TestCase):
             env = {**os.environ, "PYTHONPATH": str(SRC_DIR)}
             exe = shutil.which("agent-files", path=str(Path(sys.executable).parent))
             cmd = [exe] if exe else [sys.executable, str(_MODULE_PATH)]
+            digest_exe = shutil.which("agent-digest", path=str(Path(sys.executable).parent))
+            digest_cmd = [digest_exe] if digest_exe else [sys.executable, "-m", "support_python.tools.agent_digest"]
 
+            res_missing = subprocess.run([*cmd, "check"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(res_missing.returncode, 1, res_missing.stderr)
+            self.assertIn("agent-digest generate", res_missing.stderr)
+            res_gen = subprocess.run(
+                [*digest_cmd, "generate", "notes", "--digest", "agent-digest.md", "--skills-dir", "agent-skills"],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(res_gen.returncode, 0, res_gen.stdout + res_gen.stderr)
+            self.assertTrue((root / "agent-skills" / "int-skill" / "SKILL.md").is_file())
+            res_pending = subprocess.run([*cmd, "check"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
+            self.assertEqual(res_pending.returncode, 1, res_pending.stderr)
+            self.assertNotIn("agent-digest generate", res_pending.stderr)
             res_sync = subprocess.run([*cmd, "sync"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
             self.assertEqual(res_sync.returncode, 0, res_sync.stderr)
-            self.assertTrue(target_file.is_file())
+            self.assertIn("Keep it short.", target_file.read_text(encoding="utf-8"))
+            self.assertTrue((target_skills / "int-skill" / "SKILL.md").is_file())
             res_clean = subprocess.run([*cmd, "check"], cwd=root, env=env, capture_output=True, text=True, timeout=30)
             self.assertEqual(res_clean.returncode, 0, res_clean.stderr)
             target_file.write_text("Edited target file causing drift.\n", encoding="utf-8")

@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.17-pre
+## v2.0.18-pre
+- CLI: **[breaking]** Made `agent-files` install an existing `./agent-digest.md` and `./agent-skills` without regenerating them, exiting 1 with an `agent-digest generate` hint when the digest is missing ([agent_files.py](src/support_python/tools/agent_files.py), [agent-files.md](docs/tools/agent-files.md)).
 - CLI: **[breaking]** Renamed `processes list --format table` to `--format text`, added `kill --dry-run`, and kept JSON `stdout` log-free ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md)).
 - CLI: **[breaking]** Dropped `lint-markdown --fix`, added `fix --dry-run` and `check --format text|json`, and defaulted config to `.lint-markdown.json` ([lint_markdown.py](src/support_python/tools/lint_markdown.py), [profiles.py](src/support_python/markdown/profiles.py)).
 - CLI: **[breaking]** Generalized `agent-digest` to take `<PATH>...` inputs, order by `index` front-matter, and fold `validate` into `check` ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).

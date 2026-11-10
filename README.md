@@ -524,7 +524,8 @@ lint-markdown fix [paths...] [--dry-run] [--offline] [--profile PROFILE] [--conf
 ```
 
 ## Agent files sync
-[agent_files.py](src/support_python/tools/agent_files.py) and [agent_files_config.py](src/support_python/tools/agent_files_config.py) synchronize repository guideline digests and skills into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
+[agent_files.py](src/support_python/tools/agent_files.py) and [agent_files_config.py](src/support_python/tools/agent_files_config.py) install an existing digest and skills directory into configured AI coding tools (`ToolRegistry`, `AgentFilesConfig`, `load_agent_files_config`), exposed on the CLI as `agent-files`.
+It reads `./agent-digest.md` and `./agent-skills` by default and never regenerates them; run `agent-digest generate` first, or `sync` and `check` exit 1.
 Settings load from `.agent-files.json` in the repository root (falling back to `agent-files.json` with a warning, or `--config PATH`) with CLI flag overrides; see [agent-files.md](docs/tools/agent-files.md) for the full JSON schema and tool registry documentation:
 ```bash
 agent-files list [--format text|json] [--config PATH]

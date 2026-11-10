@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-Deterministically sync guidelines/agent-digest.md into a guarded block in each installed AI coding
-tool's global instructions file, and (separately) offer a `review` action where a tool's own CLI
-inspects this repository for improvement suggestions.
+Deterministically install an existing agent digest (default ./agent-digest.md) into a guarded block in
+each installed AI coding tool's global instructions file, plus the skills under ./agent-skills, and
+(separately) offer a `review` action where a tool's own CLI inspects this repository for improvement
+suggestions. Generating the digest and skills is agent-digest's job; this script never regenerates them.
 
 See docs/agent-instruction-files-notes.md for the design rationale.
 Each target file keeps the guarded `dev-guidelines` block first and any tool-specific/personal
@@ -30,6 +31,7 @@ from support_python.logging import (  # noqa: E402
     CliLogger,
     format_severity_indicator as format_severity_indicator,
 )
+from support_python.tools.agent_files_config import DEFAULT_DIGEST_RELPATH, DEFAULT_SKILLS_RELPATH
 
 
 class StderrRoutingLogger(CliLogger):
@@ -70,8 +72,8 @@ def find_project_root(path: Path | None = None) -> Path:
 
 
 REPO_ROOT = find_project_root()
-DIGEST_PATH = REPO_ROOT / "guidelines" / "agent-digest.md"
-SKILLS_DIR = REPO_ROOT / "skills"
+DIGEST_PATH = REPO_ROOT / DEFAULT_DIGEST_RELPATH
+SKILLS_DIR = REPO_ROOT / DEFAULT_SKILLS_RELPATH
 _INITIAL_REPO_ROOT = REPO_ROOT
 _INITIAL_DIGEST_PATH = DIGEST_PATH
 _INITIAL_SKILLS_DIR = SKILLS_DIR
@@ -84,12 +86,12 @@ def _resolve_repo_root() -> Path:
 
 def _resolve_digest_path() -> Path:
     """Return DIGEST_PATH if overridden by a caller, or resolve under the active repository root."""
-    return DIGEST_PATH if DIGEST_PATH is not _INITIAL_DIGEST_PATH else _resolve_repo_root() / "guidelines" / "agent-digest.md"
+    return DIGEST_PATH if DIGEST_PATH is not _INITIAL_DIGEST_PATH else _resolve_repo_root() / DEFAULT_DIGEST_RELPATH
 
 
 def _resolve_skills_dir() -> Path:
     """Return SKILLS_DIR if overridden by a caller, or resolve under the active repository root."""
-    return SKILLS_DIR if SKILLS_DIR is not _INITIAL_SKILLS_DIR else _resolve_repo_root() / "skills"
+    return SKILLS_DIR if SKILLS_DIR is not _INITIAL_SKILLS_DIR else _resolve_repo_root() / DEFAULT_SKILLS_RELPATH
 
 
 DEFAULT_TIMEOUT_SECONDS = 900
@@ -220,76 +222,12 @@ _INITIAL_TOOLS: list[Tool] = list(TOOLS)
 # drive headlessly. Add an adapter here once that's confirmed.
 
 
-def get_digest_generator():
-    """Return the packaged support_python.tools.agent_digest module."""
-    from support_python.tools import agent_digest
-
-    return agent_digest
-
-
 def load_digest() -> str:
+    """Return the stripped digest text, or an empty string when the digest file is missing."""
     digest_path = _resolve_digest_path()
     if not digest_path.is_file():
         return ""
     return digest_path.read_text(encoding="utf-8").strip()
-
-
-def ensure_digest(action: str, logger: CliLogger) -> str:
-    """Load the digest from guidelines/agent-digest.md. If agent-digest is available,
-    verify that the digest is in sync with source guidelines. If out of sync:
-    - on 'sync': automatically regenerate guidelines/agent-digest.md and log the update.
-    - on 'check': log a warning that the digest file on disk is out of date.
-    Returns the loaded digest string (or empty string if unavailable)."""
-    is_write = action == "sync"
-    is_check = action == "check"
-    repo_root = _resolve_repo_root()
-    digest_path = _resolve_digest_path()
-    skills_dir = _resolve_skills_dir()
-    generator = get_digest_generator()
-    source_dir = digest_path.parent
-    if generator is not None and source_dir.is_dir():
-        try:
-            expected = generator.build_digest(
-                [source_dir],
-                digest_path=digest_path,
-                skills_dir=skills_dir,
-                repo_root=Path(repo_root),
-            )
-            current = digest_path.read_text(encoding="utf-8") if digest_path.is_file() else ""
-            if is_write and hasattr(generator, "build_skills"):
-                try:
-                    skills = generator.build_skills(
-                        [source_dir],
-                        digest_path=digest_path,
-                        skills_dir=skills_dir,
-                        repo_root=Path(repo_root),
-                    )
-                    for skill_name, skill_content in skills.items():
-                        skill_file = skills_dir / skill_name / "SKILL.md"
-                        skill_file.parent.mkdir(parents=True, exist_ok=True)
-                        if not skill_file.is_file() or skill_file.read_text(encoding="utf-8") != skill_content:
-                            skill_file.write_text(skill_content, encoding="utf-8", newline="\n")
-                except Exception as skill_err:
-                    logger.log(f"Failed to synchronize derived skills: {skill_err}", level="DEBUG", origin=TOOL_NAME)
-
-            if expected.strip() and expected != current:
-                if is_write:
-                    digest_path.write_text(expected, encoding="utf-8", newline="\n")
-                    logger.log(
-                        f"Regenerated {digest_path.name} from source guidelines",
-                        origin=TOOL_NAME,
-                    )
-                    return expected.strip()
-                elif is_check:
-                    logger.log(
-                        f"{digest_path.name} is out of date compared to source guidelines (run 'agent-digest' or 'agent-files sync' to synchronize)",
-                        level="WARN",
-                        origin=TOOL_NAME,
-                    )
-        except Exception as error:
-            logger.log(f"Failed to check digest sources: {error}", level="DEBUG", origin=TOOL_NAME)
-
-    return load_digest()
 
 
 def build_guarded_block(digest: str, skills_catalog: str = "") -> str:
@@ -960,9 +898,14 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
     sync_action = "check" if args.dry_run else action
     digest_path = _resolve_digest_path()
     skills_dir = _resolve_skills_dir()
-    digest = ensure_digest(sync_action, logger)
+    digest = load_digest()
     if not digest:
-        logger.log(f"guidelines/agent-digest.md not found or empty at {digest_path}", level="ERROR", origin=TOOL_NAME)
+        logger.log(
+            f"digest not found or empty at {digest_path}; create it with "
+            f"'agent-digest generate <PATH>... --digest {digest_path} --skills-dir {skills_dir}'",
+            level="ERROR",
+            origin=TOOL_NAME,
+        )
         return 1
     skills = get_available_skills(skills_dir)
     if skills:
@@ -1169,8 +1112,8 @@ def build_harness() -> SyncHarness:
     for flag, meta, desc in (
         ("--config", "PATH", "path to .agent-files.json configuration file"),
         ("--repo-root", "PATH", "repository root directory override"),
-        ("--digest", "PATH", "guidelines digest file path override"),
-        ("--skills-dir", "PATH", "source skills directory override"),
+        ("--digest", "PATH", f"digest file to install (default: ./{DEFAULT_DIGEST_RELPATH})"),
+        ("--skills-dir", "PATH", f"skills directory to install (default: ./{DEFAULT_SKILLS_RELPATH})"),
         ("--marker", "NAME", "guarded block marker identifier override"),
         ("--marker-begin", "TEXT", "guarded block begin marker line override"),
         ("--marker-end", "TEXT", "guarded block end marker line override"),
@@ -1220,8 +1163,9 @@ def build_harness() -> SyncHarness:
         "sync",
         "sync guidelines and skills into each tool's configuration (default: all tools)",
         handler=lambda args, logger: action_sync("sync", args, logger),
-        detail="Regenerates guidelines/agent-digest.md when stale, rewrites the guarded block in each\n"
-        "tool's instructions file, and installs skills, pruning stale owned skills unless --no-prune.\n"
+        detail="Installs the existing digest into the guarded block in each tool's instructions file and\n"
+        "installs skills, pruning stale owned skills unless --no-prune. Never regenerates the digest;\n"
+        "run 'agent-digest generate' first. Exits 1 when the digest is missing.\n"
         "With --dry-run, reports what would change without writing or deleting anything.",
         usage_suffix="[TOOL ...] [options]",
         configure_parser=configure_tool_names,
@@ -1230,8 +1174,8 @@ def build_harness() -> SyncHarness:
         "check",
         "show what sync would change, without writing anything (default: all tools)",
         handler=lambda args, logger: action_sync("check", args, logger),
-        detail="Compares each tool's guarded block and installed skills against this repository.\n"
-        "Exits 1 when any tool has pending changes.",
+        detail="Compares each tool's guarded block and installed skills against the existing digest and\n"
+        "skills directory. Exits 1 when any tool has pending changes or the digest is missing.",
         usage_suffix="[TOOL ...] [options]",
         configure_parser=configure_check_parser,
     )
