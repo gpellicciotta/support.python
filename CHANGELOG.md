@@ -60,11 +60,11 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v1.3.0 [2026-11-07]
-- CLI: Parameterized agent-files sync with JSON configs, CLI flags, and `ToolRegistry` in [agent_files_config.py](src/support_python/agent_files_config.py) and [agent-files.md](docs/agent-files.md).
-- CLI: Ported global agent-files sync in [agent_files.py](src/support_python/agent_files.py) and exposed `support-python agent-files` in [cli.py](src/support_python/cli.py).
-- CLI: Ported `MarkdownLinter` in [markdown_lint.py](src/support_python/markdown_lint.py) and exposed `support-python lint markdown` in [cli.py](src/support_python/cli.py).
-- CLI: Consolidated `ToolHarness` and `CliLogger` in [cli.py](src/support_python/cli.py) and [logging.py](src/support_python/logging.py), and added `support-python backup` in [backup.py](src/support_python/backup.py).
-- DevEx: Added `stream_subprocess`, `run_step_command`, `resolve_executable`, and `EXIT_COMMAND_NOT_FOUND` in [devops.py](src/support_python/devops.py) for logged subprocess streaming.
+- CLI: Parameterized agent-files sync with JSON configs, CLI flags, and `ToolRegistry` in `src/support_python/agent_files_config.py` and `docs/agent-files.md`.
+- CLI: Ported global agent-files sync in `src/support_python/agent_files.py` and exposed `support-python agent-files` in [cli.py](src/support_python/cli.py).
+- CLI: Ported `MarkdownLinter` in `src/support_python/markdown_lint.py` and exposed `support-python lint markdown` in [cli.py](src/support_python/cli.py).
+- CLI: Consolidated `ToolHarness` and `CliLogger` in [cli.py](src/support_python/cli.py) and [logging.py](src/support_python/logging.py), and added `support-python backup` in `src/support_python/backup.py`.
+- DevEx: Added `stream_subprocess`, `run_step_command`, `resolve_executable`, and `EXIT_COMMAND_NOT_FOUND` in `src/support_python/devops.py` for logged subprocess streaming.
 - CLI: Unified `CliLogger`, `ToolLogger`, `TeeLogger`, `ToolHarness`, and build-metadata version helpers in [logging.py](src/support_python/logging.py) and [cli.py](src/support_python/cli.py).
 - BackEnd: Added sliding-window `TaskRateLimiter` in [ratelimit.py](src/support_python/ratelimit.py) to cap task dispatches across configurable time windows.
 - BackEnd: Added duration parsing, human-readable duration formatting, and relative epoch formatting helpers in [durations.py](src/support_python/durations.py).
