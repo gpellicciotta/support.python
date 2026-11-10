@@ -246,17 +246,24 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
     digest_path = _resolve_digest_path()
     skills_dir = _resolve_skills_dir()
     generator = get_digest_generator()
-    if generator is not None:
-        has_repo_root = hasattr(generator, "REPO_ROOT")
-        prev_repo_root = getattr(generator, "REPO_ROOT", None)
+    source_dir = digest_path.parent
+    if generator is not None and source_dir.is_dir():
         try:
-            if has_repo_root:
-                generator.REPO_ROOT = Path(repo_root)
-            expected = generator.build_digest()
+            expected = generator.build_digest(
+                [source_dir],
+                digest_path=digest_path,
+                skills_dir=skills_dir,
+                repo_root=Path(repo_root),
+            )
             current = digest_path.read_text(encoding="utf-8") if digest_path.is_file() else ""
             if is_write and hasattr(generator, "build_skills"):
                 try:
-                    skills = generator.build_skills()
+                    skills = generator.build_skills(
+                        [source_dir],
+                        digest_path=digest_path,
+                        skills_dir=skills_dir,
+                        repo_root=Path(repo_root),
+                    )
                     for skill_name, skill_content in skills.items():
                         skill_file = skills_dir / skill_name / "SKILL.md"
                         skill_file.parent.mkdir(parents=True, exist_ok=True)
@@ -265,7 +272,7 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
                 except Exception as skill_err:
                     logger.log(f"Failed to synchronize derived skills: {skill_err}", level="DEBUG", origin=TOOL_NAME)
 
-            if expected != current:
+            if expected.strip() and expected != current:
                 if is_write:
                     digest_path.write_text(expected, encoding="utf-8", newline="\n")
                     logger.log(
@@ -281,9 +288,6 @@ def ensure_digest(action: str, logger: CliLogger) -> str:
                     )
         except Exception as error:
             logger.log(f"Failed to check digest sources: {error}", level="DEBUG", origin=TOOL_NAME)
-        finally:
-            if has_repo_root:
-                generator.REPO_ROOT = prev_repo_root
 
     return load_digest()
 

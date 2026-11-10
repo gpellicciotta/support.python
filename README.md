@@ -46,7 +46,7 @@ From a local checkout, install into the active environment and invoke each comma
 python -m pip install .
 processes list --cwd .
 agent-files list
-agent-digest check
+agent-digest check guidelines
 lint-markdown check [paths] [--offline]
 git-repository-backup list --root ~/projects
 ```
@@ -532,11 +532,10 @@ agent-files review [TOOL...] [--config PATH] [--repo-root PATH] [--timeout SECON
 ```
 
 ## Agent digest generator
-[agent_digest.py](src/support_python/tools/agent_digest.py) generates `guidelines/agent-digest.md` and derived `skills/<name>/SKILL.md` files from repository guidelines and validates directive word and byte budgets, exposed on the CLI as `agent-digest`:
+[agent_digest.py](src/support_python/tools/agent_digest.py) builds a Markdown digest and `<name>/SKILL.md` skills from `<PATH>...` inputs and validates budgets (see [agent-digest.md](docs/tools/agent-digest.md)):
 ```bash
-agent-digest generate [--max-bytes BYTES]
-agent-digest check [--max-bytes BYTES]
-agent-digest validate [--max-bytes BYTES]
+agent-digest generate <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N]
+agent-digest check <PATH>... [--digest PATH] [--skills-dir PATH] [--link-base URL] [--max-words N] [--max-bytes N] [--skill-index FILE]
 ```
 
 ## Git repository backup

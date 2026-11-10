@@ -1288,7 +1288,8 @@ class RepoRootResolutionTests(unittest.TestCase):
                 self.assertFalse((repo_root / "scripts" / "generate-agent-digest.py").exists())
                 generator = sync_mod.get_digest_generator()
                 self.assertIs(generator, agent_digest)
-                self.assertEqual(generator._resolve_repo_root(), repo_root)
+                self.assertEqual(generator.find_project_root(Path.cwd()), repo_root)
+                self.assertFalse(hasattr(generator, "SOURCE_FILES"))
             finally:
                 os.chdir(original_cwd)
 

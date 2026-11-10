@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for support_python.tools.agent_digest (`agent-digest`).
+Unit and end-to-end tests for support_python.tools.agent_digest (`agent-digest`).
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from support_python.tools import agent_digest as generate_agent_digest
 TESTS_DIR = Path(__file__).resolve().parent.parent
 SRC_DIR = TESTS_DIR.parent / "src"
 FIXTURE_ROOT = TESTS_DIR / "fixtures" / "agent_digest"
+DEV_GUIDELINES_LINK_BASE = "https://github.com/gpellicciotta/dev-guidelines/blob/main/"
 
 SKILL_GUIDELINE = """---
 skill:
@@ -55,17 +56,18 @@ def run_main(argv: list[str]) -> tuple[int, str, str]:
     return code, out.getvalue(), err.getvalue()
 
 
-def run_action(action, **kwargs) -> tuple[int, str, str]:
+def run_action(action, *args, **kwargs) -> tuple[int, str, str]:
     """Run an action function capturing stdout and stderr."""
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-        code = action(**kwargs)
+        code = action(*args, **kwargs)
     return code, out.getvalue(), err.getvalue()
 
 
-def make_sources(root: Path) -> tuple[Path, Path]:
+def make_sources(root: Path) -> tuple[Path, Path, Path]:
     """Create a minimal guidelines directory with one core guideline and one skill guideline."""
     src_dir = root / "guidelines"
+    digest_path = src_dir / "agent-digest.md"
     skills_dir = root / "skills"
     src_dir.mkdir(parents=True)
     (src_dir / "general-guidelines.md").write_text(
@@ -73,7 +75,7 @@ def make_sources(root: Path) -> tuple[Path, Path]:
         encoding="utf-8",
     )
     (src_dir / "ui-guidelines.md").write_text(SKILL_GUIDELINE, encoding="utf-8")
-    return src_dir, skills_dir
+    return src_dir, digest_path, skills_dir
 
 
 def assert_stderr_lines_formatted(test: unittest.TestCase, stderr: str) -> None:
@@ -87,44 +89,419 @@ def assert_stderr_lines_formatted(test: unittest.TestCase, stderr: str) -> None:
         )
 
 
+class TestAgentDigestConstantsRemoval(unittest.TestCase):
+    def test_dev_guidelines_specific_constants_are_removed(self) -> None:
+        for removed_attr in ("SOURCE_FILES", "GUIDELINES_DIR", "DIGEST_PATH", "SKILLS_DIR", "PLAN_OWNED_SKILLS"):
+            with self.subTest(attr=removed_attr):
+                self.assertFalse(
+                    hasattr(generate_agent_digest, removed_attr),
+                    f"{removed_attr} should be removed from agent_digest",
+                )
+
+
+class TestPathCollectionAndOrdering(unittest.TestCase):
+    def test_collect_input_files_handles_files_recursive_dirs_hidden_dirs_and_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            docs = root / "docs"
+            nested = docs / "sub"
+            hidden = docs / ".hidden"
+            nested.mkdir(parents=True)
+            hidden.mkdir(parents=True)
+
+            f_top = root / "top.md"
+            f_a = docs / "a.md"
+            f_b = docs / "b.md"
+            f_sub = nested / "c.md"
+            f_hidden = hidden / "secret.md"
+            f_txt = docs / "ignored.txt"
+
+            for f in (f_top, f_a, f_b, f_sub, f_hidden):
+                f.write_text("# Doc\n\n- Short rule.\n", encoding="utf-8")
+            f_txt.write_text("not markdown\n", encoding="utf-8")
+
+            collected = generate_agent_digest.collect_input_files(
+                [f_top, docs, f_a, f_top],
+                digest_path=root / "agent-digest.md",
+                skills_dir=root / "agent-skills",
+            )
+            self.assertEqual(
+                collected,
+                [f_top.resolve(), f_a.resolve(), f_b.resolve(), f_sub.resolve()],
+            )
+
+    def test_collect_input_files_excludes_digest_and_skills_dir_inside_input_dir(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            digest_path = root / "agent-digest.md"
+            skills_dir = root / "agent-skills"
+            skill_sub = skills_dir / "sample-skill"
+            skill_sub.mkdir(parents=True)
+
+            source_md = root / "guide.md"
+            source_md.write_text("# Guide\n\n- Directive.\n", encoding="utf-8")
+            digest_path.write_text("## Old Digest\n", encoding="utf-8")
+            (skill_sub / "SKILL.md").write_text("---\nname: sample-skill\n---\n# Skill\n", encoding="utf-8")
+            (skill_sub / "refs.md").write_text("# Ref\n", encoding="utf-8")
+
+            collected = generate_agent_digest.collect_input_files(
+                [root],
+                digest_path=digest_path,
+                skills_dir=skills_dir,
+            )
+            self.assertEqual(collected, [source_md.resolve()])
+
+    def test_missing_or_non_markdown_paths_exit_2(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            txt_file = root / "notes.txt"
+            txt_file.write_text("plain text\n", encoding="utf-8")
+            missing = root / "does-not-exist.md"
+
+            for action in ("generate", "check"):
+                for bad_path in (missing, txt_file):
+                    with self.subTest(action=action, path=bad_path.name):
+                        code, _, err = run_main([action, str(bad_path)])
+                        self.assertEqual(code, 2)
+                        self.assertIn(bad_path.name, err)
+                        assert_stderr_lines_formatted(self, err)
+
+    def test_generate_and_check_without_paths_report_usage_error_and_exit_2(self) -> None:
+        for action in ("generate", "check"):
+            with self.subTest(action=action):
+                code, out, err = run_main([action])
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                self.assertIn("Usage: agent-digest", err)
+                assert_stderr_lines_formatted(self, err)
+
+    def test_index_ordering_orders_indexed_then_unindexed_with_stable_ties(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            guidelines = root / "guidelines"
+            guidelines.mkdir()
+
+            file_a = guidelines / "a.md"
+            file_b = guidelines / "b.md"
+            file_c = guidelines / "c.md"
+            extra = root / "extra.md"
+
+            file_a.write_text("# File A\n\n- Rule A.\n", encoding="utf-8")
+            file_b.write_text("---\nindex: 1\n---\n# File B\n\n- Rule B.\n", encoding="utf-8")
+            file_c.write_text("---\nindex: 1\n---\n# File C\n\n- Rule C.\n", encoding="utf-8")
+            extra.write_text("---\nindex: 0\n---\n# Extra\n\n- Rule Extra.\n", encoding="utf-8")
+
+            ordered = generate_agent_digest.collect_input_files([guidelines, extra])
+            self.assertEqual(
+                ordered,
+                [extra.resolve(), file_b.resolve(), file_c.resolve(), file_a.resolve()],
+            )
+
+            digest = generate_agent_digest.build_digest([guidelines, extra])
+            pos_extra = digest.index("## Extra")
+            pos_b = digest.index("## File B")
+            pos_c = digest.index("## File C")
+            pos_a = digest.index("## File A")
+            self.assertLess(pos_extra, pos_b)
+            self.assertLess(pos_b, pos_c)
+            self.assertLess(pos_c, pos_a)
+
+    def test_non_integer_index_exits_1_and_names_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            bad_file = root / "bad-index.md"
+            bad_file.write_text("---\nindex: first\n---\n# Bad\n\n- Rule.\n", encoding="utf-8")
+
+            for action in ("generate", "check"):
+                with self.subTest(action=action):
+                    code, _, err = run_main(
+                        [
+                            action,
+                            str(bad_file),
+                            "--digest",
+                            str(root / "out.md"),
+                            "--skills-dir",
+                            str(root / "skills"),
+                        ]
+                    )
+                    self.assertEqual(code, 1)
+                    self.assertIn("bad-index.md", err)
+                    assert_stderr_lines_formatted(self, err)
+
+
+class TestOutputOptionsAndDefaults(unittest.TestCase):
+    def test_generate_uses_default_digest_and_skills_dir_in_cwd(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir = root / "src_docs"
+            src_dir.mkdir()
+            (src_dir / "core.md").write_text("# Core\n\n- Short rule.\n", encoding="utf-8")
+            (src_dir / "skill.md").write_text(SKILL_GUIDELINE, encoding="utf-8")
+
+            orig_cwd = Path.cwd()
+            os.chdir(root)
+            try:
+                code, _, err = run_main(["generate", "src_docs"])
+                self.assertEqual(code, 0, err)
+                self.assertTrue((root / "agent-digest.md").is_file())
+                self.assertIn("## Core", (root / "agent-digest.md").read_text(encoding="utf-8"))
+                self.assertTrue((root / "agent-skills" / "sample-guidelines" / "SKILL.md").is_file())
+
+                check_code, _, check_err = run_main(["check", "src_docs"])
+                self.assertEqual(check_code, 0, check_err)
+            finally:
+                os.chdir(orig_cwd)
+
+    def test_generate_respects_custom_digest_and_skills_dir_options(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir = root / "guidelines"
+            src_dir.mkdir()
+            (src_dir / "core.md").write_text("# Core\n\n- Short rule.\n", encoding="utf-8")
+            (src_dir / "skill.md").write_text(SKILL_GUIDELINE, encoding="utf-8")
+
+            custom_digest = root / "out" / "custom-digest.md"
+            custom_skills = root / "out" / "custom-skills"
+
+            code, _, err = run_main(
+                [
+                    "generate",
+                    str(src_dir),
+                    "--digest",
+                    str(custom_digest),
+                    "--skills-dir",
+                    str(custom_skills),
+                ]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertTrue(custom_digest.is_file())
+            self.assertTrue((custom_skills / "sample-guidelines" / "SKILL.md").is_file())
+
+
+class TestLinkBaseAndSkillLinks(unittest.TestCase):
+    def test_github_and_relative_skill_md_urls_rewrite_to_skill_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            core = root / "core.md"
+            skill = root / "testing.md"
+            core.write_text(
+                "# Core\n\n"
+                "- Follow [Plan Task Usage](https://github.com/gpellicciotta/plan/blob/main/src/plan/skills/plan-task-usage-guidelines/SKILL.md).\n"
+                "- Follow [Custom Skill](../other/skills/custom-skill/SKILL.md).\n",
+                encoding="utf-8",
+            )
+            skill.write_text(
+                "---\n"
+                "skill:\n"
+                "  name: testing-guidelines\n"
+                "  description: Testing.\n"
+                "---\n"
+                "# Testing\n\n"
+                "- Follow [Research](https://github.com/gpellicciotta/plan/blob/main/src/plan/skills/research-guidelines/SKILL.md).\n",
+                encoding="utf-8",
+            )
+
+            digest = generate_agent_digest.build_digest([core, skill])
+            skills = generate_agent_digest.build_skills([core, skill])
+
+            self.assertIn("Follow the `plan-task-usage-guidelines` skill.", digest)
+            self.assertIn("Follow the `custom-skill` skill.", digest)
+            self.assertIn("Follow the `research-guidelines` skill.", skills["testing-guidelines"])
+
+    def test_link_base_override_and_missing_origin_keeps_relative_links(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / ".git").mkdir()
+            docs = root / "guidelines"
+            docs.mkdir()
+            (root / "scripts").mkdir()
+            (root / "scripts" / "tool.py").write_text("# tool\n", encoding="utf-8")
+
+            core = docs / "core.md"
+            core.write_text("# Core\n\n- Run [tool.py](../scripts/tool.py).\n", encoding="utf-8")
+
+            # Without origin remote and without --link-base, link stays relative
+            digest_no_base = generate_agent_digest.build_digest([core])
+            self.assertIn("[tool.py](../scripts/tool.py)", digest_no_base)
+
+            # And check reports the relative link in digest
+            digest_out = root / "agent-digest.md"
+            skills_out = root / "agent-skills"
+            run_main(["generate", str(core), "--digest", str(digest_out), "--skills-dir", str(skills_out)])
+            code, _, err = run_main(["check", str(core), "--digest", str(digest_out), "--skills-dir", str(skills_out)])
+            self.assertEqual(code, 1)
+            self.assertIn("Relative markdown link in digest: ../scripts/tool.py", err)
+
+            # With --link-base override, link is rewritten and check passes
+            custom_base = "https://github.com/acme/project/blob/develop/"
+            run_main(
+                [
+                    "generate",
+                    str(core),
+                    "--digest",
+                    str(digest_out),
+                    "--skills-dir",
+                    str(skills_out),
+                    "--link-base",
+                    custom_base,
+                ]
+            )
+            self.assertIn(
+                "[tool.py](https://github.com/acme/project/blob/develop/scripts/tool.py)",
+                digest_out.read_text(encoding="utf-8"),
+            )
+            code_ok, _, err_ok = run_main(
+                [
+                    "check",
+                    str(core),
+                    "--digest",
+                    str(digest_out),
+                    "--skills-dir",
+                    str(skills_out),
+                    "--link-base",
+                    custom_base,
+                ]
+            )
+            self.assertEqual(code_ok, 0, err_ok)
+
+    def test_derive_link_base_from_origin_remote_and_branch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            repo = Path(tmpdir)
+            subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://github.com/gpellicciotta/dev-guidelines.git"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+            )
+            derived = generate_agent_digest.derive_link_base(repo)
+            self.assertEqual(derived, "https://github.com/gpellicciotta/dev-guidelines/blob/main/")
+
+
+class TestMergedCheckAction(unittest.TestCase):
+    def test_check_fails_on_stale_digest_stale_skill_budget_violation_and_unlinked_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+
+            # Generate fresh outputs
+            code, _, err = run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            self.assertEqual(code, 0, err)
+
+            # Fresh check passes with --skill-index
+            code, _, err = run_main(
+                [
+                    "check",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--skill-index",
+                    str(src_dir / "general-guidelines.md"),
+                ]
+            )
+            self.assertEqual(code, 0, err)
+
+            # 1. Stale digest fails check
+            digest_path.write_text("stale digest\n", encoding="utf-8")
+            code, _, err = run_main(["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            self.assertEqual(code, 1)
+            self.assertIn("agent-digest.md is out of date", err)
+
+            # Restore digest, make skill stale -> fails check
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            (skills_dir / "sample-guidelines" / "SKILL.md").write_text("stale skill\n", encoding="utf-8")
+            code, _, err = run_main(["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            self.assertEqual(code, 1)
+            self.assertIn("sample-guidelines/SKILL.md is out of date", err)
+
+            # Restore skill, test word budget violation (--max-words 1)
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            code, _, err = run_main(
+                [
+                    "check",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--max-words",
+                    "1",
+                ]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("sentence word budget violation(s)", err)
+
+            # Test byte budget violation (--max-bytes 10)
+            code, _, err = run_main(
+                [
+                    "check",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--max-bytes",
+                    "10",
+                ]
+            )
+            self.assertEqual(code, 1)
+            self.assertIn("exceeds the hard budget limit", err)
+
+            # Test unlinked skill with --skill-index
+            index_file = src_dir / "general-guidelines.md"
+            index_file.write_text("# General Guidelines\n\n- Core rule without skill link.\n", encoding="utf-8")
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            # Without --skill-index, check passes
+            code_no_idx, _, err_no_idx = run_main(
+                ["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)]
+            )
+            self.assertEqual(code_no_idx, 0, err_no_idx)
+            # With --skill-index, check fails
+            code_idx, _, err_idx = run_main(
+                [
+                    "check",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--skill-index",
+                    str(index_file),
+                ]
+            )
+            self.assertEqual(code_idx, 1)
+            self.assertIn("ui-guidelines.md", err_idx)
+
+    def test_check_rejects_unknown_frontmatter_keys_and_orphan_reference_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+
+            # Unknown top-level key
+            (src_dir / "general-guidelines.md").write_text(
+                "---\nauthor: test\n---\n# General\n\n- Short rule.\n- See [Sample](ui-guidelines.md).\n",
+                encoding="utf-8",
+            )
+            # Unknown key under skill:
+            (src_dir / "ui-guidelines.md").write_text(
+                "---\nskill:\n  name: sample-guidelines\n  description: Sample.\n  extra_key: bad\n---\n# Sample\n\n- Rule.\n",
+                encoding="utf-8",
+            )
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            orphan = skills_dir / "sample-guidelines" / "references" / "orphan.md"
+            orphan.parent.mkdir(parents=True)
+            orphan.write_text("# Orphan\n", encoding="utf-8")
+
+            code, _, err = run_main(["check", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            self.assertEqual(code, 1)
+            self.assertIn("author", err)
+            self.assertIn("extra_key", err)
+            self.assertIn("Orphan reference file 'references/orphan.md'", err)
+
+
 class TestGenerateAgentDigestCli(unittest.TestCase):
-    def setUp(self) -> None:
-        self._repo_patch = mock.patch.object(generate_agent_digest, "REPO_ROOT", FIXTURE_ROOT)
-        self._repo_patch.start()
-        self.addCleanup(self._repo_patch.stop)
-
-    def test_digest_defers_plan_rules_and_preserves_personal_rules(self) -> None:
-        digest = generate_agent_digest.build_digest()
-        self.assertIn("In projects managed with plan, follow plan's bundled skills for tasks, reviews, and evidence.", digest)
-        for fragment in (
-            "## Task Sizing",
-            "Always create a companion task file",
-            "to the task file",
-            "in the task file before implementation",
-            "under `### Tests`",
-            "TDD execution steps",
-            "Never use @dummy",
-            "Record findings for sibling projects",
-            "An automated loop pushes or deploys",
-        ):
-            with self.subTest(fragment=fragment):
-                self.assertNotIn(fragment, digest)
-        for fragment in (
-            "Ask clarifying questions before proceeding",
-            "Practice test-driven development",
-            "Define concrete unit test cases",
-            "Standing consent never covers reading external secrets",
-            "Never fake, simulate, or fabricate",
-        ):
-            with self.subTest(fragment=fragment):
-                self.assertIn(fragment, digest)
-
-    def test_plan_owned_skills_are_not_generated(self) -> None:
-        skills = generate_agent_digest.build_skills()
-        for name in ("plan-task-usage-guidelines", "research-guidelines"):
-            self.assertNotIn(name, set(skills))
-        self.assertIn("testing-guidelines", skills)
-
     def test_bare_invocation_shows_help_without_generating(self) -> None:
         with mock.patch.object(generate_agent_digest, "action_generate", side_effect=AssertionError("generate ran")):
             code, out, err = run_main([])
@@ -133,22 +510,27 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
         self.assertRegex(out.splitlines()[0], r"^agent-digest v\S+ - Copyright \(c\) ")
         self.assertIn("Usage:", out)
 
-    def test_help_lists_version_header_actions_logging_options_and_exit_codes(self) -> None:
+    def test_help_lists_version_header_actions_options_and_exit_codes(self) -> None:
         code, out, _ = run_main(["help"])
         self.assertEqual(code, 0)
         self.assertRegex(out.splitlines()[0], r"^agent-digest v\S+ - Copyright \(c\) ")
         for fragment in (
             "generate",
             "check",
-            "validate",
+            "--digest",
+            "--skills-dir",
+            "--link-base",
+            "--max-words",
+            "--max-bytes",
+            "--skill-index",
             "--log-file",
             "--log-level",
             "--debug",
             "--verbose",
-            "--max-bytes",
             "Exit codes:",
         ):
             self.assertIn(fragment, out)
+        self.assertNotRegex(out, r"(?m)^\s+validate\s")
         self.assertNotIn("Detailed Action Descriptions:", out)
 
     def test_help_verbose_documents_every_action(self) -> None:
@@ -158,14 +540,14 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
         self.assertIn("Examples:", out)
 
     def test_action_specific_help_shows_only_target_action(self) -> None:
-        for action in ("generate", "check", "validate"):
+        for action in ("generate", "check"):
             with self.subTest(action=action):
                 code, out, err = run_main([action, "--help"])
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
                 self.assertIn(f"Detailed Action Description: {action}", out)
-                self.assertIn(f"Usage:\n  agent-digest {action} [options]", out)
-                for other_action in ("generate", "check", "validate"):
+                self.assertIn(f"Usage:\n  agent-digest {action} <PATH>...", out)
+                for other_action in ("generate", "check"):
                     if other_action != action:
                         self.assertNotIn(f"Detailed Action Description: {other_action}", out)
 
@@ -176,128 +558,89 @@ class TestGenerateAgentDigestCli(unittest.TestCase):
         self.assertIn("Detailed Action Description: check", out)
         self.assertNotIn("Detailed Action Description: generate", out)
 
-    def test_validate_emits_startup_and_completion_banners(self) -> None:
-        code, out, _ = run_main(["validate", "--max-bytes", "100000"])
-        self.assertEqual(code, 0)
-        self.assertRegex(out, r"Starting agent-digest v\S+ with configuration:\n- Command: validate\n")
-        self.assertIn("- Max bytes: 100000", out)
-        self.assertRegex(out, r"Finished agent-digest validate in \d+\.\ds with status: succeeded")
-
-    def test_log_file_receives_utc_timestamped_entries(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            log_path = Path(tmpdir) / "digest.log"
-            code, _, _ = run_main(["validate", "--max-bytes", "100000", "--log-file", str(log_path)])
-            self.assertEqual(code, 0)
-            content = log_path.read_text(encoding="utf-8")
-        self.assertRegex(content, r"^\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\] \*\*\[INFO\]\*\*  Starting agent-digest")
-        self.assertIn("with status: succeeded", content)
-
-    def test_log_level_error_suppresses_info_output(self) -> None:
-        code, out, err = run_main(["validate", "--max-bytes", "100000", "--log-level", "ERROR"])
-        self.assertEqual(code, 0)
+    def test_validate_is_rejected_as_unknown_subcommand_exiting_2(self) -> None:
+        code, out, err = run_main(["validate"])
+        self.assertEqual(code, 2)
         self.assertEqual(out, "")
-        self.assertEqual(err, "")
+        self.assertIn("Unknown subcommand: 'validate'", err)
+        self.assertRegex(err, r"(?m)^ {12}Usage: agent-digest \{help\|version\|generate\|check\}")
+        assert_stderr_lines_formatted(self, err)
 
-    def test_debug_flag_emits_debug_entries(self) -> None:
-        code, out, _ = run_main(["validate", "--max-bytes", "100000", "--debug"])
-        self.assertEqual(code, 0)
-        self.assertIn("- Log level: DEBUG", out)
-        self.assertRegex(out, r"(?m)^\*\*\[DEBUG\]\*\* ")
+    def test_check_emits_startup_and_completion_banners_and_logs_to_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir, digest_path, skills_dir = make_sources(Path(tmpdir))
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            log_path = Path(tmpdir) / "digest.log"
+            code, out, err = run_main(
+                [
+                    "check",
+                    str(src_dir),
+                    "--digest",
+                    str(digest_path),
+                    "--skills-dir",
+                    str(skills_dir),
+                    "--max-bytes",
+                    "100000",
+                    "--log-file",
+                    str(log_path),
+                ]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertRegex(out, r"Starting agent-digest v\S+ with configuration:\n- Command: check\n")
+            self.assertIn("- Max bytes: 100000", out)
+            self.assertRegex(out, r"Finished agent-digest check in \d+\.\ds with status: succeeded")
+            content = log_path.read_text(encoding="utf-8")
+            self.assertRegex(content, r"^\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\] \*\*\[INFO\]\*\*  Starting agent-digest")
+            self.assertIn("with status: succeeded", content)
+
+    def test_log_level_error_suppresses_info_output_and_debug_emits_debug(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir, digest_path, skills_dir = make_sources(Path(tmpdir))
+            base_args = [
+                "check",
+                str(src_dir),
+                "--digest",
+                str(digest_path),
+                "--skills-dir",
+                str(skills_dir),
+            ]
+            run_main(["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir)])
+            code, out, err = run_main([*base_args, "--log-level", "ERROR"])
+            self.assertEqual(code, 0)
+            self.assertEqual(out, "")
+            self.assertEqual(err, "")
+
+            code_dbg, out_dbg, _ = run_main([*base_args, "--debug"])
+            self.assertEqual(code_dbg, 0)
+            self.assertIn("- Log level: DEBUG", out_dbg)
+            self.assertRegex(out_dbg, r"(?m)^\*\*\[DEBUG\]\*\* ")
 
     def test_unknown_option_reports_formatted_error_and_exit_2(self) -> None:
-        code, _, err = run_main(["validate", "--bogus"])
-        self.assertEqual(code, 2)
-        self.assertIn("--bogus", err)
-        assert_stderr_lines_formatted(self, err)
-
-    def test_unknown_option_logs_to_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             log_path = Path(tmpdir) / "error.log"
-            code, _, err = run_main(["validate", "--bogus", "--log-file", str(log_path)])
+            code, _, err = run_main(["check", "--bogus", "--log-file", str(log_path)])
             self.assertEqual(code, 2)
             self.assertIn("--bogus", err)
+            assert_stderr_lines_formatted(self, err)
             self.assertTrue(log_path.exists())
-            content = log_path.read_text(encoding="utf-8")
-            self.assertIn("--bogus", content)
-            self.assertRegex(content, r"\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\] \*\*\[ERROR\]\*\* ")
+            self.assertIn("--bogus", log_path.read_text(encoding="utf-8"))
 
-    def test_unknown_action_logs_to_log_file(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            log_path = Path(tmpdir) / "error.log"
-            code, _, err = run_main(["bogus", "--log-file", str(log_path)])
-            self.assertEqual(code, 2)
-            self.assertIn("Unknown subcommand: 'bogus'", err)
-            self.assertTrue(log_path.exists())
-            content = log_path.read_text(encoding="utf-8")
-            self.assertIn("Unknown subcommand: 'bogus'", content)
-            self.assertRegex(content, r"\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d\] \*\*\[ERROR\]\*\* ")
-
-    def test_unknown_action_or_leading_option_reports_formatted_error_and_exit_2(self) -> None:
-        for argv in (["bogus"], ["--bogus"]):
-            with self.subTest(argv=argv):
-                code, out, err = run_main(argv)
-                self.assertEqual(code, 2)
-                self.assertEqual(out, "")
-                self.assertIn(f"Unknown subcommand: '{argv[0]}'", err)
-                self.assertRegex(err, r"(?m)^ {12}Usage: agent-digest \{help\|version\|generate\|check\|validate\}")
-                assert_stderr_lines_formatted(self, err)
-
-    def test_size_budget_failure_reports_failed_completion(self) -> None:
-        code, _, err = run_main(["validate", "--max-bytes", "10"])
-        self.assertEqual(code, 1)
-        self.assertIn("exceeds the hard budget limit", err)
-        self.assertRegex(err, r"Finished agent-digest validate in \d+\.\ds with status: failed")
-        assert_stderr_lines_formatted(self, err)
-
-
-class TestGenerateAgentDigestLogging(unittest.TestCase):
     def test_check_lists_each_up_to_date_skill_only_when_verbose(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
-            src_dir, skills_dir = make_sources(Path(tmpdir))
-            dirs = {"source_dir": src_dir, "skills_root": skills_dir}
-            code, out, _ = run_action(generate_agent_digest.action_generate, logger=CliLogger(), **dirs)
+            src_dir, digest_path, skills_dir = make_sources(Path(tmpdir))
+            opts = {"paths": [src_dir], "digest_path": digest_path, "skills_dir": skills_dir}
+            code, out, _ = run_action(generate_agent_digest.action_generate, logger=CliLogger(), **opts)
             self.assertEqual(code, 0)
             self.assertIn("sample-guidelines/SKILL.md", out)
 
-            code, out, err = run_action(generate_agent_digest.action_check, logger=CliLogger(), **dirs)
+            code, out, err = run_action(generate_agent_digest.action_check, logger=CliLogger(), **opts)
             self.assertEqual((code, err), (0, ""))
             self.assertNotIn("sample-guidelines/SKILL.md is up to date", out)
             self.assertIn("All 1 derived skill(s) are up to date.", out)
 
-            code, out, _ = run_action(generate_agent_digest.action_check, logger=CliLogger(verbose=True), **dirs)
+            code, out, _ = run_action(generate_agent_digest.action_check, logger=CliLogger(verbose=True), **opts)
             self.assertEqual(code, 0)
             self.assertIn("sample-guidelines/SKILL.md is up to date", out)
-
-    def test_check_reports_stale_files_and_diffs_with_severity_indicators(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            src_dir, skills_dir = make_sources(Path(tmpdir))
-            dirs = {"source_dir": src_dir, "skills_root": skills_dir}
-            run_action(generate_agent_digest.action_generate, logger=CliLogger(), **dirs)
-            (skills_dir / "sample-guidelines" / "SKILL.md").write_text("stale\n", encoding="utf-8")
-            (src_dir / "agent-digest.md").write_text("stale\n", encoding="utf-8")
-
-            code, _, err = run_action(generate_agent_digest.action_check, logger=CliLogger(), **dirs)
-        self.assertEqual(code, 1)
-        self.assertIn("sample-guidelines/SKILL.md is out of date", err)
-        self.assertIn("agent-digest.md is out of date", err)
-        self.assertIn("-stale", err)
-        assert_stderr_lines_formatted(self, err)
-
-    def test_validate_reports_word_budget_violations_with_severity_indicators(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            src_dir, skills_dir = make_sources(Path(tmpdir))
-            code, _, err = run_action(
-                generate_agent_digest.action_validate,
-                max_words=1,
-                source_dir=src_dir,
-                skills_root=skills_dir,
-                logger=CliLogger(),
-            )
-        self.assertEqual(code, 1)
-        self.assertIn("sentence word budget violation(s) in digest", err)
-        self.assertIn("sentence word budget violation(s) in skill sample-guidelines", err)
-        self.assertRegex(err, r"(?m)^ {12}Line \d+ \(\d+ words\): ")
-        assert_stderr_lines_formatted(self, err)
 
 
 class TestGenerateAgentDigestEndToEnd(unittest.TestCase):
@@ -325,364 +668,31 @@ class TestGenerateAgentDigestEndToEnd(unittest.TestCase):
             timeout=120,
         )
 
-    def test_installed_agent_digest_version_prints_banner_and_exits_0(self) -> None:
-        result = self.run_script("version")
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertRegex(result.stdout.strip(), r"^agent-digest v\S+ - Copyright \(c\) ")
+    def test_installed_agent_digest_version_and_bare_help(self) -> None:
+        res_ver = self.run_script("version")
+        self.assertEqual(res_ver.returncode, 0, res_ver.stderr)
+        self.assertRegex(res_ver.stdout.strip(), r"^agent-digest v\S+ - Copyright \(c\) ")
 
-    def test_bare_invocation_prints_help(self) -> None:
-        result = self.run_script()
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertRegex(result.stdout.splitlines()[0], r"^agent-digest v\S+ - Copyright \(c\) ")
-        self.assertNotIn("Generated ", result.stdout)
+        res_bare = self.run_script()
+        self.assertEqual(res_bare.returncode, 0, res_bare.stderr)
+        self.assertNotIn("Generated ", res_bare.stdout)
 
-    def test_unknown_action_reports_formatted_error(self) -> None:
-        result = self.run_script("bogus")
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, "")
-        self.assertIn("Unknown subcommand: 'bogus'", result.stderr)
-        assert_stderr_lines_formatted(self, result.stderr)
-
-    def test_validate_succeeds_with_banners(self) -> None:
-        result = self.run_script("validate")
+    def test_check_succeeds_on_fixture_checkout_with_explicit_options(self) -> None:
+        result = self.run_script(
+            "check",
+            "guidelines",
+            "--digest",
+            "guidelines/agent-digest.md",
+            "--skills-dir",
+            "skills",
+            "--skill-index",
+            "guidelines/general-guidelines.md",
+            "--link-base",
+            DEV_GUIDELINES_LINK_BASE,
+        )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Starting agent-digest v", result.stdout)
-        self.assertRegex(result.stdout, r"Finished agent-digest validate in \d+\.\ds with status: succeeded")
-
-
-class TestGenerateAgentDigest(unittest.TestCase):
-    def setUp(self) -> None:
-        self._repo_patch = mock.patch.object(generate_agent_digest, "REPO_ROOT", FIXTURE_ROOT)
-        self._repo_patch.start()
-        self.addCleanup(self._repo_patch.stop)
-
-    def test_plan_owned_links_remain_portable_without_local_sources(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            source_dir = Path(tmpdir)
-            for name in sorted(generate_agent_digest.PLAN_OWNED_SKILLS):
-                self.assertNotIn(f"{name}.md", generate_agent_digest.SOURCE_FILES)
-                content = f"Follow [guidance](../../plan/src/plan/skills/{name}/SKILL.md)."
-                rewritten = generate_agent_digest.rewrite_markdown_links(content, source_dir=source_dir)
-                self.assertEqual(rewritten, f"Follow the `{name}` skill.")
-
-    def test_build_digest_filters_blockquotes(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
-            # Create mock source files
-            for filename in [
-                "ai-agent-guidelines.md",
-                "plan-task-usage-guidelines.md",
-                "general-guidelines.md",
-                "markdown-guidelines.md",
-                "javascript-guidelines.md",
-                "java-guidelines.md",
-                "python-guidelines.md",
-            ]:
-                (tmppath / filename).write_text(
-                    f"# Title for {filename}\n\n- Top-level directive.\n  > Rationale blockquote.\n",
-                    encoding="utf-8",
-                )
-
-            digest = generate_agent_digest.build_digest(source_dir=tmppath)
-            self.assertIn("## Title for ai-agent-guidelines.md", digest)
-            self.assertIn("- Top-level directive.", digest)
-            self.assertNotIn("Rationale blockquote", digest)
-
-    def test_find_budget_violations(self) -> None:
-        short_text = "- Valid short sentence."
-        self.assertEqual(len(generate_agent_digest.find_budget_violations(short_text, max_words=20)), 0)
-
-        long_sentence = "- This is a sentence with way too many words that will easily exceed the twenty word budget limit enforced by the guidelines protocol."
-        violations = generate_agent_digest.find_budget_violations(long_sentence, max_words=20)
-        self.assertEqual(len(violations), 1)
-        self.assertEqual(violations[0][1], 23)
-
-    def test_cli_help_and_version(self) -> None:
-        self.assertEqual(generate_agent_digest.main(["help"]), 0)
-        self.assertEqual(generate_agent_digest.main(["help", "--verbose"]), 0)
-        self.assertEqual(generate_agent_digest.main(["--help"]), 0)
-        self.assertEqual(generate_agent_digest.main(["version"]), 0)
-        self.assertEqual(generate_agent_digest.main(["--version"]), 0)
-
-    def test_check_size_budget(self) -> None:
-        is_valid, count, limit = generate_agent_digest.check_size_budget("short text", max_bytes=100)
-        self.assertTrue(is_valid)
-        self.assertEqual(count, len("short text".encode("utf-8")))
-        self.assertEqual(limit, 100)
-
-        is_valid, count, limit = generate_agent_digest.check_size_budget("a" * 150, max_bytes=100)
-        self.assertFalse(is_valid)
-        self.assertEqual(count, 150)
-        self.assertEqual(limit, 100)
-
-    def test_action_validate_size_budget(self) -> None:
-        # With high limit, validation succeeds if words are within budget
-        self.assertEqual(generate_agent_digest.action_validate(max_words=50, max_bytes=100000), 0)
-        # With tiny limit (e.g. 10 bytes), validation fails on size
-        self.assertEqual(generate_agent_digest.action_validate(max_words=50, max_bytes=10), 1)
-
-    def test_cli_max_bytes_option(self) -> None:
-        self.assertEqual(generate_agent_digest.main(["validate", "--max-bytes", "100000"]), 0)
-        self.assertEqual(generate_agent_digest.main(["validate", "--max-bytes", "10"]), 1)
-
-    def test_build_skills_and_digest_exclusion(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmppath = Path(tmpdir)
-            # Create a core guideline without skill:
-            (tmppath / "ai-agent-guidelines.md").write_text(
-                "# AI Agent Guidelines\n\n- Core behavioral rule.\n  > Rationale.\n",
-                encoding="utf-8",
-            )
-            # Create other core files
-            for fn in ["general-guidelines.md"]:
-                (tmppath / fn).write_text(f"# {fn}\n\n- Core rule.\n", encoding="utf-8")
-
-            # Create a skill guideline with skill: frontmatter
-            (tmppath / "javascript-guidelines.md").write_text(
-                """---
-skill:
-  name: javascript-guidelines
-  description: JavaScript guidelines description.
----
-
-# JavaScript Guidelines
-
-- JS rule.
-  > JS rationale.
-- Repository link [tool](../scripts/tool.py).
-""",
-                encoding="utf-8",
-            )
-
-            # Test build_skills
-            skills = generate_agent_digest.build_skills(source_dir=tmppath)
-            self.assertIn("javascript-guidelines", skills)
-            js_skill = skills["javascript-guidelines"]
-            self.assertIn("name: javascript-guidelines", js_skill)
-            self.assertIn("description: >-", js_skill)
-            self.assertIn("- JS rule.", js_skill)
-            self.assertNotIn("JS rationale.", js_skill)
-            # Check repository link rewrite rule
-            self.assertIn("[tool](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/tool.py)", js_skill)
-
-            # Test build_digest excludes the skill
-            digest = generate_agent_digest.build_digest(source_dir=tmppath)
-            self.assertIn("- Core behavioral rule.", digest)
-            self.assertNotIn("- JS rule.", digest)
-            self.assertNotIn("javascript-guidelines", digest)
-
-    def test_strict_frontmatter_parser_valid(self) -> None:
-        content = """---
-skill:
-  name: sample-skill
-  description: >-
-    First line of description.
-    Second line of description.
-  globs:
-    - "*.py"
-    - "*.md"
----
-# Body
-"""
-        fm, body = generate_agent_digest.split_frontmatter(content)
-        self.assertIsNotNone(fm)
-        self.assertEqual(fm["skill"]["name"], "sample-skill")
-        self.assertEqual(
-            fm["skill"]["description"],
-            "First line of description. Second line of description.",
-        )
-        self.assertEqual(fm["skill"]["globs"], ["*.py", "*.md"])
-        self.assertEqual(body.strip(), "# Body")
-
-    def test_strict_frontmatter_parser_rejects_invalid_syntax(self) -> None:
-        bad_syntax = """---
-skill:
-  name: [invalid, inline, list]
----
-# Body
-"""
-        with self.assertRaises(ValueError):
-            generate_agent_digest.split_frontmatter(bad_syntax)
-
-    def test_link_rewriting_rules(self) -> None:
-        raw_body = """# Title
-- Sibling skill: [Process Management Guidelines](process-management-guidelines.md).
-- Sibling non-skill: [AI Agent Guidelines](ai-agent-guidelines.md).
-- Own skill file: [playwright-recipes.md](../skills/testing-guidelines/references/playwright-recipes.md).
-- Repo file: [lint-markdown.py](../scripts/lint-markdown.py).
-- External: [SemVer](https://semver.org).
-```markdown
-- [lint-markdown.py](../scripts/lint-markdown.py)
-```
-"""
-        # Testing skill rewrite
-        rewritten_skill = generate_agent_digest.build_skill_content(
-            "testing-guidelines",
-            "Testing description",
-            raw_body,
-        )
-        self.assertIn(
-            "Sibling skill: the `process-management-guidelines` skill.",
-            rewritten_skill,
-        )
-        self.assertIn("Sibling non-skill: AI Agent Guidelines.", rewritten_skill)
-        self.assertIn(
-            "Own skill file: [playwright-recipes.md](references/playwright-recipes.md).",
-            rewritten_skill,
-        )
-        self.assertIn(
-            "Repo file: [lint-markdown.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/lint-markdown.py).",
-            rewritten_skill,
-        )
-        self.assertIn("External: [SemVer](https://semver.org).", rewritten_skill)
-        # Inside code fence, preserved
-        self.assertIn("- [lint-markdown.py](../scripts/lint-markdown.py)", rewritten_skill)
-
-    def test_action_validate_orphan_reference_files(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            skills_dir = Path(tmpdir) / "skills"
-            test_skill_dir = skills_dir / "test-skill"
-            refs_dir = test_skill_dir / "references"
-            refs_dir.mkdir(parents=True)
-            (test_skill_dir / "SKILL.md").write_text(
-                "---\nname: test-skill\ndescription: test\n---\n# Test\n",
-                encoding="utf-8",
-            )
-            orphan_file = refs_dir / "unlinked.md"
-            orphan_file.write_text("# Unlinked\n", encoding="utf-8")
-
-            # Must fail validation because unlinked.md is not linked in SKILL.md
-            exit_code = generate_agent_digest.action_validate(skills_root=skills_dir)
-            self.assertEqual(exit_code, 1)
-
-    def test_action_validate_unknown_skill_keys(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            src_dir = Path(tmpdir) / "guidelines"
-            src_dir.mkdir(parents=True)
-            (src_dir / "sample-guidelines.md").write_text(
-                """---
-skill:
-  name: sample-guidelines
-  description: Sample
-  unknown_key: value
----
-# Sample
-""",
-                encoding="utf-8",
-            )
-            exit_code = generate_agent_digest.action_validate(source_dir=src_dir)
-            self.assertEqual(exit_code, 1)
-
-    def test_action_validate_escaping_links(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            skills_dir = Path(tmpdir) / "skills"
-            test_skill_dir = skills_dir / "sample-skill"
-            test_skill_dir.mkdir(parents=True)
-            (test_skill_dir / "SKILL.md").write_text(
-                "---\nname: sample-skill\ndescription: Sample\n---\n# Sample\n- Escaping link [bad](../outside.md).\n",
-                encoding="utf-8",
-            )
-            exit_code = generate_agent_digest.action_validate(skills_root=skills_dir)
-            self.assertEqual(exit_code, 1)
-
-    def test_action_validate_coverage_general_guidelines(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            src_dir = Path(tmpdir) / "guidelines"
-            src_dir.mkdir(parents=True)
-            (src_dir / "general-guidelines.md").write_text(
-                "# General Guidelines\n\n- No skills linked here.\n",
-                encoding="utf-8",
-            )
-            (src_dir / "sample-guidelines.md").write_text(
-                """---
-skill:
-  name: sample-guidelines
-  description: Sample
----
-# Sample
-- Valid content.
-""",
-                encoding="utf-8",
-            )
-            exit_code = generate_agent_digest.action_validate(source_dir=src_dir)
-            self.assertEqual(exit_code, 1)
-
-    def test_all_guidelines_frontmatter_and_skills_integrity(self) -> None:
-        repo_root = FIXTURE_ROOT
-        guidelines_dir = repo_root / "guidelines"
-        skills_dir = repo_root / "skills"
-
-        skills = generate_agent_digest.build_skills(source_dir=guidelines_dir, skills_root=skills_dir)
-        self.assertEqual(len(skills), 12)
-
-        # Confirm testing-guidelines links playwright-recipes.md
-        testing_skill = skills["testing-guidelines"]
-        self.assertIn("[playwright-recipes.md](references/playwright-recipes.md)", testing_skill)
-        self.assertNotIn("../skills/testing-guidelines", testing_skill)
-
-        # Confirm markdown-guidelines rewrites lint-markdown.py link
-        markdown_skill = skills["markdown-guidelines"]
-        self.assertIn(
-            "[lint-markdown.py](https://github.com/gpellicciotta/dev-guidelines/blob/main/scripts/lint-markdown.py)", markdown_skill
-        )
-        self.assertNotIn("../../scripts/lint-markdown.py", markdown_skill)
-
-    def test_execution_evidence_rules_point_at_companion_validation_proof(self) -> None:
-        repo_root = FIXTURE_ROOT
-        testing_guideline_file = repo_root / "guidelines" / "testing-guidelines.md"
-        testing_skill_file = repo_root / "skills" / "testing-guidelines" / "SKILL.md"
-
-        self.assertTrue(testing_guideline_file.exists())
-        self.assertTrue(testing_skill_file.exists())
-
-        testing_guideline_content = testing_guideline_file.read_text(encoding="utf-8")
-        testing_skill_content = testing_skill_file.read_text(encoding="utf-8")
-
-        for label, content in (("guideline", testing_guideline_content), ("skill", testing_skill_content)):
-            self.assertIn(
-                "Paste the verbatim terminal output of that run into the companion `validation-proof.md` file's `## Walkthrough & Validation` section.",
-                content,
-                f"Missing companion validation-proof reference in testing {label}",
-            )
-            self.assertNotIn(
-                "into the task file's `## Walkthrough & Validation` section",
-                content,
-                f"Stale task file inline walkthrough reference in testing {label}",
-            )
-
-    def test_execution_evidence_accepts_affected_tests_under_loop_verification(self) -> None:
-        repo_root = FIXTURE_ROOT
-        testing_guideline_file = repo_root / "guidelines" / "testing-guidelines.md"
-        testing_skill_file = repo_root / "skills" / "testing-guidelines" / "SKILL.md"
-
-        self.assertTrue(testing_guideline_file.exists())
-        self.assertTrue(testing_skill_file.exists())
-
-        testing_guideline_content = testing_guideline_file.read_text(encoding="utf-8")
-        testing_skill_content = testing_skill_file.read_text(encoding="utf-8")
-
-        for label, content in (("guideline", testing_guideline_content), ("skill", testing_skill_content)):
-            self.assertIn(
-                "Accept failing-first and affected-test runs as task evidence when a project's work loop owns full-suite verification.",
-                content,
-                f"Missing affected-test rule in testing {label}",
-            )
-            self.assertIn(
-                "Inspect recorded affected-test evidence during review rather than rerunning entire test suites.",
-                content,
-                f"Missing reviewer affected-test rule in testing {label}",
-            )
-
-    def test_agent_files_get_digest_generator_returns_packaged_module_without_script(self) -> None:
-        from support_python.tools import agent_files
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            repo_root = Path(tmpdir).resolve()
-            (repo_root / ".git").mkdir()
-            self.assertFalse((repo_root / "scripts" / "generate-agent-digest.py").exists())
-            with mock.patch.object(agent_files, "REPO_ROOT", repo_root):
-                generator = agent_files.get_digest_generator()
-            self.assertIs(generator, generate_agent_digest)
+        self.assertRegex(result.stdout, r"Finished agent-digest check in \d+\.\ds with status: succeeded")
 
 
 if __name__ == "__main__":

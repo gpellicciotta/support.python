@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.14-pre
+## v2.0.15-pre
+- CLI: **[breaking]** Generalized `agent-digest` to take `<PATH>...` inputs, order by `index` front-matter, and fold `validate` into `check` ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
 - CLI: Ported the agent digest generator into [agent_digest.py](src/support_python/tools/agent_digest.py) with the `agent-digest` console script and packaged loading in [agent_files.py](src/support_python/tools/agent_files.py).
 - CLI: **[breaking]** Made `sync` and `check` canonical in `agent-files` (removing `update` and `diff`), added `--format text|json`, and defaulted config to `.agent-files.json` ([agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py)).
 - CLI: **[breaking]** Configured UTF-8 streams in `ToolHarness.run` and removed `ToolLogger` and `TeeLogger` aliases in favor of `CliLogger` ([cli.py](src/support_python/cli.py), [logging.py](src/support_python/logging.py)).
