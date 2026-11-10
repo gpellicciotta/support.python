@@ -162,6 +162,13 @@ class ToolHarness:
         """Set or update recognized exit codes."""
         self.exit_codes.update(exit_codes)
 
+    @staticmethod
+    def add_format_option(parser: argparse.ArgumentParser, *, default: str = "text") -> None:
+        """Add the standard ``--format {text,json}`` option; ``json`` switches the action's logger to JSON output mode."""
+        parser.add_argument(
+            "--format", choices=["text", "json"], default=default, help=f"output format (text or json; default: {default})"
+        )
+
     def format_version(self) -> str:
         """Return single-line formatted version banner per CLI guidelines."""
         return f"{self.name} v{get_full_version(self.version, cwd=self.repo_dir)} - {self.copyright}"
@@ -288,14 +295,19 @@ class ToolHarness:
         return parser
 
     def create_logger(self, args: argparse.Namespace) -> CliLogger:
-        """Construct standard :class:`CliLogger` configured from parsed arguments."""
+        """Construct standard :class:`CliLogger` configured from parsed arguments.
+
+        The logger runs in JSON output mode when the action's ``--format`` option is ``json``.
+        """
         log_path = Path(args.log_file).resolve() if getattr(args, "log_file", None) else self.default_log_file
         debug_flag = getattr(args, "debug", False)
         explicit_level = getattr(args, "log_level", None)
         effective_init_level = explicit_level if explicit_level is not None else (None if debug_flag else self.default_log_level)
-        return CliLogger(
+        logger = CliLogger(
             log_file=log_path, log_level=effective_init_level, debug=debug_flag, verbose=getattr(args, "verbose", False)
         )
+        logger.json_output = getattr(args, "format", None) == "json"
+        return logger
 
     def log_startup(self, logger: CliLogger, action: str, extra: Optional[dict[str, Any]] = None) -> None:
         """Emit single multi-line startup message per logging guidelines."""

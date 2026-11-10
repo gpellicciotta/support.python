@@ -922,7 +922,7 @@ def run_action(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
         output_format = getattr(args, "format", "text")
         if output_format == "json":
             payload = [{"name": repo.name, "path": str(repo)} for repo in repos]
-            logger.emit(json.dumps(payload, indent=2))
+            logger.emit_json(payload, indent=2)
             return 0
         for repo in repos:
             logger.emit(f"{repo.name}  {repo}")
@@ -967,7 +967,7 @@ def describe_config(value: str | None) -> str:
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     """Register output format flags for the list action."""
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="Output format (text or json).")
+    ToolHarness.add_format_option(parser)
 
 
 class BackupHarness(ToolHarness):
@@ -975,7 +975,6 @@ class BackupHarness(ToolHarness):
 
     config_file: str = ""
     dry_run: bool = False
-    json_mode: bool = False
 
     def format_help(self, verbose: bool = False) -> str:
         """Return the help screen, which documents option values, config files, and scheduling."""
@@ -985,34 +984,12 @@ class BackupHarness(ToolHarness):
         """Record the config file and dry-run mode for the startup banner, then build the logger."""
         self.config_file = describe_config(args.config)
         self.dry_run = args.dry_run
-        self.json_mode = getattr(args, "format", "text") == "json"
         return super().create_logger(args)
 
     def log_startup(self, logger: CliLogger, action: str, extra: dict[str, Any] | None = None) -> None:
         """Emit the standard startup banner including the config file and dry-run mode."""
         config = {"Config file": self.config_file, "Dry run": str(self.dry_run).lower(), **(extra or {})}
-        if self.json_mode:
-            lines = [
-                f"Starting {self.name} v{get_full_version(self.version, cwd=self.repo_dir)} with configuration:",
-                f"- Command: {action}",
-                f"- Log file: {logger.log_file or 'none'}",
-                f"- Log level: {logger.effective_level}",
-                f"- Verbose: {str(logger.verbose).lower()}",
-                *(f"- {key}: {val}" for key, val in config.items()),
-            ]
-            logger.info("\n".join(lines), to_stdout=False)
-            return
         super().log_startup(logger, action, extra=config)
-
-    def log_completion(self, logger: CliLogger, action: str, exit_code: int, started_at: float) -> None:
-        """Emit completion summary upon exit, suppressing stdout when JSON mode succeeds."""
-        if self.json_mode and exit_code == 0:
-            import time
-
-            duration = time.monotonic() - started_at
-            logger.info(f"Finished {self.name} {action} in {duration:.1f}s with status: succeeded", to_stdout=False)
-            return
-        super().log_completion(logger, action, exit_code, started_at)
 
     def _build_parser(self, action_name: str | None = None) -> argparse.ArgumentParser:
         """Build the action parser, reporting argument errors with severity indicators."""

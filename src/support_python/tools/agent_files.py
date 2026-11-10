@@ -34,23 +34,6 @@ from support_python.logging import (  # noqa: E402
 from support_python.tools.agent_files_config import DEFAULT_DIGEST_RELPATH, DEFAULT_SKILLS_RELPATH
 
 
-class StderrRoutingLogger(CliLogger):
-    """CLI logger routing WARN and ERROR messages logged via .log() to stderr."""
-
-    def __init__(self, *args, json_mode: bool = False, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.json_mode = json_mode
-
-    def log(self, message: str = "", level: str | None = "INFO", origin: str | None = None, **kwargs) -> None:
-        is_err = (level or "").strip().upper() in ("WARN", "WARNING", "ERROR")
-        kwargs.setdefault("to_stderr", is_err)
-        if self.json_mode and level is not None:
-            kwargs["to_stdout"] = False
-        else:
-            kwargs.setdefault("to_stdout", not is_err)
-        super().log(message, level=level, origin=origin, **kwargs)
-
-
 TOOL_NAME = "agent-files"
 TOOL_VERSION = PROJECT_VERSION
 
@@ -384,13 +367,13 @@ def sync_tool(
         current_content = tool.target_file.read_text(encoding="utf-8") if tool.target_file.exists() else ""
         new_content = apply_guarded_block(current_content, guarded_block)
     except (OSError, ValueError) as error:
-        logger.log(f"FAILED: {error}", level="ERROR", origin=tool.name)
+        logger.error(f"FAILED: {error}", origin=tool.name)
         if changes is not None:
             changes.append(f"invalid target {tool.target_file}: {error}")
         return False
 
     if new_content == current_content:
-        logger.log(f"{action}: already up to date", origin=tool.name)
+        logger.info(f"{action}: already up to date", origin=tool.name)
         return True
 
     if action == "check":
@@ -402,7 +385,7 @@ def sync_tool(
                 tofile=str(tool.target_file),
             )
         )
-        logger.log(f"{action}: pending changes --\n{''.join(diff_lines)}", origin=tool.name)
+        logger.info(f"{action}: pending changes --\n{''.join(diff_lines)}", origin=tool.name)
         if changes is not None:
             changes.append(f"instructions file out of date: {tool.target_file}")
         return False
@@ -410,9 +393,9 @@ def sync_tool(
     tool.target_file.parent.mkdir(parents=True, exist_ok=True)
     backup_path = backup(tool.target_file)
     if backup_path is not None:
-        logger.log(f"backed up existing file to {backup_path}", origin=tool.name)
+        logger.info(f"backed up existing file to {backup_path}", origin=tool.name)
     write_text_in_place(tool.target_file, new_content)
-    logger.log(f"{action}: guarded dev-guidelines block synced", origin=tool.name)
+    logger.info(f"{action}: guarded dev-guidelines block synced", origin=tool.name)
     return True
 
 
@@ -540,7 +523,7 @@ def load_skills_manifest(
     assumption = "assuming the legacy skill list" if fallback_names else "assuming no previously installed skills"
     if not manifest_path.is_file():
         if skills_dir.is_dir() and fallback_names and warn_if_missing:
-            logger.log(f"no {SKILLS_MANIFEST_NAME} in {skills_dir}; {assumption}", level="WARN", origin=origin)
+            logger.warn(f"no {SKILLS_MANIFEST_NAME} in {skills_dir}; {assumption}", origin=origin)
         return list(fallback_names)
 
     try:
@@ -554,7 +537,7 @@ def load_skills_manifest(
         ):
             raise ValueError("unexpected manifest structure")
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
-        logger.log(f"malformed {manifest_path} ({error}); {assumption}", level="WARN", origin=origin)
+        logger.warn(f"malformed {manifest_path} ({error}); {assumption}", origin=origin)
         return list(fallback_names)
 
     return sorted(set(names))
@@ -608,27 +591,23 @@ def prune_skill_dirs(
 
         if action == "check":
             msg = f"stale skill '{skill_name}'{located_in} would be removed"
-            logger.log(msg, origin=tool_name)
+            logger.info(msg, origin=tool_name)
             if changes is not None:
                 changes.append(msg)
             retained.append(skill_name)
             ok = False
         elif action == "sync":
             if not prune:
-                logger.log(f"{action}: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
+                logger.info(f"{action}: stale skill '{skill_name}'{located_in} kept (--no-prune)", origin=tool_name)
                 retained.append(skill_name)
                 continue
             try:
                 if not is_direct_child_dir(skills_dir, stale_dir):
                     raise OSError(f"{stale_dir} is not a direct child directory of {skills_dir}")
                 shutil.rmtree(stale_dir)
-                logger.log(f"{action}: pruned stale skill '{skill_name}'{removed_from}", origin=tool_name)
+                logger.info(f"{action}: pruned stale skill '{skill_name}'{removed_from}", origin=tool_name)
             except Exception as error:
-                logger.log(
-                    f"FAILED to prune stale skill '{skill_name}'{removed_from}: {error}",
-                    level="ERROR",
-                    origin=tool_name,
-                )
+                logger.error(f"FAILED to prune stale skill '{skill_name}'{removed_from}: {error}", origin=tool_name)
                 retained.append(skill_name)
                 ok = False
 
@@ -653,10 +632,9 @@ def clean_legacy_skills_dir(
     owned_names = load_skills_manifest(legacy_dir, logger, tool.name, warn_if_missing=False)
     for skill_path in skills:
         if skill_path.name not in owned_names and (legacy_dir / skill_path.name).is_dir():
-            logger.log(
+            logger.warn(
                 f"possible duplicate skill '{skill_path.name}' in {legacy_dir} was not installed by this script; "
                 "remove it manually if it is a leftover",
-                level="WARN",
                 origin=tool.name,
             )
 
@@ -670,7 +648,7 @@ def clean_legacy_skills_dir(
             elif manifest_path.is_file():
                 manifest_path.unlink()
         except OSError as error:
-            logger.log(f"FAILED to update {manifest_path}: {error}", level="ERROR", origin=tool.name)
+            logger.error(f"FAILED to update {manifest_path}: {error}", origin=tool.name)
             ok = False
 
     return ok
@@ -752,20 +730,19 @@ def sync_tool_skills(
 
         if action == "sync" and not prune and stale_files:
             for rel_path in stale_files:
-                logger.log(
-                    f"{action}: stale file kept in skill '{skill_name}' (--no-prune): {rel_path.as_posix()}",
-                    origin=tool.name,
+                logger.info(
+                    f"{action}: stale file kept in skill '{skill_name}' (--no-prune): {rel_path.as_posix()}", origin=tool.name
                 )
             diffs = [diff for diff in diffs if not diff.startswith(STALE_FILE_DIFF_PREFIX)]
             stale_files = []
 
         if not diffs:
-            logger.log(f"{action}: skill '{skill_name}' already up to date", level="DEBUG", origin=tool.name)
+            logger.debug_msg(f"{action}: skill '{skill_name}' already up to date", origin=tool.name)
             continue
 
         if action == "check":
             diff_summary = "\n  ".join(diffs)
-            logger.log(f"{action}: skill '{skill_name}' pending changes --\n  {diff_summary}", origin=tool.name)
+            logger.info(f"{action}: skill '{skill_name}' pending changes --\n  {diff_summary}", origin=tool.name)
             if changes is not None:
                 changes.extend(f"skill '{skill_name}': {d}" for d in diffs)
             all_ok = False
@@ -774,9 +751,9 @@ def sync_tool_skills(
                 target_dir.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(skill_path, target_dir, copy_function=copy_file_in_place, dirs_exist_ok=True)
                 remove_stale_skill_files(target_dir, stale_files)
-                logger.log(f"{action}: synced skill '{skill_name}'", origin=tool.name)
+                logger.info(f"{action}: synced skill '{skill_name}'", origin=tool.name)
             except Exception as error:
-                logger.log(f"FAILED to sync skill '{skill_name}': {error}", level="ERROR", origin=tool.name)
+                logger.error(f"FAILED to sync skill '{skill_name}': {error}", origin=tool.name)
                 all_ok = False
 
     # Prune skills this script installed earlier that no longer exist in the source directory.
@@ -793,7 +770,7 @@ def sync_tool_skills(
         try:
             write_skills_manifest(tool.skills_dir, [*current_names, *retained])
         except OSError as error:
-            logger.log(f"FAILED to write {SKILLS_MANIFEST_NAME}: {error}", level="ERROR", origin=tool.name)
+            logger.error(f"FAILED to write {SKILLS_MANIFEST_NAME}: {error}", origin=tool.name)
             all_ok = False
 
     return all_ok
@@ -802,14 +779,14 @@ def sync_tool_skills(
 def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bool:
     resolved_command = resolve_command(tool)
     if resolved_command is None:
-        logger.log(f"skip: '{tool.command}' not found on PATH or in known locations", origin=tool.name)
+        logger.info(f"skip: '{tool.command}' not found on PATH or in known locations", origin=tool.name)
         return True
 
     repo_root = _resolve_repo_root()
     prompt = REVIEW_PROMPT_TEMPLATE.format(repository_root=repo_root, target_file=tool.target_file)
     args = [resolved_command, *tool.review_args(prompt, tool.target_file.name, timeout)]
-    # Debug-level: internal invocation detail, file-only, never on stdout even with --verbose.
-    logger.log(f"command line: {subprocess.list2cmdline(args)}", level="DEBUG", origin=tool.name)
+    # Debug-level: internal invocation detail, shown only when the log level allows DEBUG (e.g. --debug).
+    logger.debug_msg(f"command line: {subprocess.list2cmdline(args)}", origin=tool.name)
 
     tool_env = os.environ.copy()
     if tool.name == "claude-code":
@@ -819,9 +796,9 @@ def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bo
     tool_env["PYTHONIOENCODING"] = "utf-8"
 
     if verbose:
-        logger.log(f"running {resolved_command} (review) ...", origin=tool.name)
+        logger.info(f"running {resolved_command} (review) ...", origin=tool.name)
     else:
-        logger.log(f"running {tool.command} (review) ...", origin=tool.name)
+        logger.info(f"running {tool.command} (review) ...", origin=tool.name)
     try:
         result = subprocess.run(
             args,
@@ -834,23 +811,23 @@ def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bo
             env=tool_env,
         )
     except subprocess.TimeoutExpired:
-        logger.log(f"FAILED: timed out after {timeout}s", level="ERROR", origin=tool.name)
+        logger.error(f"FAILED: timed out after {timeout}s", origin=tool.name)
         return False
     except FileNotFoundError as error:
-        logger.log(f"FAILED: could not launch '{resolved_command}': {error}", level="ERROR", origin=tool.name)
+        logger.error(f"FAILED: could not launch '{resolved_command}': {error}", origin=tool.name)
         return False
 
     if result.returncode != 0:
         message = f"FAILED (exit {result.returncode})"
         if result.stderr.strip():
             message += f"\n{result.stderr.strip()}"
-        logger.log(message, level="ERROR", origin=tool.name)
+        logger.error(message, origin=tool.name)
         return False
 
     message = "review complete"
     if result.stdout.strip():
         message += f"\n{result.stdout.strip()}"
-    logger.log(message, origin=tool.name)
+    logger.info(message, origin=tool.name)
     return True
 
 
@@ -872,19 +849,19 @@ def configure_tool_names(parser: argparse.ArgumentParser) -> None:
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     """Register output format flags for the list action."""
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json)")
+    ToolHarness.add_format_option(parser)
 
 
 def configure_check_parser(parser: argparse.ArgumentParser) -> None:
     """Register tool names and output format flags for the check action."""
     configure_tool_names(parser)
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json)")
+    ToolHarness.add_format_option(parser)
 
 
 def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
     output_format = getattr(args, "format", "text")
     if output_format == "json":
-        print(json.dumps(collect_tools_info(), indent=2))
+        logger.emit_json(collect_tools_info(), indent=2)
         return 0
     print_tools(logger)
     return 0
@@ -900,19 +877,16 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
     skills_dir = _resolve_skills_dir()
     digest = load_digest()
     if not digest:
-        logger.log(
+        logger.error(
             f"digest not found or empty at {digest_path}; create it with "
             f"'agent-digest generate <PATH>... --digest {digest_path} --skills-dir {skills_dir}'",
-            level="ERROR",
             origin=TOOL_NAME,
         )
         return 1
     skills = get_available_skills(skills_dir)
     if skills:
-        logger.log(
-            f"discovered {len(skills)} skill(s) in {skills_dir.name}: {', '.join(s.name for s in skills)}",
-            level="DEBUG",
-            origin=TOOL_NAME,
+        logger.debug_msg(
+            f"discovered {len(skills)} skill(s) in {skills_dir.name}: {', '.join(s.name for s in skills)}", origin=TOOL_NAME
         )
     payload: list[dict[str, object]] = []
     ok = True
@@ -928,7 +902,7 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
             status = "up-to-date" if (tool_ok and skills_ok) else ("unavailable" if has_invalid else "changes-pending")
             payload.append({"tool": tool.name, "status": status, "changes": tool_changes})
     if is_json:
-        print(json.dumps(payload, indent=2))
+        logger.emit_json(payload, indent=2)
     return 0 if ok else 1
 
 
@@ -945,20 +919,11 @@ class SyncHarness(ToolHarness):
     argument errors with severity indicators."""
 
     args: argparse.Namespace | None = None
-    json_mode: bool = False
 
-    def create_logger(self, args: argparse.Namespace) -> StderrRoutingLogger:
+    def create_logger(self, args: argparse.Namespace) -> CliLogger:
         """Record the parsed arguments for the startup banner, then build the logger."""
         self.args = args
-        self.json_mode = getattr(args, "format", "text") == "json"
-        base = super().create_logger(args)
-        return StderrRoutingLogger(
-            log_file=base.log_file,
-            log_level=base.effective_level if base._explicit_level_set else None,
-            debug=base.debug_flag,
-            verbose=base.verbose,
-            json_mode=self.json_mode,
-        )
+        return super().create_logger(args)
 
     def log_startup(self, logger: CliLogger, action: str, extra: dict | None = None) -> None:
         """Emit the standard startup banner including the selected tools and action options."""
@@ -976,12 +941,8 @@ class SyncHarness(ToolHarness):
     def log_completion(self, logger: CliLogger, action: str, exit_code: int, started_at: float) -> None:
         """Emit the completion summary, formatting long review runs in minutes and hours."""
         duration = format_duration(time.monotonic() - started_at)
-        status = "succeeded" if exit_code == 0 else "failed"
-        logger.log(
-            f"Finished {self.name} {action} in {duration} with status: {status}",
-            level="INFO" if exit_code == 0 else "ERROR",
-            **({"to_stdout": logger.verbose} if exit_code == 0 and not self.json_mode else {}),
-        )
+        message = f"Finished {self.name} {action} in {duration} with status: {'succeeded' if exit_code == 0 else 'failed'}"
+        logger.info(message, to_stdout=logger.verbose) if exit_code == 0 else logger.error(message)
 
     def _build_parser(self, action_name: str | None = None) -> argparse.ArgumentParser:
         """Build the action parser, reporting argument errors with severity indicators."""

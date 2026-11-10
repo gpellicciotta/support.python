@@ -18,6 +18,7 @@ agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
 Supported configuration flags override JSON settings and built-in defaults:
 - `--config PATH` loads explicit JSON settings from `PATH`.
 - `--format text|json` selects text or JSON output on `list` and `check` (default: `text`; `check` JSON reports `up-to-date`, `changes-pending`, or `unavailable` when a target file cannot be read or has invalid guarded-block markers).
+- In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--repo-root PATH` overrides the source repository root directory.
 - `--digest PATH` overrides the digest file to install (default: `{{repo-root}}/agent-digest.md`).
 - `--skills-dir PATH` overrides the skills directory to install (default: `{{repo-root}}/agent-skills`).

@@ -20,6 +20,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from support_python.logging import CliLogger
 from support_python.tools import agent_files as sync_mod
 
 SRC_DIR = Path(__file__).resolve().parents[2] / "src"
@@ -93,7 +94,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "sync", CliLogger(None))
 
             self.assertTrue(ok)
             content = target.read_text(encoding="utf-8")
@@ -108,7 +109,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
+                sync_mod.sync_tool(tool, block, "sync", CliLogger(None))
 
             backups = list(Path(tmp_dir).glob("AGENT.md.bak-*"))
             self.assertEqual(len(backups), 1)
@@ -121,11 +122,11 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
+                sync_mod.sync_tool(tool, block, "sync", CliLogger(None))
                 backups_after_first = list(Path(tmp_dir).glob("AGENT.md.bak-*"))
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
-                    ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
+                    ok = sync_mod.sync_tool(tool, block, "sync", CliLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("already up to date", out.getvalue())
@@ -140,7 +141,7 @@ class SyncToolTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                ok = sync_mod.sync_tool(tool, block, "check", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "check", CliLogger(None))
 
             self.assertFalse(ok)
             self.assertFalse(target.exists())
@@ -154,7 +155,7 @@ class SyncToolTests(unittest.TestCase):
             target.write_text(block.strip() + "\n", encoding="utf-8")
 
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                ok = sync_mod.sync_tool(tool, block, "check", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "check", CliLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("already up to date", out.getvalue())
@@ -184,15 +185,15 @@ class FormatSeverityIndicatorTests(unittest.TestCase):
         self.assertEqual(sync_mod.format_severity_indicator(None), "")
 
 
-class StderrRoutingLoggerTests(unittest.TestCase):
+class AgentFilesCliLoggerTests(unittest.TestCase):
     def test_appends_across_reopen_instead_of_overwriting(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "test.log"
             with contextlib.redirect_stdout(io.StringIO()):
-                logger = sync_mod.StderrRoutingLogger(log_path)
+                logger = CliLogger(log_path)
                 logger.log("first")
                 logger.close()
-                logger = sync_mod.StderrRoutingLogger(log_path)
+                logger = CliLogger(log_path)
                 logger.log("second")
                 logger.close()
 
@@ -204,7 +205,7 @@ class StderrRoutingLoggerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "test.log"
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                logger = sync_mod.StderrRoutingLogger(log_path, debug=True)
+                logger = CliLogger(log_path, debug=True)
                 logger.log("secret detail", level="DEBUG")
                 logger.close()
 
@@ -215,7 +216,7 @@ class StderrRoutingLoggerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "test.log"
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                logger = sync_mod.StderrRoutingLogger(log_path, debug=False)
+                logger = CliLogger(log_path, debug=False)
                 logger.log("should not appear anywhere", level="DEBUG")
                 logger.close()
 
@@ -229,7 +230,7 @@ class StderrRoutingLoggerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             log_path = Path(tmp_dir) / "test.log"
             with contextlib.redirect_stdout(io.StringIO()) as out:
-                logger = sync_mod.StderrRoutingLogger(log_path)
+                logger = CliLogger(log_path)
                 logger.log("hello", level="INFO")
                 logger.close()
 
@@ -606,7 +607,7 @@ class SyncToolSkillsTests(unittest.TestCase):
                 skills_dir=target_skills_dir,
             )
 
-            logger = sync_mod.StderrRoutingLogger(None)
+            logger = CliLogger(None)
             with contextlib.redirect_stdout(io.StringIO()):
                 ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "sync", logger)
 
@@ -631,7 +632,7 @@ class SyncToolSkillsTests(unittest.TestCase):
                 skills_dir=target_skills_dir,
             )
 
-            logger = sync_mod.StderrRoutingLogger(None)
+            logger = CliLogger(None)
             with contextlib.redirect_stdout(io.StringIO()):
                 ok = sync_mod.sync_tool_skills(fake_tool, [skill_dir], "check", logger)
 
@@ -662,7 +663,7 @@ class SkillPruningTests(unittest.TestCase):
 
     def _run(self, tool: "sync_mod.Tool", skills: list[Path], action: str, prune: bool = True) -> tuple[bool, str]:
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            ok = sync_mod.sync_tool_skills(tool, skills, action, sync_mod.StderrRoutingLogger(None), prune=prune)
+            ok = sync_mod.sync_tool_skills(tool, skills, action, CliLogger(None), prune=prune)
         return ok, out.getvalue() + err.getvalue()
 
     def test_update_prunes_manifest_listed_skill_missing_from_source(self) -> None:
@@ -840,7 +841,7 @@ class LegacySkillsDirTests(unittest.TestCase):
 
     def _run(self, tool: "sync_mod.Tool", skills: list[Path], action: str, prune: bool = True) -> tuple[bool, str]:
         with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
-            ok = sync_mod.sync_tool_skills(tool, skills, action, sync_mod.StderrRoutingLogger(None), prune=prune)
+            ok = sync_mod.sync_tool_skills(tool, skills, action, CliLogger(None), prune=prune)
         return ok, out.getvalue() + err.getvalue()
 
     def test_update_moves_skills_and_removes_owned_copies_from_legacy_dir(self) -> None:
@@ -1181,7 +1182,7 @@ class HiddenTargetFileTests(unittest.TestCase):
             block = sync_mod.build_guarded_block("DIGEST")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool(tool, block, "sync", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool(tool, block, "sync", CliLogger(None))
 
             self.assertTrue(ok)
             self.assertIn("DIGEST", target.read_text(encoding="utf-8"))
@@ -1211,7 +1212,7 @@ class HiddenTargetFileTests(unittest.TestCase):
             tool = sync_mod.Tool("fake-tool", "fake-cmd", root / "AGENT.md", lambda p, t, to: [], skills_dir=root / "tool_skills")
 
             with contextlib.redirect_stdout(io.StringIO()):
-                ok = sync_mod.sync_tool_skills(tool, [skill_dir], "sync", sync_mod.StderrRoutingLogger(None))
+                ok = sync_mod.sync_tool_skills(tool, [skill_dir], "sync", CliLogger(None))
 
             self.assertTrue(ok)
             self.assertEqual(installed.read_text(encoding="utf-8"), "new skill text")
@@ -1422,7 +1423,7 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
 
                 self.assertEqual(_run_main(["sync"])[0], 0)
                 code_clean, out_clean, err_clean = _run_main(["check", "--format", "json"])
-                self.assertEqual((code_clean, err_clean), (0, ""))
+                self.assertEqual((code_clean, err_clean), (0, "<fake-tool> check: already up to date\n"))
                 self.assertEqual(json.loads(out_clean), [{"tool": "fake-tool", "status": "up-to-date", "changes": []}])
 
                 # Text and JSON check agree on stale files under --no-prune.

@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 import sys
-from typing import Any, Dict, List, NoReturn, Optional, Tuple
+from typing import Dict, List, NoReturn, Optional, Tuple
 
 from support_python.cli import ToolHarness
 from support_python.logging import CliLogger
@@ -25,41 +24,6 @@ Directory walks skip Git-ignored files; files named explicitly are always linted
 SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [options]"
 
 
-class _JsonAwareLogger(CliLogger):
-    """CLI logger that suppresses non-emit stdout log lines in JSON output mode while preserving stderr."""
-
-    def __init__(self, *args: Any, json_mode: bool = False, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.json_mode = json_mode
-
-    def log(self, message: str = "", level: Optional[str] = None, origin: Optional[str] = None, **kwargs: Any) -> None:
-        is_err = (level or "").strip().upper() in ("WARN", "WARNING", "ERROR")
-        kwargs.setdefault("to_stderr", is_err)
-        if self.json_mode and level is not None:
-            kwargs["to_stdout"] = False
-        else:
-            kwargs.setdefault("to_stdout", not is_err)
-        super().log(message, level=level, origin=origin, **kwargs)
-
-
-class LintMarkdownHarness(ToolHarness):
-    """Tool harness supporting JSON output mode on check."""
-
-    def create_logger(self, args: argparse.Namespace) -> CliLogger:
-        """Build a logger that suppresses non-JSON console output when --format json is active."""
-        base = super().create_logger(args)
-        json_mode = getattr(args, "format", "text") == "json"
-        if not json_mode:
-            return base
-        return _JsonAwareLogger(
-            log_file=base.log_file,
-            log_level=base.effective_level if base._explicit_level_set else None,
-            debug=base.debug_flag,
-            verbose=base.verbose,
-            json_mode=True,
-        )
-
-
 def report_argument_error(message: str) -> NoReturn:
     """Log an argument error with the standard severity indicator, then exit with code 2."""
     early_logger = ToolHarness(name=TOOL_NAME, description=DESCRIPTION)._extract_early_logger(sys.argv[1:])
@@ -75,20 +39,15 @@ def configure_lint_parser(parser: argparse.ArgumentParser) -> None:
     parser.error = report_argument_error  # type: ignore[method-assign]
 
 
-def add_format_argument(parser: argparse.ArgumentParser) -> None:
-    """Add the '--format' option to an action parser."""
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="output format (text or json; default: text)")
-
-
 def configure_check_parser(parser: argparse.ArgumentParser) -> None:
     """Add the path arguments and '--format' option to the 'check' parser."""
     configure_lint_parser(parser)
-    add_format_argument(parser)
+    ToolHarness.add_format_option(parser)
 
 
 def configure_rules_parser(parser: argparse.ArgumentParser) -> None:
     """Add the '--format' option and standard error reporting to the 'rules' parser."""
-    add_format_argument(parser)
+    ToolHarness.add_format_option(parser)
     parser.error = report_argument_error  # type: ignore[method-assign]
 
 
@@ -131,7 +90,7 @@ def _emit_json_check(logger: CliLogger, files_checked: int, issues: List[LintIss
         "files_checked": files_checked,
         "issues": [issue.to_dict(relative_to=repo_root) for issue in issues],
     }
-    logger.emit(json.dumps(payload))
+    logger.emit_json(payload)
 
 
 def build_linter(
@@ -186,7 +145,7 @@ def run_rules(args: argparse.Namespace, logger: CliLogger) -> int:
         for rule in linter.registry
     ]
     if getattr(args, "format", "text") == "json":
-        logger.emit(json.dumps({"rules": rules}))
+        logger.emit_json({"rules": rules})
         return 0
     headers = ["id", "name", "scope", "fixable", "enabled", "source"]
     rows = [[("yes" if value else "no") if isinstance(value, bool) else value for value in rule.values()] for rule in rules]
@@ -308,7 +267,7 @@ def get_rules_help() -> str:
 
 def build_harness() -> ToolHarness:
     """Build the command-line harness exposing the 'check' and 'fix' actions."""
-    harness = LintMarkdownHarness(
+    harness = ToolHarness(
         name=TOOL_NAME,
         description=DESCRIPTION,
         exit_codes={

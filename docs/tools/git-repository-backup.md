@@ -22,6 +22,7 @@ Supported options:
 - `--archive-dir PATH` sets the directory holding AES-256 encrypted 7-Zip archives (`{{name}}.7z`).
 - `--no-archive` disables the archive backup layer.
 - `--format text|json` selects human-readable lines (`{{name}}  {{path}}`) or a JSON array of `{"name": "...", "path": "..."}` objects for `list` (default: `text`).
+- In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--source PATH` restores from a specific bare mirror directory or `.7z` archive file.
 - `--name NAME` restores a named repository from `--mirror-dir` or `--archive-dir` (preferring the mirror).
 - `--target DIR` sets the destination directory for `restore` (must be absent or empty).

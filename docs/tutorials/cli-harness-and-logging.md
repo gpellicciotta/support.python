@@ -10,6 +10,8 @@ All symbols are re-exported from `support_python`.
 
 ## Action-oriented CLI harness, tables, and token storage
 - `support_python.cli` provides `ToolHarness`/`Action`: registered actions with handlers, a fallback action, an exit-code table, and startup/exit banners.
+  `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.
+  Its log messages then go to `stderr`, and only `emit`/`emit_json` write to `stdout`.
   `get_full_version`/`resolve_build_metadata` add build-metadata version suffixes.
 - `support_python.tables` provides tabular output formatting (`format_table`/`render_output`).
 - `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`).
@@ -27,6 +29,16 @@ from support_python import (
 # Action-oriented CLI harness with standard banners, help, version, and logging
 harness = ToolHarness(name="my-tool", description="My tool description", version="1.0.0")
 harness.add_action("sync", "synchronize local state", handler=lambda args, logger: 0)
+
+
+# '--format json' reserves stdout for the JSON document; log messages move to stderr
+def report(args, logger) -> int:
+    logger.info("collecting")
+    logger.emit_json({"ok": True}, indent=2)
+    return 0
+
+
+harness.add_action("report", "print a status report", handler=report, configure_parser=ToolHarness.add_format_option)
 
 
 # Tabular output and JSON formatting

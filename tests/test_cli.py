@@ -317,3 +317,74 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ToolHarnessJsonOutputTests(unittest.TestCase):
+    def _make_harness(self):
+        from support_python.cli import ToolHarness
+
+        harness = ToolHarness(name="json-tool", description="JSON harness test.", version="1.0.0")
+        seen: dict[str, bool] = {}
+
+        def handle(args, logger) -> int:
+            seen["json_output"] = logger.json_output
+            logger.info("handler info")
+            logger.emit_json({"ok": True})
+            return 0
+
+        harness.add_action("report", "report", handler=handle, configure_parser=ToolHarness.add_format_option)
+        harness.add_action("plain", "plain", handler=handle)
+        return harness, seen
+
+    def _run(self, harness, argv: list[str]) -> tuple[int, str, str]:
+        import contextlib
+
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = harness.run(argv)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_add_format_option_registers_standard_option(self) -> None:
+        import argparse
+
+        from support_python.cli import ToolHarness
+
+        parser = argparse.ArgumentParser()
+        ToolHarness.add_format_option(parser)
+        option = next(a for a in parser._actions if "--format" in a.option_strings)
+        self.assertEqual((option.choices, option.default), (["text", "json"], "text"))
+        self.assertEqual(option.help, "output format (text or json; default: text)")
+
+        parser = argparse.ArgumentParser()
+        ToolHarness.add_format_option(parser, default="json")
+        option = next(a for a in parser._actions if "--format" in a.option_strings)
+        self.assertEqual((option.default, option.help), ("json", "output format (text or json; default: json)"))
+
+    def test_format_json_sets_json_output_and_keeps_stdout_pure(self) -> None:
+        import json
+
+        harness, seen = self._make_harness()
+        code, out, err = self._run(harness, ["report", "--format", "json", "--verbose"])
+        self.assertEqual(code, 0)
+        self.assertTrue(seen["json_output"])
+        self.assertEqual(json.loads(out), {"ok": True})
+        for expected in ("Starting json-tool v1.0.0", "handler info", "Finished json-tool report"):
+            self.assertIn(expected, err)
+
+    def test_text_format_and_actions_without_format_leave_json_output_off(self) -> None:
+        for argv in (["report"], ["report", "--format", "text"], ["plain"]):
+            with self.subTest(argv=argv):
+                harness, seen = self._make_harness()
+                code, out, _ = self._run(harness, argv)
+                self.assertEqual(code, 0)
+                self.assertFalse(seen["json_output"])
+                self.assertIn("handler info", out)
+
+    def test_no_tool_module_subclasses_cli_logger(self) -> None:
+        import re
+        from pathlib import Path
+
+        tools_dir = Path(__file__).resolve().parent.parent / "src" / "support_python" / "tools"
+        pattern = re.compile(r"^class\s+\w+\([^)]*\bCliLogger\b[^)]*\)\s*:", re.MULTILINE)
+        offending = [p.name for p in sorted(tools_dir.glob("*.py")) if pattern.search(p.read_text(encoding="utf-8"))]
+        self.assertEqual(offending, [])

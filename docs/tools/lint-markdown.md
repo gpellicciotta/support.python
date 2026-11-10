@@ -18,6 +18,7 @@ Supported actions, profile, and rule options:
 - `check` lints Markdown files and exits `1` if violations are found; `--format text|json` selects text output or a single JSON object (`{"files_checked": N, "issues": [{"path", "line", "column", "rule_id", "rule_name", "message", "fixable"}]}`) on `stdout`.
 - `fix` rewrites files in-place (`MD005`, `MD010`, `MD011`, `MD012`, `MD015`, `MD016`, `MD017`) and then lints; `--dry-run` lists planned fixes without writing and exits `0`.
 - `rules` lists every rule with `id`, `name`, `scope`, `fixable`, `enabled` (under the active profile), and `source` (`builtin` or the plugin entry); `--format json` prints `{"rules": [...]}`.
+- In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--profile PROFILE` selects a built-in profile (`default` or `dev-guidelines`).
 - `--config PATH` loads explicit JSON settings from a `.lint-markdown.json` file.
 - `--plugin ENTRY` loads extra rules from a plugin file or module (repeatable); see [Rule Plugins](#rule-plugins).

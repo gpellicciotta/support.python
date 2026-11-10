@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import time
 from datetime import datetime, timezone
@@ -276,7 +277,12 @@ class CliLogger:
         debug_enabled: Flag controlling whether debug messages are captured to the log file.
         origin: Default origin string prefix for messages emitted by this logger.
         start_time: Monotonic start timestamp used for total duration tracking.
+        json_output: When True, stdout is reserved for :meth:`emit` and :meth:`emit_json`; every log
+            message bound for stdout goes to stderr instead. :class:`~support_python.cli.ToolHarness`
+            sets it when an action runs with ``--format json``.
     """
+
+    json_output: bool = False
 
     def __init__(
         self,
@@ -345,6 +351,8 @@ class CliLogger:
     ) -> None:
         """Emit a log message to the log file and to stdout/stderr based on configuration.
 
+        In JSON output mode (:attr:`json_output`), a message bound for stdout goes to stderr instead.
+
         Args:
             message: Message payload text.
             level: Optional severity level name (e.g. ``"INFO"``, ``"DEBUG"``).
@@ -353,6 +361,18 @@ class CliLogger:
             to_stdout: Whether to emit on standard output. Defaults to True.
             to_stderr: Whether to emit on standard error. Defaults to False.
         """
+        self._log(message, level, origin, timestamp, to_stdout, to_stderr or (to_stdout and self.json_output), to_file)
+
+    def _log(
+        self,
+        message: str,
+        level: Optional[str],
+        origin: Optional[str],
+        timestamp: Optional[datetime],
+        to_stdout: bool,
+        to_stderr: bool,
+        to_file: bool,
+    ) -> None:
         ts = timestamp or datetime.now()
         effective_origin = origin if origin is not None else self.origin
         if not message and not level and not effective_origin:
@@ -393,8 +413,16 @@ class CliLogger:
             sys.stdout.flush()
 
     def emit(self, message: str) -> None:
-        """Emit machine-parseable command output directly to stdout and append a timestamped entry to the log file."""
-        self.log(message, level=None, origin=None, to_stdout=True, to_file=True)
+        """Emit machine-parseable command output directly to stdout and append a timestamped entry to the log file.
+
+        Output reaches stdout in JSON output mode too. It bypasses :meth:`log`, so subclasses overriding
+        :meth:`log` do not see it.
+        """
+        self._log(message, None, None, None, to_stdout=True, to_stderr=False, to_file=True)
+
+    def emit_json(self, payload: Any, *, indent: Optional[int] = None) -> None:
+        """Emit ``payload`` as one JSON document plus a newline on stdout, also in JSON output mode."""
+        self.emit(json.dumps(payload, indent=indent))
 
     def write(self, text: str) -> None:
         """Write raw text string through standard logging."""

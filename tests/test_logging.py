@@ -256,3 +256,75 @@ class UnifiedTeeAndToolLoggerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CliLoggerJsonOutputTests(unittest.TestCase):
+    def _capture(self, logger: CliLogger, action) -> tuple[str, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            action(logger)
+        return out.getvalue(), err.getvalue()
+
+    def test_json_output_defaults_off(self) -> None:
+        self.assertFalse(CliLogger().json_output)
+
+    def test_json_output_redirects_console_messages_to_stderr(self) -> None:
+        logger = CliLogger(debug=True)
+        logger.json_output = True
+
+        def log_all(lg: CliLogger) -> None:
+            lg.info("info line")
+            lg.progress("progress line")
+            lg.warn("warn line")
+            lg.error("error line")
+            lg.debug_msg("debug line")
+            lg.log("levelless line")
+            lg.log_start("demo", "1.0", ["demo"], {})
+            lg.log_end()
+
+        out, err = self._capture(logger, log_all)
+        self.assertEqual(out, "")
+        for expected in (
+            "info line",
+            "progress line",
+            "**[WARN]**  warn line",
+            "**[ERROR]** error line",
+            "**[DEBUG]** debug line",
+            "levelless line",
+            "Starting demo v1.0",
+            "Completed execution in",
+        ):
+            self.assertIn(expected, err)
+
+    def test_json_output_keeps_verbosity_rules(self) -> None:
+        logger = CliLogger(verbose=False)
+        logger.json_output = True
+        out, err = self._capture(logger, lambda lg: (lg.progress("quiet progress"), lg.info("banner", to_stdout=False)))
+        self.assertEqual((out, err), ("", ""))
+
+    def test_json_output_keeps_file_logging(self) -> None:
+        with TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "run.log"
+            logger = CliLogger(log_path=log_path)
+            logger.json_output = True
+            self._capture(logger, lambda lg: lg.info("to file"))
+            self.assertIn("**[INFO]**  to file", log_path.read_text(encoding="utf-8"))
+
+    def test_emit_json_writes_one_document_to_stdout(self) -> None:
+        for json_output in (False, True):
+            with self.subTest(json_output=json_output):
+                logger = CliLogger()
+                logger.json_output = json_output
+                out, err = self._capture(logger, lambda lg: lg.emit_json({"b": [1, 2], "a": "x"}))
+                self.assertEqual(out, '{"b": [1, 2], "a": "x"}\n')
+                self.assertEqual(err, "")
+
+    def test_emit_json_honors_indent(self) -> None:
+        out, _ = self._capture(CliLogger(), lambda lg: lg.emit_json([{"name": "x"}], indent=2))
+        self.assertEqual(out, '[\n  {\n    "name": "x"\n  }\n]\n')
+
+    def test_emit_keeps_stdout_in_json_mode(self) -> None:
+        logger = CliLogger()
+        logger.json_output = True
+        out, err = self._capture(logger, lambda lg: lg.emit('{"ok": true}'))
+        self.assertEqual((out, err), ('{"ok": true}\n', ""))

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import sys
-from typing import Any, Optional, Sequence
+from typing import Sequence
 
 from ..cli import ToolHarness
 from ..durations import parse_date_or_datetime
@@ -82,7 +82,7 @@ def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--started-after", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="Lower start-time bound.")
     parser.add_argument("--ancestors-of", type=parse_pid, default=None, metavar="PID", help="Filter ancestors of PID.")
     parser.add_argument("--descendants-of", type=parse_pid, default=None, metavar="PID", help="Filter descendants of PID.")
-    parser.add_argument("--format", choices=["text", "json"], default="text", help="Output rendering format (text or json).")
+    ToolHarness.add_format_option(parser)
 
 
 def report_kill_plan(pids: Sequence[int], logger: CliLogger) -> bool:
@@ -122,35 +122,9 @@ def run_list(args: argparse.Namespace, logger: CliLogger) -> int:
     return 0
 
 
-class JsonModeLogger(CliLogger):
-    """CLI logger that keeps ``stdout`` free for a JSON document by sending console messages to ``stderr``."""
-
-    def log(self, message: str = "", level: Optional[str] = None, origin: Optional[str] = None, **kwargs: Any) -> None:
-        if kwargs.get("to_stdout", True) and not kwargs.get("to_stderr", False):
-            kwargs.update(to_stdout=False, to_stderr=True)
-        super().log(message, level=level, origin=origin, **kwargs)
-
-
-class ProcessesHarness(ToolHarness):
-    """Tool harness routing log output to ``stderr`` when ``--format json`` is selected."""
-
-    def create_logger(self, args: argparse.Namespace) -> CliLogger:
-        base = super().create_logger(args)
-        if getattr(args, "format", "text") != "json":
-            return base
-        return JsonModeLogger(
-            log_file=base.log_file,
-            log_level=base.effective_level if base._explicit_level_set else None,
-            debug=base.debug_flag,
-            verbose=base.verbose,
-        )
-
-
 def build_harness() -> ToolHarness:
-    """Construct the :class:`ProcessesHarness` for the ``processes`` CLI."""
-    harness = ProcessesHarness(
-        name=TOOL_NAME, description=DESCRIPTION, exit_codes=EXIT_CODES, examples=EXAMPLES, fallback_action="kill"
-    )
+    """Construct the :class:`ToolHarness` for the ``processes`` CLI."""
+    harness = ToolHarness(name=TOOL_NAME, description=DESCRIPTION, exit_codes=EXIT_CODES, examples=EXAMPLES, fallback_action="kill")
     harness.add_action(
         "kill",
         "terminate processes by PID",
@@ -203,8 +177,6 @@ __all__ = [
     "DESCRIPTION",
     "EXAMPLES",
     "EXIT_CODES",
-    "JsonModeLogger",
-    "ProcessesHarness",
     "TOOL_NAME",
     "build_harness",
     "configure_kill_parser",
