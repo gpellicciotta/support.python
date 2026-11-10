@@ -158,7 +158,7 @@ class ToolHarnessUnitTests(unittest.TestCase):
 
         def configure_list(parser) -> None:
             parser.add_argument("--maybe", nargs="?", const="yes")
-            parser.add_argument("--filter")
+            parser.add_argument("-f", "--filter")
 
         harness.add_action(
             "list", "list targets", lambda args, logger: listed.append(args.filter) or 0, configure_parser=configure_list
@@ -167,7 +167,10 @@ class ToolHarnessUnitTests(unittest.TestCase):
             self.assertEqual(harness.run(["--filter", "prod", "list"]), 0)
             self.assertEqual(harness.run(["--maybe", "--log-level", "DEBUG", "list"]), 0)
             self.assertEqual(harness.run(["--maybe", "list"]), 0)
-        self.assertEqual(listed, ["prod", None, None])
+            self.assertEqual(harness.run(["--filt", "staging", "list"]), 0)
+            self.assertEqual(harness.run(["-vf", "dev", "list"]), 0)
+            self.assertEqual(harness.run(["-vfqa", "list"]), 0)
+        self.assertEqual(listed, ["prod", None, None, "staging", "dev", "qa"])
 
     def test_leading_global_values_keep_the_help_target(self) -> None:
         harness = self._make_harness(fallback_action="run")

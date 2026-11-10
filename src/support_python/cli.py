@@ -301,7 +301,7 @@ class ToolHarness:
                 options.setdefault(flag, option)
         i = 0
         while i < len(args) and args[i].startswith("-") and args[i] != "--":
-            option = options.get(args[i])
+            option = self._lookup_option(options, args[i])
             i += 1
             nargs = option.nargs if option is not None else 0
             if nargs is None:
@@ -320,6 +320,25 @@ class ToolHarness:
                 return [args[i], *args[i + 1 :], *args[:i]]
             return [args[i], *args[:i], *args[i + 1 :]]
         return [self.fallback_action, *args]
+
+    @staticmethod
+    def _lookup_option(options: dict[str, argparse.Action], token: str) -> Optional[argparse.Action]:
+        """Resolve ``token`` as argparse would: exact flags, unique long prefixes, and bundled short flags."""
+        if "=" in token:
+            return None
+        if token in options:
+            return options[token]
+        if token.startswith("--"):
+            matches = {option for flag, option in options.items() if flag.startswith(token)}
+            return matches.pop() if len(matches) == 1 else None
+        if len(token) > 2:
+            for position in range(1, len(token)):
+                option = options.get(f"-{token[position]}")
+                if option is None:
+                    return None
+                if option.nargs != 0:
+                    return option if position == len(token) - 1 else None
+        return None
 
     def _build_parser(self, action_name: Optional[str] = None) -> argparse.ArgumentParser:
         prog = f"{self.name} {action_name}" if action_name else self.name
