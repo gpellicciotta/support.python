@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Copyright (c) Giovanni Pellicciotta
-"""Move this repo from one namespace/brand word to another (e.g. --old acme --new widgets).
+"""Move the current repo from one namespace/brand word to another (e.g. --old acme --new widgets).
 
 Run the steps in order, one at a time, reviewing the result of each:
 
@@ -13,7 +13,8 @@ Run the steps in order, one at a time, reviewing the result of each:
     finish       mark released, commit, tag, push, GitHub Release    (outbound)
 
 Outbound steps print the exact command and need a typed "yes". The version lives in gradle.properties,
-pyproject.toml, or package.json, whichever exists first.
+pyproject.toml, or package.json, whichever exists first. The script acts on the Git repository
+containing the current directory.
 """
 
 from __future__ import annotations
@@ -24,29 +25,106 @@ import json
 import os
 import re
 import shlex
+import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
-from _repo_common import (
-    REPO_ROOT,
-    current_version,
-    default_branch,
-    die,
-    origin,
-    outbound,
-    read,
-    read_changelog,
-    run,
-    set_version,
-    write,
-    write_changelog,
+_SRC = Path(__file__).resolve().parent.parent / "src"
+if _SRC.is_dir():
+    sys.path.insert(0, str(_SRC))
+
+from support_python.devops.release import (  # noqa: E402
+    confirm_typed,
+    extract_release_notes,
+    next_dev_version,
+    read_version,
+    release_version,
+    write_version,
 )
+from support_python.git import get_current_branch, get_default_branch, get_github_repo, get_remote_url, get_repo_root  # noqa: E402
+
+#: Root of the Git repository containing the current directory; set by main().
+ROOT = Path.cwd()
 
 SELF = "scripts/migrate-namespace.py"
 # plan owns .plan and PLAN.md; the changelog is edited by hand below; the scripts must not rewrite themselves
 SKIP_PREFIXES = (".plan/", "PLAN.md", "CHANGELOG.md", SELF, "scripts/reset-history.py")
 PRE_HEADING_RE = re.compile(r"^## v(\d+)\.(\d+)\.(\d+)-pre$", re.MULTILINE)
+
+
+def die(message: str) -> None:
+    """Exit with a severity-tagged error message."""
+    sys.exit(f"**[ERROR]**: {message}")
+
+
+def run(args: list[str], capture: bool = False, check: bool = True) -> str:
+    """Echo and run a command in the repository root. Returns trimmed stdout when capturing."""
+    print(f"$ {shlex.join(args)}")
+    result = subprocess.run(args, cwd=ROOT, check=check, text=True, capture_output=capture)
+    return result.stdout.strip() if capture else ""
+
+
+def outbound(args: list[str]) -> None:
+    """Run a command that leaves this machine only after the user types 'yes'."""
+    if not confirm_typed(["", f"OUTBOUND: {shlex.join(args)}", ""], "yes"):
+        sys.exit("aborted")
+    run(args)
+
+
+def read(name: str) -> str:
+    """Read a repository file as UTF-8 without newline translation."""
+    with open(ROOT / name, encoding="utf-8", newline="") as f:
+        return f.read()
+
+
+def write(name: str, text: str) -> None:
+    """Write a repository file as UTF-8 without newline translation."""
+    with open(ROOT / name, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+
+
+def read_changelog() -> tuple[str, str]:
+    """Return CHANGELOG.md as LF text plus its on-disk line ending."""
+    text = read("CHANGELOG.md")
+    return text.replace("\r\n", "\n"), "\r\n" if "\r\n" in text else "\n"
+
+
+def write_changelog(text: str, newline: str) -> None:
+    """Write LF text to CHANGELOG.md using the given line ending."""
+    write("CHANGELOG.md", text.replace("\n", newline))
+
+
+def current_version() -> str:
+    """Read the project version, including any -pre suffix."""
+    try:
+        return read_version(ROOT)
+    except (OSError, ValueError) as exc:
+        die(str(exc))
+        raise AssertionError("unreachable") from exc
+
+
+def set_version(version: str) -> None:
+    """Write the project version into the first supported version file."""
+    try:
+        write_version(ROOT, version)
+    except (OSError, ValueError) as exc:
+        die(str(exc))
+
+
+def origin() -> tuple[str, str]:
+    """Return the (owner, repo) of the GitHub origin remote."""
+    repo = get_github_repo(ROOT)
+    if repo is None:
+        die(f"cannot parse origin {get_remote_url(ROOT) or '(missing)'}")
+    return repo
+
+
+def default_branch() -> str:
+    """Return origin's default branch, falling back to the current branch, then 'main'."""
+    branch = get_default_branch(ROOT) or get_current_branch(ROOT)
+    return branch if branch and branch != "(detached)" else "main"
 
 
 def tracked_files() -> list[str]:
@@ -86,7 +164,7 @@ def ensure_absent(rel: str) -> None:
 
     Empty leftover directories (git leaves them behind after a reset) are removed; anything else aborts.
     """
-    target = REPO_ROOT / rel
+    target = ROOT / rel
     for dirpath, _, _ in os.walk(target, topdown=False):
         try:
             os.rmdir(dirpath)
@@ -136,7 +214,11 @@ def rewrite_text(args: argparse.Namespace) -> int:
 
 
 def next_major(version: str) -> str:
-    return f"{int(version.split('.')[0].split('-')[0]) + 1}.0.0"
+    try:
+        return release_version(next_dev_version(version, "major"))
+    except ValueError as exc:
+        die(str(exc))
+        raise AssertionError("unreachable") from exc
 
 
 def update_changelog_for_rewrite(args: argparse.Namespace, version: str) -> None:
@@ -200,7 +282,7 @@ def cmd_freeze(args: argparse.Namespace) -> None:
         die(f"version file says {current_version()}, CHANGELOG says {version}-pre")
     today = datetime.date.today().isoformat()
     top = top_heading(text)
-    text = text[: top.start()] + f"## v{major}.{minor}.{patch + 1}-pre\n\n---\n\n## v{version} [{today}]" + text[top.end() :]
+    text = text[: top.start()] + f"## v{next_dev_version(version)}\n\n---\n\n## v{version} [{today}]" + text[top.end() :]
     write_changelog(text, newline)
     set_version(version)
     run(["git", "add", "-A"])
@@ -234,8 +316,10 @@ def cmd_publish(args: argparse.Namespace) -> None:
 
 
 def release_notes(text: str, version: str) -> str:
-    match = re.search(rf"^## v{re.escape(version)} .*?$(.*?)^---$", text, re.MULTILINE | re.DOTALL)
-    return match.group(1).strip() if match else ""
+    try:
+        return extract_release_notes(text, version)
+    except ValueError:
+        return ""
 
 
 def cmd_finish(args: argparse.Namespace) -> None:
@@ -260,6 +344,7 @@ def cmd_finish(args: argparse.Namespace) -> None:
 
 
 def main() -> int:
+    global ROOT
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--old", required=True, help="word to replace")
     parser.add_argument("--new", required=True, help="replacement word")
@@ -282,6 +367,10 @@ def main() -> int:
     for name, fn in steps:
         sub.add_parser(name).set_defaults(fn=fn)
     args = parser.parse_args()
+    root = get_repo_root(Path.cwd())
+    if root is None:
+        die("not inside a Git repository")
+    ROOT = root
     args.branch = args.branch or default_branch()
     args.fn(args)
     return 0

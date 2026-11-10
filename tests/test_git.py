@@ -53,6 +53,9 @@ QUERIES = [
     (git.has_remote, ()),
     (git.list_worktrees, ()),
     (git.get_working_tree_status, ()),
+    (git.get_default_branch, ()),
+    (git.get_remote_url, ()),
+    (git.get_github_repo, ()),
 ]
 
 
@@ -151,3 +154,41 @@ def test_untracked_arrow_is_not_a_rename():
 
 def test_nul_worktree_preserves_newlines_in_path():
     assert git.parse_worktree_porcelain("worktree /repo\n\0HEAD abc\0\0") == [{"worktree": "/repo\n", "HEAD": "abc"}]
+
+
+@pytest.mark.parametrize(
+    "url,expected",
+    [
+        ("https://github.com/owner/name.git\n", ("owner", "name")),
+        ("https://github.com/owner/name/", ("owner", "name")),
+        ("git@github.com:owner/support.python.git", ("owner", "support.python")),
+        ("ssh://git@github.com/owner/name", ("owner", "name")),
+        ("https://gitlab.com/owner/name.git", None),
+        ("", None),
+    ],
+)
+def test_github_remote_parsing(url, expected):
+    assert git.parse_github_remote(url) == expected
+
+
+def test_remote_queries(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def run(*args):
+        subprocess.run(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid", *args], cwd=repo, check=True)
+
+    run("init", "-q", "-b", "trunk")
+    assert git.get_remote_url(repo) is None
+    assert git.get_github_repo(repo) is None
+    run("commit", "-q", "--allow-empty", "-m", "Initial commit")
+    run("remote", "add", "origin", "git@github.com:owner/name.git")
+    run("remote", "add", "mirror", "https://gitlab.com/owner/name.git")
+    assert git.get_remote_url(repo) == "git@github.com:owner/name.git"
+    assert git.get_github_repo(repo) == ("owner", "name")
+    assert git.get_github_repo(repo, "mirror") is None
+    assert git.get_default_branch(repo) is None
+    run("update-ref", "refs/remotes/origin/trunk", "HEAD")
+    run("symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/trunk")
+    assert git.get_default_branch(repo) == "trunk"
+    assert git.get_default_branch(repo, "mirror") is None

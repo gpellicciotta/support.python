@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # Copyright (c) Giovanni Pellicciotta
-"""One-off: start this repo completely fresh from the current codebase at a chosen version.
+"""One-off: start the current repo completely fresh from its current codebase at a chosen version.
 
-DESTRUCTIVE and mostly irreversible. Run the steps in order:
+DESTRUCTIVE and mostly irreversible. Acts on the Git repository containing the current directory.
+Run the steps in order:
 
     backup DIR       mirror-clone the repo (all history, tags, branches) into DIR, outside the repo
     reinit           delete all plan tasks, reset CHANGELOG/version to vX.Y.Z-pre, replace local
@@ -20,27 +21,83 @@ import argparse
 import getpass
 import json
 import re
+import shlex
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-from _repo_common import (
-    REPO_ROOT,
-    confirm,
-    default_branch,
-    die,
-    origin,
-    read,
-    read_changelog,
-    run,
-    set_version,
-    write_changelog,
-)
+_SRC = Path(__file__).resolve().parent.parent / "src"
+if _SRC.is_dir():
+    sys.path.insert(0, str(_SRC))
+
+from support_python.devops.release import confirm_typed, write_version  # noqa: E402
+from support_python.git import get_current_branch, get_default_branch, get_github_repo, get_remote_url, get_repo_root  # noqa: E402
+
+#: Root of the Git repository containing the current directory; set by main().
+REPO_ROOT = Path.cwd()
 
 EXCLUDED_SCRIPTS = ("scripts/reset-history.py", "scripts/migrate-namespace.py")
 DEFAULT_VERSION = "1.0.0"
 DEFAULT_ENTRY = "- Initial release."
+
+
+def die(message: str) -> None:
+    """Exit with a severity-tagged error message."""
+    sys.exit(f"**[ERROR]**: {message}")
+
+
+def run(args: list[str], capture: bool = False, check: bool = True) -> str:
+    """Echo and run a command in the repository root. Returns trimmed stdout when capturing."""
+    print(f"$ {shlex.join(args)}")
+    result = subprocess.run(args, cwd=REPO_ROOT, check=check, text=True, capture_output=capture)
+    return result.stdout.strip() if capture else ""
+
+
+def confirm(summary: list[str], phrase: str) -> None:
+    """Print a summary and require the user to type the phrase; exit otherwise."""
+    if not confirm_typed(["", *summary, ""], phrase):
+        sys.exit("aborted")
+
+
+def read(name: str) -> str:
+    """Read a repository file as UTF-8 without newline translation."""
+    with open(REPO_ROOT / name, encoding="utf-8", newline="") as f:
+        return f.read()
+
+
+def read_changelog() -> tuple[str, str]:
+    """Return CHANGELOG.md as LF text plus its on-disk line ending."""
+    text = read("CHANGELOG.md")
+    return text.replace("\r\n", "\n"), "\r\n" if "\r\n" in text else "\n"
+
+
+def write_changelog(text: str, newline: str) -> None:
+    """Write LF text to CHANGELOG.md using the given line ending."""
+    with open(REPO_ROOT / "CHANGELOG.md", "w", encoding="utf-8", newline="") as f:
+        f.write(text.replace("\n", newline))
+
+
+def set_version(version: str) -> None:
+    """Write the project version into the first supported version file."""
+    try:
+        write_version(REPO_ROOT, version)
+    except (OSError, ValueError) as exc:
+        die(str(exc))
+
+
+def origin() -> tuple[str, str]:
+    """Return the (owner, repo) of the GitHub origin remote."""
+    repo = get_github_repo(REPO_ROOT)
+    if repo is None:
+        die(f"cannot parse origin {get_remote_url(REPO_ROOT) or '(missing)'}")
+    return repo
+
+
+def default_branch() -> str:
+    """Return origin's default branch, falling back to the current branch, then 'main'."""
+    branch = get_default_branch(REPO_ROOT) or get_current_branch(REPO_ROOT)
+    return branch if branch and branch != "(detached)" else "main"
 
 
 def repo_slug() -> str:
@@ -209,6 +266,7 @@ def cmd_reinit(args: argparse.Namespace) -> None:
 
 
 def main() -> int:
+    global REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--branch", default=None, help="branch to keep (default: origin's default branch)")
     sub = parser.add_subparsers(dest="step", required=True)
@@ -226,6 +284,10 @@ def main() -> int:
             step.add_argument("--drop-secrets", action="store_true", help="do not prompt for Actions secrets; drop them all")
             step.add_argument("--package-type", help="also delete linked GitHub packages of this type (maven, npm, ...)")
     args = parser.parse_args()
+    root = get_repo_root(Path.cwd())
+    if root is None:
+        die("not inside a Git repository")
+    REPO_ROOT = root
     args.branch = args.branch or default_branch()
     args.fn(args)
     return 0

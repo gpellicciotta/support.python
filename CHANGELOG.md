@@ -12,7 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.21-pre
+## v2.0.22-pre
+- DevEx: Made `extract-release-notes.py`, `migrate-namespace.py`, and `reset-history.py` act on the current directory's Git repository via `support_python`, deleting `_repo_common.py`; `migrate-namespace.py finish` now publishes the frozen section as release notes ([extract-release-notes.py](scripts/extract-release-notes.py), [migrate-namespace.py](scripts/migrate-namespace.py), [reset-history.py](scripts/reset-history.py)).
+- DevEx: Added `get_remote_url`, `parse_github_remote`, `get_github_repo`, and `get_default_branch` Git queries ([git.py](src/support_python/git.py)).
 - DevEx: Added a dry-runnable `ReleasePipeline` that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development, plus `confirm_typed` ([release.py](src/support_python/devops/release.py)).
 - DevEx: Added `support_python.devops.release` with version-file, CHANGELOG.md freeze/reopen, release-notes, and GitHub-origin helpers ([release.py](src/support_python/devops/release.py)).
 - CLI: Let `lint-markdown` load extra rules from plugins listed under the config `plugins` key or `--plugin`, and added a `rules` action listing every rule and its source ([plugins.py](src/support_python/markdown/plugins.py), [lint_markdown.py](src/support_python/tools/lint_markdown.py), [lint-markdown.md](docs/tools/lint-markdown.md)).

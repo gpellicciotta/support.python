@@ -17,7 +17,7 @@ from tempfile import TemporaryDirectory
 from typing import Callable, Sequence
 
 from ..files import atomic_write_text
-from ..git import parse_status_porcelain
+from ..git import parse_github_remote, parse_status_porcelain
 from ..logging import CliLogger
 from .steps import EXIT_COMMAND_NOT_FOUND, run_step_command
 
@@ -211,10 +211,10 @@ def parse_github_repo(remote_url: str) -> str:
     Raises:
         ValueError: If the URL does not point at github.com.
     """
-    match = re.search(r"github\.com[:/]([^/\s]+/[^/\s]+?)(?:\.git)?/?$", remote_url.strip())
-    if not match:
+    parsed = parse_github_remote(remote_url)
+    if not parsed:
         raise ValueError(f"Cannot parse a GitHub repository from remote URL: {remote_url}")
-    return match.group(1)
+    return "/".join(parsed)
 
 
 def confirm_typed(summary: Sequence[str], phrase: str, *, input_fn: Callable[[str], str] = input) -> bool:

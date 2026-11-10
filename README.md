@@ -51,6 +51,19 @@ lint-markdown check [paths] [--offline]
 git-repository-backup list --root ~/projects
 ```
 
+## Repository maintenance scripts
+`extract-release-notes.py`, `migrate-namespace.py`, and `reset-history.py` stay uninstalled under `scripts/`.
+Each acts on the Git repository containing the current directory, so run it from a support-python checkout against any repository:
+
+```bash
+cd path/to/other-repo
+python path/to/support.python/scripts/extract-release-notes.py 1.2.3
+python path/to/support.python/scripts/migrate-namespace.py --old acme --new widgets rewrite
+python path/to/support.python/scripts/reset-history.py backup ../backups
+```
+
+Each script imports `support_python` from the checkout's `src/` directory, or from an installed package.
+
 ## Shared CLI helpers, tabular output, and session storage
 
 `support_python.cli` provides `ToolHarness`/`Action` (registered actions with handlers, fallback action, exit-code table, startup/exit banners, and `get_full_version`/`resolve_build_metadata` build-metadata version suffixes) alongside `build_action_parser`/`print_version`/`print_help`. `support_python.tables` provides tabular output formatting (`format_table`/`render_output`), and `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`):

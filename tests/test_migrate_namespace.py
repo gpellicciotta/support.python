@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -40,9 +39,7 @@ class TestRepoScripts(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "acme-lib"
-        (self.repo / "scripts").mkdir(parents=True)
-        for name in ("_repo_common.py", "migrate-namespace.py", "reset-history.py"):
-            shutil.copy(SCRIPTS_DIR / name, self.repo / "scripts" / name)
+        self.repo.mkdir()
         (self.repo / ".gitignore").write_text("__pycache__/\n", encoding="utf-8")
         (self.repo / "acme").mkdir()
         (self.repo / "acme" / "core.py").write_text("NAME = 'Acme acme ACME'\n", encoding="utf-8")
@@ -56,10 +53,10 @@ class TestRepoScripts(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
-    def script(self, name: str, *args: str, stdin: str = "") -> subprocess.CompletedProcess:
+    def script(self, name: str, *args: str, stdin: str = "", cwd: Path | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
-            [sys.executable, str(self.repo / "scripts" / name), *args],
-            cwd=self.repo,
+            [sys.executable, str(SCRIPTS_DIR / name), *args],
+            cwd=cwd or self.repo,
             input=stdin,
             text=True,
             capture_output=True,
@@ -108,6 +105,29 @@ class TestRepoScripts(unittest.TestCase):
         result = self.script("reset-history.py", "backup", str(self.repo / "inside"))
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("outside the repository", result.stderr)
+
+    def test_build_runs_in_current_repository_root(self) -> None:
+        command = "git rev-parse --show-toplevel"
+        result = self.script(
+            "migrate-namespace.py", "--old", "acme", "--new", "widgets", "--build-command", command, "build", cwd=self.repo / "acme"
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        toplevel = [line for line in result.stdout.splitlines() if not line.startswith("$ ")]
+        self.assertEqual([Path(line).resolve() for line in toplevel], [self.repo.resolve()])
+
+    def test_scripts_outside_repository_fail(self) -> None:
+        outside = Path(self.tmp.name) / "outside"
+        outside.mkdir()
+        for name, args in (("migrate-namespace.py", ("--old", "a", "--new", "b", "build")), ("reset-history.py", ("backup", "x"))):
+            result = self.script(name, *args, cwd=outside)
+            self.assertEqual(result.returncode, 1, name)
+            self.assertIn("not inside a Git repository", result.stderr)
+
+    def test_help_exits_zero(self) -> None:
+        for name in ("migrate-namespace.py", "reset-history.py"):
+            result = self.script(name, "--help")
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("usage:", result.stdout)
 
 
 if __name__ == "__main__":

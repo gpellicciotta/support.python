@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 
@@ -342,6 +343,73 @@ def has_remote(cwd: Path | str, remote: str = "origin", timeout: float = DEFAULT
         return None
 
 
+def get_remote_url(cwd: Path | str, remote: str = "origin", timeout: float = DEFAULT_GIT_TIMEOUT) -> str | None:
+    """Retrieve the fetch URL of a git remote.
+
+    Args:
+        cwd: Working directory of the repository.
+        remote: Remote name (default: 'origin').
+        timeout: Command timeout in seconds.
+
+    Returns:
+        Remote URL string, or None if the remote is absent or the query fails.
+    """
+    try:
+        res = run_git_command(cwd, "remote", "get-url", remote, timeout=timeout)
+        url = res.stdout.strip()
+        return url if url else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def parse_github_remote(remote_url: str) -> tuple[str, str] | None:
+    """Parse ``(owner, name)`` from an https or ssh GitHub remote URL.
+
+    Args:
+        remote_url: Remote URL, e.g. 'https://github.com/owner/name.git' or 'git@github.com:owner/name.git'.
+
+    Returns:
+        Tuple of owner and repository name, or None if the URL does not point at github.com.
+    """
+    match = re.search(r"github\.com[:/]([^/\s]+)/([^/\s]+?)(?:\.git)?/?$", remote_url.strip())
+    return (match.group(1), match.group(2)) if match else None
+
+
+def get_github_repo(cwd: Path | str, remote: str = "origin", timeout: float = DEFAULT_GIT_TIMEOUT) -> tuple[str, str] | None:
+    """Retrieve the GitHub ``(owner, name)`` of a git remote.
+
+    Args:
+        cwd: Working directory of the repository.
+        remote: Remote name (default: 'origin').
+        timeout: Command timeout in seconds.
+
+    Returns:
+        Tuple of owner and repository name, or None if the remote is absent, not on GitHub, or the query fails.
+    """
+    url = get_remote_url(cwd, remote, timeout=timeout)
+    return parse_github_remote(url) if url else None
+
+
+def get_default_branch(cwd: Path | str, remote: str = "origin", timeout: float = DEFAULT_GIT_TIMEOUT) -> str | None:
+    """Retrieve a remote's default branch from its locally recorded HEAD reference.
+
+    Args:
+        cwd: Working directory of the repository.
+        remote: Remote name (default: 'origin').
+        timeout: Command timeout in seconds.
+
+    Returns:
+        Branch name without the remote prefix, or None if 'refs/remotes/<remote>/HEAD' is unset or the query fails.
+    """
+    try:
+        res = run_git_command(cwd, "symbolic-ref", "--quiet", "--short", f"refs/remotes/{remote}/HEAD", timeout=timeout)
+        ref = res.stdout.strip()
+        prefix = f"{remote}/"
+        return ref[len(prefix) :] if ref.startswith(prefix) and len(ref) > len(prefix) else None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 __all__ = [
     "DEFAULT_GIT_ENV",
     "DEFAULT_GIT_TIMEOUT",
@@ -356,4 +424,8 @@ __all__ = [
     "get_working_tree_status",
     "is_git_clean",
     "has_remote",
+    "get_remote_url",
+    "parse_github_remote",
+    "get_github_repo",
+    "get_default_branch",
 ]

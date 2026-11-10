@@ -54,7 +54,8 @@ Cross-platform Python scripts under `scripts/`; each supports `--help` and `--ve
 | `extract-release-notes.py`       | Print one version's CHANGELOG.md section for GitHub Release notes                   |
 | `install-from-github-release.py` | Install a released wheel from any GitHub repo (defaults to this project)            |
 
-`_cli_common.py`, `_tool_common.py`, `_harness.py`, and `_repo_common.py` are shared helper modules.
+`_cli_common.py`, `_tool_common.py`, and `_harness.py` are shared helper modules.
+`reset-history.py`, `migrate-namespace.py`, and `extract-release-notes.py` act on the Git repository containing the current directory.
 
 ### Task Coordination Protocol
 All task work follows the `plan-task-usage-guidelines` skill from

@@ -91,6 +91,10 @@ from .git import (
     get_working_tree_status,
     is_git_clean,
     has_remote,
+    get_remote_url,
+    parse_github_remote,
+    get_github_repo,
+    get_default_branch,
 )
 from .env import read_env_file
 from .errors import (
@@ -243,6 +247,10 @@ __all__ = [
     "get_working_tree_status",
     "is_git_clean",
     "has_remote",
+    "get_remote_url",
+    "parse_github_remote",
+    "get_github_repo",
+    "get_default_branch",
     # Dates
     "DATE_FORMAT",
     "format_datetime",
