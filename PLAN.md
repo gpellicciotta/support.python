@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [x] T0073 Fail the test run when a test writes into the real home directory or the repository's own .plan directory.
-- [ ] T0065 [protocol: adhoc] Make every tool's --version report the installed support-python version instead of the current directory's project version.
+- [x] T0065 [owner: @gemini, session: antigravity-20261110-51d0ec] [protocol: adhoc] Make every tool's --version report the installed support-python version instead of the current directory's project version.
 - [ ] T0066 [protocol: adhoc] Make agent-files sync --dry-run --no-prune report kept stale skills instead of removals.
 - [ ] T0067 [protocol: adhoc] Retry lint-markdown external link checks with GET when HEAD returns 404, as webawesome.com does.
 - [ ] T0098 Make ToolHarness version output show the -pre suffix instead of the PEP 440 rc0 form from package metadata.
@@ -31,9 +31,9 @@ An overview of all tasks and their planning.
 - [ ] T0078 [needs: T0068] Add --format text|json to git-repository-backup backup and restore, reporting per-repository results.
 - [ ] T0081 [needs: T0068, T0069, T0070, T0074, T0075, T0076, T0077, T0078] Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
 - [ ] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
-- [ ] T0103 [protocol: adhoc] [needs: T0065, T0066, T0067, T0098, T0097, T0087, T0088, T0071, T0072, T0083, T0084, T0085, T0090, T0086, T0079, T0082, T0074, T0077, T0068, T0069, T0070, T0075, T0076, T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
+- [ ] T0103 [protocol: adhoc] [needs: T0066, T0067, T0098, T0097, T0087, T0088, T0071, T0072, T0083, T0084, T0085, T0090, T0086, T0079, T0082, T0074, T0077, T0068, T0069, T0070, T0075, T0076, T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
 
 ---
 
 ## Backlog
-*(Currently no tasks)*
+- [ ] T0104 Add skills-only installation to agent-files, as a command mode and an importable function, matching plan's current skill installer.
