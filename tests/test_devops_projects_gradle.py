@@ -306,6 +306,12 @@ class GradleHelpTests(GradleTestCase):
         self.assertNotIn("tests/test_cli.py", out)
         self.assertIn("devops test com.example.AppTest", out)
 
+    def test_help_exit_codes_do_not_mention_a_virtual_environment(self) -> None:
+        code, out, _ = run_cli(self.cli(), "help")
+        self.assertEqual(code, 0)
+        self.assertNotIn("virtual environment", out)
+        self.assertIn("a prerequisite is missing", out)
+
     def test_skip_checks_with_a_release_task_warns_that_it_is_ignored(self) -> None:
         code, out, err = run_cli(self.cli(release_task="doFullRelease"), "release", "--dry-run", "--skip-checks")
         self.assertEqual(code, 0)

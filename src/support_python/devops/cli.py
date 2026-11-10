@@ -34,7 +34,7 @@ DEFAULT_DESCRIPTION = "Runs the lint, format, test, build, check, clean, version
 #: Exit codes of the standard actions.
 EXIT_CODES: dict[int, str] = {
     0: "success",
-    1: "an operation failed, the virtual environment is missing, or versions drift",
+    1: "an operation failed, a prerequisite is missing, or versions drift",
     2: "invalid arguments or unknown action",
 }
 

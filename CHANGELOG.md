@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.2-pre
+## v2.0.3-pre
+- Library: Reworded the `DevopsCli` exit code 1 text to say a prerequisite is missing, instead of naming the Python virtual environment for every adapter.
 - Library: Made `DevopsCli` take help summaries and the `test` example from the project adapter, so `GradleProject` help names its Gradle tasks ([devops-scripts.md](docs/tutorials/devops-scripts.md)).
 - Library: Made `devops release --skip-checks` warn that it has no effect on a project with its own release, such as a `GradleProject` with a `release_task`.
 
