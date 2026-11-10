@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 3050.4, input: 2373310, output: 135888, cache_read: 54463054}
-review_status: pending
+  review: {turns: 2, duration_s: 162.4, input: 24, output: 4168, cache_read: 406402, cache_write: 48340}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1624.6
 ---
 # T0071: Split the test suite into a parallel fast default suite and a marked slow suite, with per-test timeouts
 
@@ -76,4 +79,18 @@ Run both suites in CI, and keep the fast suite under 2 minutes.
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 rejected by @claude: Implementation meets the core goals.
+  - Findings: [review-findings-1.md](T0071-split-the-test-suite-into-a-parallel-fast/review-findings-1.md).
+
+- [2026-11-11] **[Doc]**
+  Restored build bullet in devops.md and test selection in AGENTS.md.
+  - devops.md build bullet restored.
+  - AGENTS.md test selection restored.
+
+- [2026-11-11] **[Verify]**
+  Re-verified fast and slow suites, updating verbatim outputs.
+  - Fast suite passed in 17.25s.
+  - Slow suite passed in 58.01s.
 
