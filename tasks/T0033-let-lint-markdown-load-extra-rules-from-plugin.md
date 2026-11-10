@@ -12,11 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1238.6, input: 196, output: 77190, cache_read: 9131532, cache_write: 217988}
+  worker: {turns: 4, duration_s: 1615.4, input: 240, output: 92226, cache_read: 11908544, cache_write: 259776}
   review: {turns: 2, duration_s: 340.4, input: 68, output: 15684, cache_read: 1881694, cache_write: 113074}
-review_status: rejected
-review_round: 1
-reviewed_by: "@claude-2"
+review_status: pending
+review_round: 2
 work_duration: 807.2
 ---
 # T0033: Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action
@@ -81,4 +80,7 @@ Document writing a plugin rule in `docs/tools/lint-markdown.md`.
   - Files touched: 9.
   - Lines touched: 653.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 2 requested (mode: agent).
 
