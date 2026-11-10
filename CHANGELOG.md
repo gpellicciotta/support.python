@@ -12,7 +12,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.22-pre
+## v2.0.23-pre
+- DevEx: Added `DevopsCli` with lint, format, test, build, check, clean, versions, and release actions over `Project`/`PythonProject` adapters, and rebuilt [devops.py](scripts/devops.py) on them ([cli.py](src/support_python/devops/cli.py), [projects.py](src/support_python/devops/projects.py)).
+- DevEx: Added an optional post-freeze `build` hook to `ReleasePipeline`, so release assets carry the release version instead of `-pre` ([release.py](src/support_python/devops/release.py)).
 - DevEx: Made `extract-release-notes.py`, `migrate-namespace.py`, and `reset-history.py` act on the current directory's Git repository via `support_python`, deleting `_repo_common.py`; `migrate-namespace.py finish` now publishes the frozen section as release notes ([extract-release-notes.py](scripts/extract-release-notes.py), [migrate-namespace.py](scripts/migrate-namespace.py), [reset-history.py](scripts/reset-history.py)).
 - DevEx: Added `get_remote_url`, `parse_github_remote`, `get_github_repo`, and `get_default_branch` Git queries ([git.py](src/support_python/git.py)).
 - DevEx: Added a dry-runnable `ReleasePipeline` that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development, plus `confirm_typed` ([release.py](src/support_python/devops/release.py)).

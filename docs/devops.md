@@ -44,7 +44,7 @@ Cross-platform Python scripts under `scripts/`; each supports `--help` and `--ve
 | Script                           | Purpose                                                                             |
 | :------------------------------- | :---------------------------------------------------------------------------------- |
 | `bootstrap-dev-environment.py`   | Create the venv, install, lint, test, and build                                     |
-| `devops.py`                      | Run `lint`, `test`, `build`, `check`, or `clean` in the venv                        |
+| `devops.py`                      | Run lint, format, test, build, check, clean, versions, and release in the venv      |
 | `processes.py`                   | Safely terminate processes by PID and list running processes with filters           |
 | `lint-markdown.py`               | Lint and fix Markdown files with the packaged `support_python` linter               |
 | `agent-files.py`                 | Sync repository guideline digests and skills into AI coding tools                   |
@@ -56,6 +56,25 @@ Cross-platform Python scripts under `scripts/`; each supports `--help` and `--ve
 
 `_cli_common.py`, `_tool_common.py`, and `_harness.py` are shared helper modules.
 `reset-history.py`, `migrate-namespace.py`, and `extract-release-notes.py` act on the Git repository containing the current directory.
+
+### The devops.py Script
+[devops.py](../scripts/devops.py) runs `DevopsCli(PythonProject(REPO_ROOT))` from `support_python.devops`.
+It imports the package from `src/`, so it needs no install; its commands run through `.venv`.
+```bash
+python scripts/devops.py lint | format | build | check | clean
+python scripts/devops.py test [SELECTION...] [-- PYTEST-OPTIONS...]
+python scripts/devops.py versions
+python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
+python scripts/devops.py help [--verbose] | version
+```
+- `lint` runs `ruff check .` and `ruff format --check .`; `format` runs `ruff format .`.
+- `test` runs `pytest -q`; `build` removes `dist/` and runs `python -m build -o dist`.
+- `check` runs lint, test, and build, stopping at the first failure.
+- `clean` removes `dist/`, `build/`, and `src/*.egg-info`; it needs no venv.
+- `versions` compares `pyproject.toml` with the top `CHANGELOG.md` heading and exits 1 on drift.
+- `release` runs `ReleasePipeline` with `check` as its quality check (see [Automated Release](#automated-release)).
+- `release` rebuilds after the freeze commit and attaches the new `dist/*.whl` and `dist/*.tar.gz`.
+- A missing venv exits 1 with a hint to run `bootstrap-dev-environment.py`; unknown actions exit 2.
 
 ### Task Coordination Protocol
 All task work follows the `plan-task-usage-guidelines` skill from
@@ -70,6 +89,21 @@ Ongoing work accumulates under the top `CHANGELOG.md` heading while it carries a
 `## v0.1.1-pre`), which must always match `version` in `pyproject.toml` (the single source of truth) exactly,
 `-pre` included. Escalate that heading/version together the moment a change lands that needs it.
 
+### Automated Release
+`python scripts/devops.py release` releases from a clean `main`; preview it first with `--dry-run`.
+It pushes and publishes, so it needs explicit approval like any tag push.
+1. Check preconditions: a clean tree, `main`, an authenticated `gh`, fresh tags, no existing release, and non-empty notes.
+2. Run `check` (lint, test, build) as the quality gate; `--skip-checks` skips it.
+3. Ask for the typed `release vX.Y.Z` confirmation; `--yes` skips it.
+4. Freeze the `CHANGELOG.md` heading and the `pyproject.toml` version, and commit.
+5. Rebuild `dist/` from the frozen version; a failed build stops before anything is tagged or pushed.
+6. Tag, push `main` and the tag, and publish the GitHub release with the rebuilt wheel and sdist.
+7. Open the next patch `-pre` version, commit, and push.
+
+[publish.yml](../.github/workflows/publish.yml) then builds the tag again and uploads `dist/*`.
+Its same-named files replace the attached assets, since `overwrite_files` defaults to true.
+
+### Manual Release
 1. Confirm the top `CHANGELOG.md` heading's version and `pyproject.toml`'s `version` already agree.
 2. Freeze: replace the heading's `-pre` suffix with `[{{date}}]`, and drop `-pre` from `pyproject.toml`'s
    `version` so both again match exactly. In the same commit, add the next patch version's `## vX.Y.Z-pre`

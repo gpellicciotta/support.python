@@ -273,8 +273,10 @@ class ReleasePipeline:
         root: Repository root.
         logger: Logger receiving progress, planned steps, and errors.
         quality_check: Optional check run before any change; returning ``False`` aborts the release.
-        assets: Optional callable returning files to attach, resolved after the quality check; relative paths
-            are taken from ``root``.
+        assets: Optional callable returning files to attach, resolved after the quality check, or after ``build``
+            when given; relative paths are taken from ``root``.
+        build: Optional build run after the freeze commit and before tagging, so the assets carry the release
+            version; returning ``False`` stops the release before anything is tagged or pushed.
         main_branch: Branch releases are cut from and pushed to.
         dry_run: Log every planned edit and command without running the quality check, prompting, or changing
             anything. Read-only precondition queries, including ``git fetch``, still run.
@@ -289,6 +291,7 @@ class ReleasePipeline:
     logger: CliLogger
     quality_check: Callable[[], bool] | None = None
     assets: Callable[[], Sequence[Path]] | None = None
+    build: Callable[[], bool] | None = None
     main_branch: str = "main"
     dry_run: bool = False
     assume_yes: bool = False
@@ -331,10 +334,12 @@ class ReleasePipeline:
                 self.logger.info("[dry-run] Skipping the quality check.")
             elif not self.quality_check():
                 return self._fail("Quality check failed; nothing was changed.")
-        assets = [root / Path(asset) for asset in self.assets()] if self.assets is not None else []
-        missing = [str(asset) for asset in assets if not asset.is_file()]
-        if missing and not self.dry_run:
-            return self._fail(f"Release assets not found: {', '.join(missing)}")
+        assets: list[Path] = []
+        if self.build is None:
+            assets = self._asset_paths(root)
+            missing = [str(asset) for asset in assets if not asset.is_file()]
+            if missing and not self.dry_run:
+                return self._fail(f"Release assets not found: {', '.join(missing)}")
 
         steps = self._plan(root, entry, version_name, release, next_version, tag, notes, assets, freeze)
         if self.dry_run:
@@ -414,7 +419,7 @@ class ReleasePipeline:
         next_version: str,
         tag: str,
         notes: str,
-        assets: Sequence[Path],
+        assets: list[Path],
         freeze: bool,
     ) -> list[_Step]:
         status = f"released: {self.today().isoformat()}"
@@ -427,11 +432,13 @@ class ReleasePipeline:
                 self._command(root, ["git", "add", *changed]),
                 self._command(root, ["git", "commit", "-m", f"Released version {release}."]),
             ]
+        if self.build is not None:
+            steps.append(self._build(root, assets))
         steps += [
             self._command(root, ["git", "tag", tag]),
             self._command(root, ["git", "push", "origin", self.main_branch]),
             self._command(root, ["git", "push", "origin", tag]),
-            self._publish(root, tag, notes, assets),
+            self._publish(root, tag, notes, assets, built=self.build is not None),
             self._edit(root, "CHANGELOG.md", f"## v{next_version}", lambda text: open_dev_changelog(text, next_version)),
             self._set_version(root, entry, version_name, next_version),
             self._command(root, ["git", "add", *changed]),
@@ -439,6 +446,24 @@ class ReleasePipeline:
             self._command(root, ["git", "push", "origin", self.main_branch]),
         ]
         return steps
+
+    def _asset_paths(self, root: Path) -> list[Path]:
+        return [root / Path(asset) for asset in self.assets()] if self.assets is not None else []
+
+    def _build(self, root: Path, assets: list[Path]) -> _Step:
+        """Return the step running ``build`` and filling ``assets`` with its outputs."""
+
+        def action() -> bool:
+            if self.build is None or not self.build():
+                return False
+            assets[:] = self._asset_paths(root)
+            missing = [str(asset) for asset in assets if not asset.is_file()]
+            if missing:
+                self.logger.error(f"Release assets not found: {', '.join(missing)}")
+                return False
+            return True
+
+        return "build release assets from the frozen version", action
 
     def _command(self, root: Path, argv: list[str]) -> _Step:
         return subprocess.list2cmdline(argv), lambda: self.runner(argv, root, self.logger) == 0
@@ -466,9 +491,12 @@ class ReleasePipeline:
 
         return f"edit {name}: {entry.template.format(version=version)}", action
 
-    def _publish(self, root: Path, tag: str, notes: str, assets: Sequence[Path]) -> _Step:
-        def argv(notes_file: str) -> list[str]:
-            return ["gh", "release", "create", tag, "--title", tag, "--notes-file", notes_file, *map(str, assets)]
+    def _publish(self, root: Path, tag: str, notes: str, assets: Sequence[Path], *, built: bool = False) -> _Step:
+        """Return the publish step; with ``built``, ``assets`` is filled by the build step before it runs."""
+
+        def argv(notes_file: str, planned: bool = False) -> list[str]:
+            files = ["<built-assets>"] if planned and built else [str(asset) for asset in assets]
+            return ["gh", "release", "create", tag, "--title", tag, "--notes-file", notes_file, *files]
 
         def action() -> bool:
             with TemporaryDirectory(prefix="release-notes-") as tmp:
@@ -476,7 +504,7 @@ class ReleasePipeline:
                 notes_file.write_text(notes, encoding="utf-8")
                 return self.runner(argv(str(notes_file)), root, self.logger) == 0
 
-        return subprocess.list2cmdline(argv("<notes-file>")), action
+        return subprocess.list2cmdline(argv("<notes-file>", planned=True)), action
 
     def _release_url(self, root: Path, tag: str) -> str:
         code, out = self.query(["git", "remote", "get-url", "origin"], root)

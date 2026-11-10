@@ -27,6 +27,7 @@ python -m build
 ```
 
 This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packages.
+`python scripts/devops.py check` lints, tests, and builds through `.venv` in one step.
 On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
 `.github/workflows/python-package.yml`.
 
@@ -297,6 +298,8 @@ It checks every precondition before any change: a clean tree, the main branch, a
 It also requires no existing tag or GitHub release, and non-empty release notes.
 It then runs the quality check and asks the user to type `release v<X>` unless `assume_yes` is set.
 Next it freezes the `-pre` version, tags, pushes, and publishes a GitHub release with assets.
+An optional `build` hook runs after the freeze commit and before tagging; `assets` is then resolved after it.
+That way the assets carry the release version, and a failed build stops before anything is tagged or pushed.
 Finally it reopens the next patch `-pre` version and pushes it.
 `dry_run` logs every planned edit and command without prompting or changing anything.
 Side-effecting commands go through `runner` (default `run_step_command`); read-only queries go through `query`:
@@ -313,6 +316,7 @@ pipeline = ReleasePipeline(
     root=root,
     logger=CliLogger(),
     quality_check=lambda: run_step_command([sys.executable, "-m", "pytest", "-q"], root) == 0,
+    build=lambda: run_step_command([sys.executable, "-m", "build", "-o", "dist"], root) == 0,
     assets=lambda: sorted((root / "dist").glob("*")),
     dry_run="--dry-run" in sys.argv,
 )
@@ -320,6 +324,29 @@ sys.exit(pipeline.run())
 ```
 
 `confirm_typed(summary, phrase)` prints the summary lines and returns whether the user typed `phrase` exactly.
+
+`DevopsCli` turns a `Project` into the standard `devops` command line on `ToolHarness`.
+Its actions are `lint`, `format`, `test`, `build`, `check`, `clean`, `versions`, and `release`, plus `help` and `version`.
+`check` runs lint, test, and build, stopping at the first failure.
+`versions` exits 1 when the version file and the top `CHANGELOG.md` heading differ.
+`release` runs `ReleasePipeline` with `check` as its quality check and `build` as its post-freeze build hook.
+It attaches the outputs of that post-freeze build, never the `-pre` build from `check`.
+`PythonProject` runs ruff, pytest, and build through `<root>/.venv` and exits 1 with a bootstrap hint when it is missing.
+Commands go through an injectable `runner` (default `run_step_command`), and `add_action` adds project-specific actions.
+A consumer's devops script stays as thin as this repository's own [devops.py](scripts/devops.py):
+
+```python
+import sys
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from support_python.devops import DevopsCli, PythonProject  # noqa: E402
+
+if __name__ == "__main__":
+    sys.exit(DevopsCli(PythonProject(REPO_ROOT)).run())
+```
 
 ## View Capture Engine and Static Server
 

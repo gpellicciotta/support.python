@@ -353,5 +353,65 @@ class FullReleaseIntegrationTests(PipelineTestBase):
         self.assertEqual(self.origin_log(), ["Released version 1.0.0.", "Initial commit."])
 
 
+class BuildHookTests(PipelineTestBase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.events: list[str] = []
+        self.build_result = True
+        self.built = self.root / "dist" / "demo-1.0.0-py3-none-any.whl"
+
+    def build(self) -> bool:
+        version = (self.root / "pyproject.toml").read_text(encoding="utf-8")
+        self.events.append(f"build: {git(self.root, 'log', '-1', '--format=%s')} | tags: {git(self.root, 'tag', '--list')!r}")
+        self.events.append(f"build version: {version.splitlines()[-1]}")
+        self.asset.unlink()
+        self.built.write_bytes(b"wheel")
+        return self.build_result
+
+    def assets(self) -> list[Path]:
+        self.events.append("assets")
+        return sorted((self.root / "dist").glob("*"))
+
+    def test_assets_are_built_after_the_freeze_commit_and_before_the_tag(self) -> None:
+        self.assertEqual(self.run_pipeline(assume_yes=True, build=self.build, assets=self.assets), 0)
+        self.assertEqual(
+            self.events,
+            ["build: Released version 1.0.0. | tags: ''", 'build version: version = "1.0.0"', "assets"],
+        )
+        creates = [step for step in self.gh.steps if step[:3] == ["gh", "release", "create"]]
+        self.assertEqual(len(creates), 1)
+        self.assertEqual(creates[0][-1], str(self.built))
+        self.assertNotIn(str(self.asset), creates[0])
+        self.assertEqual(git(self.origin, "tag", "--list"), "v1.0.0")
+
+    def test_failed_build_stops_before_tagging_and_pushing(self) -> None:
+        self.build_result = False
+        self.assertEqual(self.run_pipeline(assume_yes=True, build=self.build, assets=self.assets), 1)
+        self.assertIn("build release assets", self.logger.text())
+        self.assertEqual(git(self.root, "tag", "--list"), "")
+        self.assertEqual(git(self.root, "log", "-1", "--format=%s"), "Released version 1.0.0.")
+        self.assertEqual(self.origin_log(), ["Initial commit."])
+        self.assertNotIn("assets", self.events)
+        self.assertEqual([step for step in self.gh.steps if step[0] == "gh"], [])
+
+    def test_dry_run_plans_the_build_without_running_it_or_resolving_assets(self) -> None:
+        before, origin_before = self.snapshot(), self.origin_log()
+        self.assertEqual(self.run_pipeline(dry_run=True, build=self.build, assets=self.assets), 0)
+        self.assert_untouched(before, origin_before)
+        self.assertEqual(self.events, [])
+        log = self.logger.text()
+        self.assertLess(log.index('git commit -m "Released version 1.0.0."'), log.index("build release assets"))
+        self.assertLess(log.index("build release assets"), log.index("git tag v1.0.0"))
+        self.assertIn("gh release create v1.0.0 --title v1.0.0 --notes-file <notes-file> <built-assets>", log)
+
+    def test_missing_built_asset_fails_before_tagging(self) -> None:
+        missing = self.root / "dist" / "absent.whl"
+        self.assertEqual(self.run_pipeline(assume_yes=True, build=self.build, assets=lambda: [missing]), 1)
+        self.assertIn(missing.name, self.logger.text())
+        self.assertEqual(git(self.root, "tag", "--list"), "")
+        self.assertEqual(self.origin_log(), ["Initial commit."])
+        self.assertEqual([step for step in self.gh.steps if step[0] == "gh"], [])
+
+
 if __name__ == "__main__":
     unittest.main()

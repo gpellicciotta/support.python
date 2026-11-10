@@ -70,6 +70,9 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "confirm_typed",
             "capture_command",
             "ReleasePipeline",
+            "Project",
+            "PythonProject",
+            "DevopsCli",
         ]
         self.assertCountEqual(devops_pkg.__all__, expected_all)
 
