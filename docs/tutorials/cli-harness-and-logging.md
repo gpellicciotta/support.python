@@ -15,6 +15,7 @@ All symbols are re-exported from `support_python`.
   `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.
   Its log messages then go to `stderr`, and only `emit`/`emit_json` write to `stdout`.
   `get_full_version`/`resolve_build_metadata` add build-metadata version suffixes.
+  Installed tools derive metadata from install records, never enclosing repositories.
   Use `get_package_version` for consumer `__version__` values to preserve the `-pre` suffix.
   `ToolHarness` also maps a trailing `rc0` back to `-pre` automatically.
 - `support_python.tables` provides tabular output formatting (`format_table`/`render_output`).

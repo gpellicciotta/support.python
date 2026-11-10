@@ -10,7 +10,9 @@ from __future__ import annotations
 import argparse
 from dataclasses import dataclass
 from functools import lru_cache
+import importlib.metadata
 import inspect
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -70,11 +72,92 @@ def _infer_caller_dir() -> Path:
     return Path(main_file).resolve().parent if isinstance(main_file, str) and main_file else Path(__file__).resolve().parent
 
 
+def _find_git_repo_root(path: Path) -> Optional[Path]:
+    """Find the root of the Git working tree containing ``path``, if any."""
+    current = path.resolve()
+    for directory in (current, *current.parents):
+        if (directory / ".git").exists():
+            return directory
+    return None
+
+
+def _is_support_python_checkout(git_root: Path, package_dir: Path) -> bool:
+    """Return True if ``git_root`` is an editable or source checkout of support.python itself."""
+    pyproject = git_root / "pyproject.toml"
+    if not pyproject.is_file():
+        return False
+    try:
+        content = pyproject.read_text(encoding="utf-8")
+        if not re.search(r'^\s*name\s*=\s*["\']support-python["\']', content, re.MULTILINE):
+            return False
+    except OSError:
+        return False
+    expected_src = (git_root / "src" / "support_python").resolve()
+    if expected_src.is_dir() and (package_dir == expected_src or expected_src in package_dir.parents):
+        return True
+    return False
+
+
+def _find_support_python_checkout(package_dir: Path) -> Optional[Path]:
+    """Return the root of the support.python checkout if ``package_dir`` is inside one, or ``None``."""
+    if any(part in ("site-packages", "dist-packages", ".venv", "venv") for part in package_dir.parts):
+        return None
+    git_root = _find_git_repo_root(package_dir)
+    if git_root is not None and _is_support_python_checkout(git_root, package_dir):
+        return git_root
+    return None
+
+
+def _read_install_commit(distribution: str = "support-python") -> Optional[str]:
+    """Read the commit hash recorded in distribution metadata at install time (e.g. direct_url.json)."""
+    try:
+        dist = importlib.metadata.distribution(distribution)
+        direct_url_text = dist.read_text("direct_url.json")
+        if direct_url_text:
+            data = json.loads(direct_url_text)
+            commit = data.get("vcs_info", {}).get("commit_id")
+            if commit and isinstance(commit, str):
+                return commit[:7]
+    except Exception:
+        pass
+    return None
+
+
+def _is_support_python_target(work_dir: Path, package_dir: Path, checkout_root: Optional[Path] = None) -> bool:
+    """Return True if ``work_dir`` points into the support_python package or its checkout."""
+    if work_dir == package_dir or package_dir in work_dir.parents:
+        return True
+    if checkout_root is not None and (work_dir == checkout_root or checkout_root in work_dir.parents):
+        return True
+    return False
+
+
 @lru_cache(maxsize=16)
 def resolve_build_metadata(cwd: Optional[Union[str, Path]] = None) -> str:
     """Resolve the short commit hash of the checkout as SemVer build metadata, or ``"unknown"``."""
     work_dir = Path(cwd).resolve() if cwd is not None else Path(__file__).resolve().parent
-    if any(part in ("site-packages", "dist-packages") for part in work_dir.parts):
+    package_dir = Path(__file__).resolve().parent
+    checkout_root = _find_support_python_checkout(package_dir)
+
+    if _is_support_python_target(work_dir, package_dir, checkout_root):
+        if checkout_root is not None:
+            try:
+                res = subprocess.run(
+                    ["git", "rev-parse", "--short", "HEAD"], cwd=work_dir, capture_output=True, text=True, timeout=5
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    return res.stdout.strip()
+            except Exception:
+                pass
+        install_commit = _read_install_commit("support-python")
+        if install_commit:
+            return install_commit
+        return "unknown"
+
+    if any(part in ("site-packages", "dist-packages", ".venv", "venv") for part in work_dir.parts):
+        return "unknown"
+    git_root = _find_git_repo_root(work_dir)
+    if git_root is None:
         return "unknown"
     try:
         res = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=work_dir, capture_output=True, text=True, timeout=5)

@@ -52,6 +52,88 @@ class BuildMetadataVersionTests(unittest.TestCase):
             self.assertEqual(called_cwd, expected_dir.resolve())
         resolve_build_metadata.cache_clear()
 
+    def test_build_metadata_reads_install_time_commit_from_direct_url(self) -> None:
+        import json
+        from pathlib import Path
+        from unittest.mock import MagicMock
+        from support_python.cli import get_full_version, resolve_build_metadata
+
+        resolve_build_metadata.cache_clear()
+        mock_dist = MagicMock()
+        mock_dist.read_text.return_value = json.dumps(
+            {
+                "url": "https://github.com/gpellicciotta/support.python.git",
+                "vcs_info": {"commit_id": "341b3f3ff018a43bdc29410e1429a2c0f108c865", "vcs": "git"},
+            }
+        )
+        installed_dir = Path("C:/app/.venv/Lib/site-packages/support_python")
+        with (
+            patch("importlib.metadata.distribution", return_value=mock_dist),
+            patch("support_python.cli.__file__", str(installed_dir / "cli.py")),
+        ):
+            self.assertEqual(resolve_build_metadata(), "341b3f3")
+            self.assertEqual(resolve_build_metadata(installed_dir), "341b3f3")
+            self.assertEqual(get_full_version("2.0.0", cwd=installed_dir), "2.0.0+341b3f3")
+        resolve_build_metadata.cache_clear()
+
+    def test_foreign_repo_with_venv_keeps_own_hash(self) -> None:
+        from pathlib import Path
+        import subprocess
+        from tempfile import TemporaryDirectory
+        from support_python.cli import get_full_version, resolve_build_metadata
+
+        resolve_build_metadata.cache_clear()
+        with TemporaryDirectory() as tmp:
+            foreign_repo = Path(tmp) / "consumer_repo"
+            foreign_repo.mkdir()
+            subprocess.run(["git", "init"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=foreign_repo, capture_output=True, check=True)
+            (foreign_repo / "README.md").write_text("Consumer repo\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "commit", "-m", "Consumer commit"], cwd=foreign_repo, capture_output=True, check=True)
+            expected_hash = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"], cwd=foreign_repo, capture_output=True, text=True, check=True
+            ).stdout.strip()
+
+            installed_pkg = foreign_repo / ".venv" / "Lib" / "site-packages" / "support_python"
+            installed_pkg.mkdir(parents=True)
+            cli_py = installed_pkg / "cli.py"
+            cli_py.write_text("# dummy\n", encoding="utf-8")
+
+            with patch("support_python.cli.__file__", str(cli_py)):
+                self.assertEqual(resolve_build_metadata(foreign_repo), expected_hash)
+                self.assertEqual(get_full_version("1.0.0", cwd=foreign_repo), f"1.0.0+{expected_hash}")
+
+                resolve_build_metadata.cache_clear()
+                self.assertEqual(resolve_build_metadata(installed_pkg), "unknown")
+                self.assertEqual(get_full_version("2.0.0", cwd=installed_pkg), "2.0.0")
+
+                resolve_build_metadata.cache_clear()
+                self.assertEqual(resolve_build_metadata(installed_pkg / "tools"), "unknown")
+                self.assertEqual(get_full_version("2.0.0", cwd=installed_pkg / "tools"), "2.0.0")
+        resolve_build_metadata.cache_clear()
+
+    def test_source_or_editable_checkout_returns_checkout_hash(self) -> None:
+        from pathlib import Path
+        import subprocess
+        from support_python.cli import get_full_version, resolve_build_metadata
+
+        resolve_build_metadata.cache_clear()
+        repo_root = Path(__file__).resolve().parent.parent
+        expected_hash = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=repo_root, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+        self.assertEqual(resolve_build_metadata(), expected_hash)
+        pkg_dir = repo_root / "src" / "support_python"
+        self.assertEqual(resolve_build_metadata(pkg_dir), expected_hash)
+        tools_dir = pkg_dir / "tools"
+        self.assertEqual(resolve_build_metadata(tools_dir), expected_hash)
+        self.assertEqual(resolve_build_metadata(repo_root), expected_hash)
+        self.assertTrue(get_full_version("2.0.15-pre").startswith(f"2.0.15-pre+{expected_hash}"))
+        resolve_build_metadata.cache_clear()
+
 
 class ToolHarnessUnitTests(unittest.TestCase):
     def _make_harness(self, fallback_action: str | None = None):
@@ -412,6 +494,48 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
             out_text = res.stdout.decode("utf-8")
             self.assertIn("Usage:", out_text)
             self.assertIn("Non-ASCII check: \u2713 \u2014 \u2603", out_text)
+
+    def test_installed_wheel_in_foreign_repo_venv_shows_no_foreign_hash(self) -> None:
+        from pathlib import Path
+        import subprocess
+        import sys
+        from tempfile import TemporaryDirectory
+
+        repo_root = Path(__file__).resolve().parent.parent
+        with TemporaryDirectory() as tmp:
+            foreign_repo = Path(tmp) / "foreign_repo"
+            foreign_repo.mkdir()
+            subprocess.run(["git", "init"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "config", "user.name", "Tester"], cwd=foreign_repo, capture_output=True, check=True)
+            (foreign_repo / "README.md").write_text("Foreign project\n", encoding="utf-8")
+            subprocess.run(["git", "add", "README.md"], cwd=foreign_repo, capture_output=True, check=True)
+            subprocess.run(["git", "commit", "-m", "Initial foreign commit"], cwd=foreign_repo, capture_output=True, check=True)
+            foreign_hash = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"], cwd=foreign_repo, capture_output=True, text=True, check=True
+            ).stdout.strip()
+
+            venv_dir = foreign_repo / ".venv"
+            subprocess.run([sys.executable, "-m", "venv", str(venv_dir)], check=True)
+            py_exe = venv_dir / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+
+            whl_dir = Path(tmp) / "whl"
+            subprocess.run(
+                [sys.executable, "-m", "build", "--wheel", "-o", str(whl_dir), str(repo_root)],
+                capture_output=True,
+                check=True,
+            )
+            whl = next(whl_dir.glob("*.whl"))
+            subprocess.run([str(py_exe), "-m", "pip", "install", "--no-deps", str(whl)], capture_output=True, check=True)
+
+            agent_files_bin = venv_dir / ("Scripts/agent-files.exe" if sys.platform == "win32" else "bin/agent-files")
+            for arg in ("version", "--version"):
+                with self.subTest(arg=arg):
+                    res = subprocess.run([str(agent_files_bin), arg], cwd=foreign_repo, capture_output=True, text=True, timeout=15)
+                    self.assertEqual(res.returncode, 0, res.stderr)
+                    self.assertNotIn(foreign_hash, res.stdout)
+                    self.assertIn("agent-files v", res.stdout)
+                    self.assertIn("Giovanni Pellicciotta", res.stdout)
 
 
 class ToolHarnessDebugImpliesVerboseTests(unittest.TestCase):

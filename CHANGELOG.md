@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.15-pre
+## v2.0.16-pre
+- Library: Derived version build metadata only from support-python checkouts or install metadata, not enclosing repositories ([cli.py](src/support_python/cli.py)).
 - Library: Made `ToolHarness` map a trailing `rc0` version suffix back to `-pre` ([cli.py](src/support_python/cli.py)).
 - CLI: Retried external link checks with GET when HEAD returns 404 in `lint-markdown` ([lint.py](src/support_python/markdown/lint.py)).
 - CLI: Made agent-files sync --dry-run --no-prune report kept stale skills instead of removals ([agent_files.py](src/support_python/tools/agent_files.py)).
