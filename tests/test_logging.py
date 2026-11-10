@@ -254,10 +254,6 @@ class UnifiedTeeAndToolLoggerTests(unittest.TestCase):
             self.assertNotIn(alias, support_python.__all__)
 
 
-if __name__ == "__main__":
-    unittest.main()
-
-
 class CliLoggerJsonOutputTests(unittest.TestCase):
     def _capture(self, logger: CliLogger, action) -> tuple[str, str]:
         out, err = io.StringIO(), io.StringIO()
@@ -328,3 +324,7 @@ class CliLoggerJsonOutputTests(unittest.TestCase):
         logger.json_output = True
         out, err = self._capture(logger, lambda lg: lg.emit('{"ok": true}'))
         self.assertEqual((out, err), ('{"ok": true}\n', ""))
+
+
+if __name__ == "__main__":
+    unittest.main()

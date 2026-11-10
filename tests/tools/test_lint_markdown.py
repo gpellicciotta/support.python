@@ -353,6 +353,16 @@ class TestCLIAndMain(unittest.TestCase):
         self.assertIn("- Log level: DEBUG\n", out)
         self.assertIn(f"{format_severity_indicator('DEBUG')} Linting 1 markdown file", out)
 
+    def test_debug_alone_prints_verbose_clean_file_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            (Path(tmp_dir) / "clean.md").write_bytes(b"# Title\n\n- Bullet item\n")
+            code_verbose, verbose_out, _ = run_main(["check", "--verbose", "--offline", tmp_dir])
+            code_debug, debug_out, _ = run_main(["check", "--debug", "--offline", tmp_dir])
+        self.assertEqual((code_verbose, code_debug), (0, 0))
+        ok_lines = [line for line in verbose_out.splitlines() if line.startswith("OK: ")]
+        self.assertTrue(ok_lines, verbose_out)
+        self.assertEqual([line for line in debug_out.splitlines() if line.startswith("OK: ")], ok_lines)
+
     def test_log_level_threshold_filters_console_without_log_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             (Path(tmp_dir) / "clean.md").write_bytes(b"# Title\n\n- Bullet item\n")

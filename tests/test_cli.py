@@ -315,8 +315,64 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
             self.assertIn("Non-ASCII check: \u2713 \u2014 \u2603", out_text)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class ToolHarnessDebugImpliesVerboseTests(unittest.TestCase):
+    def _make_harness(self):
+        from support_python.cli import ToolHarness
+
+        harness = ToolHarness(
+            name="debug-tool",
+            description="Debug harness test.",
+            version="1.0.0",
+            examples=["debug-tool run"],
+            detailed_help="Extra details.",
+        )
+        seen: dict = {}
+
+        def handle(args, logger) -> int:
+            seen.update(verbose=args.verbose, logger_verbose=logger.verbose, level=logger.effective_level)
+            return 0
+
+        harness.add_action("run", "run the tool", handler=handle, detail="Runs the tool in detail.")
+        return harness, seen
+
+    def _run(self, harness, argv: list[str]) -> tuple[int, str]:
+        import contextlib
+
+        out = io.StringIO()
+        with redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
+            code = harness.run(argv)
+        return code, out.getvalue()
+
+    def test_debug_alone_sets_args_verbose(self) -> None:
+        harness, seen = self._make_harness()
+        self.assertEqual(self._run(harness, ["run", "--debug"])[0], 0)
+        self.assertEqual(seen, {"verbose": True, "logger_verbose": True, "level": "DEBUG"})
+
+    def test_verbose_alone_keeps_info_threshold(self) -> None:
+        harness, seen = self._make_harness()
+        self.assertEqual(self._run(harness, ["run", "--verbose"])[0], 0)
+        self.assertEqual(seen, {"verbose": True, "logger_verbose": True, "level": "INFO"})
+
+    def test_log_level_wins_threshold_but_debug_still_implies_verbose(self) -> None:
+        harness, seen = self._make_harness()
+        self.assertEqual(self._run(harness, ["run", "--log-level", "WARN", "--debug"])[0], 0)
+        self.assertEqual(seen, {"verbose": True, "logger_verbose": True, "level": "WARN"})
+
+    def test_help_debug_matches_help_verbose(self) -> None:
+        harness, _ = self._make_harness()
+        for debug_argv, verbose_argv in (
+            (["help", "--debug"], ["help", "--verbose"]),
+            (["help", "run", "--debug"], ["help", "run", "--verbose"]),
+            (["run", "--help", "--debug"], ["run", "--help", "--verbose"]),
+        ):
+            with self.subTest(argv=debug_argv):
+                debug_out = self._run(harness, debug_argv)[1]
+                self.assertEqual(debug_out, self._run(harness, verbose_argv)[1])
+        self.assertIn("Detailed Action Descriptions:", self._run(harness, ["help", "--debug"])[1])
+
+    def test_debug_option_help_mentions_verbose(self) -> None:
+        harness, _ = self._make_harness()
+        self.assertIn("enable debug output logging (implies --verbose)", harness.format_help())
 
 
 class ToolHarnessJsonOutputTests(unittest.TestCase):
@@ -388,3 +444,7 @@ class ToolHarnessJsonOutputTests(unittest.TestCase):
         pattern = re.compile(r"^class\s+\w+\([^)]*\bCliLogger\b[^)]*\)\s*:", re.MULTILINE)
         offending = [p.name for p in sorted(tools_dir.glob("*.py")) if pattern.search(p.read_text(encoding="utf-8"))]
         self.assertEqual(offending, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

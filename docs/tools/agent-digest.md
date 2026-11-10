@@ -27,6 +27,7 @@ agent-digest version
 | `--format FORMAT`    | `text`              | Print the `check` result as `text` or one `json` document          |
 
 Standard logging options (`--log-file PATH`, `--log-level LEVEL`, `--debug`, `--verbose`) apply to `generate` and `check`.
+`--debug` sets the `DEBUG` threshold and implies `--verbose`; an explicit `--log-level` still sets the threshold.
 
 ---
 

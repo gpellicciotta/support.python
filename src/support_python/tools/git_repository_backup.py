@@ -134,7 +134,7 @@ Options:
   -v, --verbose          enable verbose output logging
   --log-file PATH        append operational logs to specified file
   --log-level LEVEL      logging severity threshold (DEBUG, INFO, WARN, ERROR; default: INFO)
-  --debug                enable debug output logging
+  --debug                enable debug output logging (implies --verbose)
 
 Exit codes:
 {format_exit_codes()}

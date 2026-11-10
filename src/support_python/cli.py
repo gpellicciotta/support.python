@@ -178,7 +178,7 @@ class ToolHarness:
             ("-h, --help", "show help message and exit"),
             ("--version", "show version information and exit"),
             ("-v, --verbose", "enable verbose output logging"),
-            ("--debug", "enable debug output logging"),
+            ("--debug", "enable debug output logging (implies --verbose)"),
             ("--log-file PATH", "append operational logs to specified file"),
             ("--log-level LEVEL", f"logging severity threshold (DEBUG, INFO, WARN, ERROR; default: {self.default_log_level})"),
         ]
@@ -340,7 +340,7 @@ class ToolHarness:
             print(self.format_version())
             return 0
         if first in ("help", "-h", "--help"):
-            is_verbose = any(arg in ("-v", "--verbose") for arg in rest)
+            is_verbose = any(arg in ("-v", "--verbose", "--debug") for arg in rest)
             targets = [arg for arg in rest if not arg.startswith("-")]
             out = (
                 self.format_action_help(targets[0], verbose=is_verbose)
@@ -386,6 +386,8 @@ class ToolHarness:
             )
         except SystemExit as exc:
             return exc.code if isinstance(exc.code, int) else 2
+        if getattr(args, "debug", False):
+            args.verbose = True  # --debug implies --verbose for every handler reading args.verbose
 
         if getattr(args, "version", False):
             print(self.format_version())
