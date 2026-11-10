@@ -15,6 +15,7 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v2.0.51-pre
+- CLI: Fixed log files stamping entries in local time; `CliLogger` and `format_log_message` now write UTC ([logging.py](src/support_python/logging.py)).
 - Library: Added `Setting`, `SettingsSchema`, `resolve_settings`, and `add_config_actions`, giving tools guideline precedence and a standard `config` group ([config.py](src/support_python/config.py)).
 - Library: Added `user_config_dir` and `user_config_path`, resolving user config through `XDG_CONFIG_HOME`, `%APPDATA%`, or `~/.config` ([env.py](src/support_python/env.py)).
 - Config: Made `agent-files`, `lint-markdown`, and `git-repository-backup` accept kebab-case or snake_case keys, reporting unknown keys in kebab-case.

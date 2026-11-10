@@ -1,11 +1,24 @@
 import contextlib
 import io
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Optional
+from unittest import mock
 
 from support_python import CliLogger, LogLevel, format_log_message, format_severity_indicator
+
+
+class _UtcPlusTwoClock(datetime):
+    """A clock frozen at 21:00 UTC on a machine whose local time zone is UTC+2."""
+
+    @classmethod
+    def now(cls, tz: Optional[timezone] = None) -> datetime:  # type: ignore[override]
+        utc_now = datetime(2026, 9, 3, 21, 0, 0, tzinfo=timezone.utc)
+        if tz is None:
+            return datetime(2026, 9, 3, 23, 0, 0)
+        return utc_now.astimezone(tz)
 
 
 class LogLevelTests(unittest.TestCase):
@@ -61,6 +74,16 @@ class FormatLogMessageTests(unittest.TestCase):
         ts = datetime(2026, 9, 3, 21, 0, 0)
         result = format_log_message("Started", level="INFO", origin="cli", timestamp=ts, for_file=True)
         self.assertEqual(result, "[2026-09-03 21:00:00] **[INFO]**  <cli> Started\n")
+
+    def test_file_mode_converts_aware_timestamp_to_utc(self) -> None:
+        ts = datetime(2026, 9, 3, 23, 0, 0, tzinfo=timezone(timedelta(hours=2)))
+        result = format_log_message("Started", level="INFO", timestamp=ts, for_file=True)
+        self.assertEqual(result, "[2026-09-03 21:00:00] **[INFO]**  Started\n")
+
+    def test_file_mode_defaults_to_current_utc_time(self) -> None:
+        with mock.patch("support_python.logging.datetime", _UtcPlusTwoClock):
+            result = format_log_message("Started", level="INFO", for_file=True)
+        self.assertEqual(result, "[2026-09-03 21:00:00] **[INFO]**  Started\n")
 
     def test_stdout_mode_strips_timestamp_and_info_tag(self) -> None:
         result = format_log_message("Started", level="INFO", origin="cli", for_file=False)
@@ -175,6 +198,15 @@ class ResolveAndNormalizeLogLevelTests(unittest.TestCase):
 
 
 class UnifiedTeeAndToolLoggerTests(unittest.TestCase):
+    def test_log_file_timestamps_use_utc(self) -> None:
+        with TemporaryDirectory() as tmp:
+            log_file = Path(tmp) / "utc.log"
+            logger = CliLogger(log_file=log_file, log_level="INFO")
+            with mock.patch("support_python.logging.datetime", _UtcPlusTwoClock), contextlib.redirect_stdout(io.StringIO()):
+                logger.info("Starting work")
+            logger.close()
+            self.assertEqual(log_file.read_text(encoding="utf-8"), "[2026-09-03 21:00:00] **[INFO]**  Starting work\n")
+
     def test_logger_tees_to_file_and_console_with_matching_content(self) -> None:
         from support_python.logging import format_invocation_start, init_cli_logger, log_message
 

@@ -164,7 +164,7 @@ def format_log_message(
         message: Log message text (single or multi-line).
         level: Optional severity level name (e.g. ``"INFO"``, ``"ERROR"``).
         origin: Optional component or logger origin identifier (enclosed in angle brackets).
-        timestamp: Optional datetime timestamp. Defaults to current local time.
+        timestamp: Optional datetime timestamp, converted to UTC; a naive value is taken as UTC. Defaults to now.
         for_file: Whether to format for log file (includes timestamp and full severity tags).
         retain_debug_on_console: If True, retain ``**[DEBUG]**`` on console streams when ``for_file=False``.
 
@@ -174,10 +174,9 @@ def format_log_message(
     if not message and not level and not origin:
         return ""
 
-    ts = timestamp or datetime.now()
     parts: list[str] = []
     if for_file:
-        parts.append(f"[{ts.strftime('%Y-%m-%d %H:%M:%S')}]")
+        parts.append(format_utc_timestamp(timestamp))
 
     if level:
         lvl_clean = level.strip().upper()
@@ -357,7 +356,7 @@ class CliLogger:
             message: Message payload text.
             level: Optional severity level name (e.g. ``"INFO"``, ``"DEBUG"``).
             origin: Optional origin override. Defaults to :attr:`origin`.
-            timestamp: Optional datetime timestamp. Defaults to current local time.
+            timestamp: Optional datetime timestamp, written to the log file in UTC. Defaults to now.
             to_stdout: Whether to emit on standard output. Defaults to True.
             to_stderr: Whether to emit on standard error. Defaults to False.
         """
@@ -373,7 +372,7 @@ class CliLogger:
         to_stderr: bool,
         to_file: bool,
     ) -> None:
-        ts = timestamp or datetime.now()
+        ts = timestamp or datetime.now(timezone.utc)
         effective_origin = origin if origin is not None else self.origin
         if not message and not level and not effective_origin:
             return
