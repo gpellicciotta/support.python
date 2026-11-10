@@ -14,6 +14,7 @@
 - tests/test_capture.py
 - tests/test_console_scripts.py
 - tests/tools/test_lint_markdown.py
+- tests/conftest.py
 - docs/tutorials/cli-harness-and-logging.md
 - docs/migration-v2.md
 - CHANGELOG.md
@@ -37,7 +38,7 @@
   - Assert each banner still ends with `Copyright (c) Giovanni Pellicciotta`.
 
 Completion check: `.venv/Scripts/python -m pytest tests/test_cli.py tests/test_devops_cli.py tests/test_capture.py tests/test_console_scripts.py` plus `python scripts/devops.py check`.
-Size estimate: 18 files, 260 lines
+Size estimate: 19 files, 270 lines
 Size note: Each bundled tool needs a one-line wiring change; splitting would ship the tools without their banner.
 
 ### Notes

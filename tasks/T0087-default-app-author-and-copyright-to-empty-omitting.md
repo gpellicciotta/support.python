@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 3601.4, input: 4420, output: 552}
+work_duration: 1813.2
 ---
 # T0087: Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs
 
@@ -26,8 +29,8 @@ The five bundled tools and this repository's devops script keep their current ba
 - [x] **[Implement]** Write failing tests for the empty default banner, explicit copyrights, and bundled tool banners.
 - [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
 - [x] **[Implement]** Empty the defaults, add `TOOLS_COPYRIGHT`, wire it into the tools, and add the `DevopsCli` argument.
-- [ ] **[Verify]**    Run `python scripts/devops.py check`, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Update cli-harness-and-logging.md, migration-v2.md, and CHANGELOG.md.
+- [x] **[Verify]**    Run `python scripts/devops.py check`, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Update cli-harness-and-logging.md, migration-v2.md, and CHANGELOG.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
