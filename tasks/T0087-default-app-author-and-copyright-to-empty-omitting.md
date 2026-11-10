@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 4, duration_s: 6708.2, input: 5819126, output: 272946, cache_read: 185878076}
+  worker: {turns: 6, duration_s: 6942.4, input: 6049066, output: 291902, cache_read: 190382938}
 work_duration: 3391.9
+review_status: pending
+review_round: 1
 ---
 # T0087: Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs
 
@@ -59,4 +61,7 @@ The five bundled tools and this repository's devops script keep their current ba
 
 - [2026-11-10] **[Doc]**
   Updated migration guide, harness tutorial, and changelog with breaking changes.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
