@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 936.0, input: 132, output: 35764, cache_read: 4363576, cache_write: 144388}
+review_status: pending
+review_round: 1
 ---
 # T0040: Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release
 
@@ -52,4 +56,7 @@ Read and write the version in `package.json`, and release packed tarballs as ass
   - Files touched: 6.
   - Lines touched: 334.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
