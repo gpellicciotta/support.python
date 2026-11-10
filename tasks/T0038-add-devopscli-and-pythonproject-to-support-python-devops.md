@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1268.0, input: 196, output: 64112, cache_read: 9135242, cache_write: 214916}
+review_status: pending
+review_round: 1
 ---
 # T0038: Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them
 
@@ -54,4 +58,7 @@ Rebuild this repository's `scripts/devops.py` on `DevopsCli(PythonProject(...))`
   - Files touched: 9.
   - Lines touched: 744.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
