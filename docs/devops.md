@@ -130,5 +130,6 @@ Projects building their devops script on it pin the same tag in their `scripts/r
 
 ## Continuous Integration
 [python-package.yml](../.github/workflows/python-package.yml) runs on every push and pull request, on Python 3.9 and the latest 3.x.
+The 3.9 job runs on `ubuntu-24.04`, because `setup-python` has no 3.9 build for the `ubuntu-latest` image.
 It installs the `dev` extra, runs `ruff check` and `ruff format --check`, runs `pytest`, and builds the distributions.
 [publish.yml](../.github/workflows/publish.yml) runs on a published GitHub release and attaches the wheel and sdist.
