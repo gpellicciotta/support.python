@@ -4,7 +4,8 @@ Focused modules for developing CLI tools and ops scripts, all re-exported from `
 - [terminal.py](../../src/support_python/terminal.py): `configure_utf8_output` for cross-platform console standard stream encoding.
 - [version.py](../../src/support_python/version.py): `get_project_version` for resolving the version from Gradle properties or `pyproject.toml`.
 - [net.py](../../src/support_python/net.py): `is_port_in_use` for checking TCP socket availability.
-- [env.py](../../src/support_python/env.py): `read_env_file` for parsing `.env` or properties files.
+- [env.py](../../src/support_python/env.py): `read_env_file` for parsing `.env` or properties files,
+  and `user_config_dir`/`user_config_path` for locating user configuration files.
 - [crypto.py](../../src/support_python/crypto.py): `get_standard_password_hash` and `decrypt_property_value` for credentials and properties.
 
 ## Example
@@ -17,6 +18,7 @@ from support_python import (
     get_standard_password_hash,
     is_port_in_use,
     read_env_file,
+    user_config_path,
 )
 
 # Ensure console standard streams encode UTF-8 correctly
@@ -31,6 +33,10 @@ if not is_port_in_use(8080):
 
 # Parse .env or properties file
 env_vars = read_env_file(".env")
+
+# Locate the user config file: $XDG_CONFIG_HOME/my-tool/config.json when XDG_CONFIG_HOME is absolute,
+# else %APPDATA%/my-tool/config.json on Windows, else ~/.config/my-tool/config.json (never created)
+config_file = user_config_path("my-tool")
 
 # Compute standard password hash
 password_hash = get_standard_password_hash("my-password")

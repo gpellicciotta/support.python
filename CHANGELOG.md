@@ -12,7 +12,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.43-pre
+## v2.0.44-pre
+- Library: Added `user_config_dir` and `user_config_path`, which resolve a tool's user configuration file through an absolute `XDG_CONFIG_HOME`, then `%APPDATA%` on Windows, then `~/.config` ([env.py](src/support_python/env.py)).
 - Library: Made `parse_datetime` accept 1 to 6 fractional second digits and `+HH:MM`/`-HH:MM` offsets (converted to UTC), added `format_datetime(..., millis=True)`, and added `parse_date`/`format_date` for `YYYY-MM-DD` values; parsing now rejects non-zero-padded fields, lowercase `t`/`z`, and non-ASCII digits that `strptime` accepted ([dates.py](src/support_python/dates.py)).
 - CLI: Made `--debug` imply `--verbose` in `ToolHarness`, so handlers reading `args.verbose` and `help --debug` behave as with `--verbose`; `--log-level` still sets the threshold ([cli.py](src/support_python/cli.py)).
 - CLI: Added `--dry-run` to `agent-digest generate` and `--format text|json` to `agent-digest check`, whose JSON document lists digest and skill statuses and every issue, as [ADR-0003](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md) requires ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).

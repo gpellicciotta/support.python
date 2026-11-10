@@ -52,6 +52,9 @@ Functional and technical requirements for the `support-python` project.
 - Provide TCP socket inspection (`is_port_in_use` in `support_python.net`), cross-platform terminal UTF-8 output configuration
   (`configure_utf8_output` in `support_python.terminal`), project version discovery across Gradle/pyproject configs
   (`get_project_version` in `support_python.version`), and properties/.env file parsing (`read_env_file` in `support_python.env`).
+- Provide user configuration file resolution (`user_config_dir`, `user_config_path` in `support_python.env`) per the
+  [Configuration Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/configuration-guidelines.md#configuration-files):
+  an absolute `XDG_CONFIG_HOME` first, then `%APPDATA%` on Windows, then `~/.config` elsewhere.
 - Provide focused, composable modules eliminating duplicate `scripts/lib/common.py` scripts across projects.
 
 ### REST Client HTTP Transport

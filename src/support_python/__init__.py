@@ -94,7 +94,7 @@ from .git import (
     get_github_repo,
     get_default_branch,
 )
-from .env import read_env_file
+from .env import read_env_file, user_config_dir, user_config_path
 from .errors import (
     DEFAULT_NOT_FOUND_PATTERNS,
     ApiError,
@@ -353,6 +353,8 @@ __all__ = [
     "get_standard_password_hash",
     # Env
     "read_env_file",
+    "user_config_dir",
+    "user_config_path",
     # Files
     "atomic_replace",
     "atomic_write_text",
