@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 2561.8, input: 1509646, output: 191684, cache_read: 29324806}
+review_status: pending
+review_round: 1
 ---
 # T0097: Derive version build metadata from the support.python checkout, not an enclosing repository
 
@@ -40,4 +44,7 @@ Completion check: a test installing into a venv inside a foreign Git repository 
 
 - [2026-11-10] **[Doc]**
   Documented build metadata derivation and recorded changelog entry.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
