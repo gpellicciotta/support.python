@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1433.0, input: 156, output: 79484, cache_read: 6862910, cache_write: 207992}
+  worker: {turns: 4, duration_s: 1491.4, input: 176, output: 81656, cache_read: 8126110, cache_write: 223422}
 work_duration: 728.8
+review_status: pending
+review_round: 1
 ---
 # T0036: Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development
 
@@ -65,4 +67,7 @@ Run commands through an injectable runner defaulting to `run_step_command`.
 
 - [2026-11-10] **[Doc]**
   Documented ReleasePipeline and confirm_typed in README.md and added a v2.0.20-pre CHANGELOG.md entry.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
