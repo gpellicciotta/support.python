@@ -4,6 +4,7 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
+- [x] T0091 Make DevopsCli help summaries and examples come from the project adapter, so GradleProject help describes Gradle tasks.
 - [x] T0089 Replace the stale update-global-agent-files.py text in the agent-files guarded block marker, still recognizing existing blocks.
 - [ ] T0088 Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none.
 - [ ] T0087 Default APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright when empty, while the bundled tools keep theirs.
@@ -34,4 +35,6 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
-- [ ] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
+- [ ] T0093 Make GradleProject.release refuse a version without -pre before the confirmation, as ReleasePipeline does.
+- [ ] T0092 Let project adapters supply the DevopsCli exit-code text, dropping the virtual environment wording for Gradle and npm projects.
+- [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
