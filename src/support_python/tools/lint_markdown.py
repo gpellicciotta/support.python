@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 from typing import Dict, List, NoReturn, Optional, Tuple
 
-from support_python.cli import ToolHarness
+from support_python.cli import PROJECT_VERSION, ToolHarness
 from support_python.logging import CliLogger
 from support_python.markdown.lint import DEFAULT_EXCLUDES, LintIssue, MarkdownLinter
 from support_python.markdown.lint import discover_markdown_files, find_project_root, parse_rule_codes
@@ -19,6 +19,7 @@ from support_python.markdown.registry import RuleRegistry
 from support_python.tables import format_table
 
 TOOL_NAME = "lint-markdown"
+TOOL_VERSION: str = PROJECT_VERSION
 DESCRIPTION = """Automated markdown linter enforcing repository markdown styling guidelines.
 Directory walks skip Git-ignored files; files named explicitly are always linted."""
 SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [options]"
@@ -26,7 +27,7 @@ SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [
 
 def report_argument_error(message: str) -> NoReturn:
     """Log an argument error with the standard severity indicator, then exit with code 2."""
-    early_logger = ToolHarness(name=TOOL_NAME, description=DESCRIPTION)._extract_early_logger(sys.argv[1:])
+    early_logger = ToolHarness(name=TOOL_NAME, description=DESCRIPTION, version=TOOL_VERSION)._extract_early_logger(sys.argv[1:])
     early_logger.error(f"{message}\nUsage: {SHORT_USAGE}; run '{TOOL_NAME} help' for details.")
     early_logger.close()
     sys.exit(2)
@@ -270,6 +271,7 @@ def build_harness() -> ToolHarness:
     harness = ToolHarness(
         name=TOOL_NAME,
         description=DESCRIPTION,
+        version=TOOL_VERSION,
         exit_codes={
             1: "lint violations found, or an operational error occurred",
             2: "invalid arguments, syntax errors, or nonexistent paths",

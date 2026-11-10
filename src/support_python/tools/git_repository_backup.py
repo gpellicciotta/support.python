@@ -84,7 +84,7 @@ class RestoreSource:
 
 def get_version_banner() -> str:
     """Return single-line formatted version string."""
-    return f"{TOOL_NAME} v{get_full_version()} - {COPYRIGHT}"
+    return f"{TOOL_NAME} v{get_full_version(TOOL_VERSION)} - {COPYRIGHT}"
 
 
 def format_exit_codes() -> str:

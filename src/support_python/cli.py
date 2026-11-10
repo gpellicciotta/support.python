@@ -28,11 +28,9 @@ APP_AUTHOR: str = "Giovanni Pellicciotta"
 COPYRIGHT: str = f"Copyright (c) {APP_AUTHOR}"
 
 #: Default project version string resolved from package metadata or pyproject.toml.
-PROJECT_VERSION: str = get_project_version()
+PROJECT_VERSION: str = get_package_version("support-python")
 if PROJECT_VERSION == "0.0.0+unknown":
     PROJECT_VERSION = get_project_version(Path(__file__).resolve().parent)
-if PROJECT_VERSION == "0.0.0+unknown":
-    PROJECT_VERSION = get_package_version("support-python")
 
 #: Standard CLI exit codes mapped to short human-readable descriptions.
 STANDARD_EXIT_CODES: Sequence[Tuple[int, str]] = [
@@ -75,6 +73,8 @@ def _infer_caller_dir() -> Path:
 def resolve_build_metadata(cwd: Optional[Union[str, Path]] = None) -> str:
     """Resolve the short commit hash of the checkout as SemVer build metadata, or ``"unknown"``."""
     work_dir = Path(cwd).resolve() if cwd is not None else Path(__file__).resolve().parent
+    if any(part in ("site-packages", "dist-packages") for part in work_dir.parts):
+        return "unknown"
     try:
         res = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=work_dir, capture_output=True, text=True, timeout=5)
         if res.returncode == 0 and res.stdout.strip():
@@ -86,7 +86,7 @@ def resolve_build_metadata(cwd: Optional[Union[str, Path]] = None) -> str:
 
 def get_full_version(tool_version: Optional[str] = None, cwd: Optional[Union[str, Path]] = None) -> str:
     """Return ``tool_version`` decorated with build metadata (short commit hash), e.g. ``1.0.14-pre+af31b0d``."""
-    base_version = tool_version if tool_version is not None else get_project_version(cwd)
+    base_version = tool_version if tool_version is not None else (get_project_version(cwd) if cwd is not None else PROJECT_VERSION)
     if "+" in base_version:
         return base_version
     metadata = resolve_build_metadata(cwd) if cwd is not None else resolve_build_metadata()
@@ -126,7 +126,11 @@ class ToolHarness:
         """Initialize the CLI action harness."""
         self.name, self.description, self.copyright = name, description, copyright
         self.repo_dir: Path = Path(repo_dir).resolve() if repo_dir is not None else _infer_caller_dir()
-        self.version = version if version is not None else get_project_version(self.repo_dir)
+        if version is not None:
+            self.version = version
+        else:
+            inferred = get_project_version(self.repo_dir)
+            self.version = inferred if inferred != "0.0.0+unknown" else PROJECT_VERSION
         self.default_log_file = Path(default_log_file).resolve() if default_log_file else None
         self.default_log_level = default_log_level
         self.exit_codes: dict[int, str] = {**DEFAULT_EXIT_CODES, **(exit_codes or {})}

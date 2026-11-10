@@ -498,5 +498,98 @@ class ToolHarnessJsonOutputTests(unittest.TestCase):
         self.assertEqual(offending, [])
 
 
+class ToolVersionReportingTests(unittest.TestCase):
+    """Verify that every tool reports the installed support-python version instead of cwd's project version."""
+
+    def test_project_version_and_full_version_do_not_default_to_cwd(self) -> None:
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from support_python.version import get_package_version, get_project_version
+
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        expected_ver = get_package_version("support-python")
+        if expected_ver == "0.0.0+unknown":
+            expected_ver = get_project_version(Path(src_dir) / "support_python")
+
+        with TemporaryDirectory() as tmp:
+            unrelated = Path(tmp)
+            (unrelated / "pyproject.toml").write_text(
+                '[project]\nname = "unrelated-project"\nversion = "9.9.9"\n',
+                encoding="utf-8",
+            )
+            code = (
+                "from support_python.cli import PROJECT_VERSION, get_full_version\n"
+                "print('PROJECT_VERSION=' + PROJECT_VERSION)\n"
+                "print('FULL_VERSION=' + get_full_version())\n"
+            )
+            env = dict(os.environ)
+            env["PYTHONPATH"] = f"{src_dir}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else src_dir
+            res = subprocess.run(
+                [sys.executable, "-c", code],
+                cwd=unrelated,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=15,
+            )
+            self.assertEqual(res.returncode, 0, res.stderr)
+            self.assertNotIn("9.9.9", res.stdout)
+            self.assertIn(f"PROJECT_VERSION={expected_ver}", res.stdout)
+            self.assertTrue(res.stdout.startswith(f"PROJECT_VERSION={expected_ver}\nFULL_VERSION={expected_ver}"))
+
+    def test_every_tool_version_reports_support_python_version_in_unrelated_directory(self) -> None:
+        import os
+        import subprocess
+        import sys
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+        from support_python.version import get_package_version, get_project_version
+
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        expected_ver = get_package_version("support-python")
+        if expected_ver == "0.0.0+unknown":
+            expected_ver = get_project_version(Path(src_dir) / "support_python")
+
+        tools = [
+            ("processes", "support_python.tools.processes"),
+            ("agent-files", "support_python.tools.agent_files"),
+            ("agent-digest", "support_python.tools.agent_digest"),
+            ("lint-markdown", "support_python.tools.lint_markdown"),
+            ("git-repository-backup", "support_python.tools.git_repository_backup"),
+        ]
+
+        with TemporaryDirectory() as tmp:
+            unrelated = Path(tmp)
+            (unrelated / "pyproject.toml").write_text(
+                '[project]\nname = "unrelated-project"\nversion = "9.9.9"\n',
+                encoding="utf-8",
+            )
+            env = dict(os.environ)
+            env["PYTHONPATH"] = f"{src_dir}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else src_dir
+
+            for tool_name, mod_name in tools:
+                for arg in ("--version", "version"):
+                    with self.subTest(tool=tool_name, arg=arg):
+                        code = f"import sys; from {mod_name} import main; sys.exit(main(sys.argv[1:]))"
+                        res = subprocess.run(
+                            [sys.executable, "-c", code, arg],
+                            cwd=unrelated,
+                            capture_output=True,
+                            text=True,
+                            env=env,
+                            timeout=15,
+                        )
+                        self.assertEqual(res.returncode, 0, res.stderr)
+                        output = res.stdout.strip()
+                        self.assertNotIn("9.9.9", output)
+                        self.assertTrue(
+                            output.startswith(f"{tool_name} v{expected_ver}"),
+                            f"Expected '{output}' to start with '{tool_name} v{expected_ver}'",
+                        )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -7,7 +7,7 @@ from datetime import datetime
 import sys
 from typing import Sequence
 
-from ..cli import ToolHarness
+from ..cli import PROJECT_VERSION, ToolHarness
 from ..durations import parse_date_or_datetime
 from ..logging import CliLogger
 from .. import processes
@@ -15,6 +15,7 @@ from ..processes import list_processes, safe_kill
 from ..tables import render_output
 
 TOOL_NAME = "processes"
+TOOL_VERSION: str = PROJECT_VERSION
 DESCRIPTION = "Safely terminate processes by PID and list running processes with hierarchy, path, and time filters."
 KILL_DETAIL = (
     "Terminates each listed process ID in turn while protecting the current process and all ancestor processes. "
@@ -124,7 +125,14 @@ def run_list(args: argparse.Namespace, logger: CliLogger) -> int:
 
 def build_harness() -> ToolHarness:
     """Construct the :class:`ToolHarness` for the ``processes`` CLI."""
-    harness = ToolHarness(name=TOOL_NAME, description=DESCRIPTION, exit_codes=EXIT_CODES, examples=EXAMPLES, fallback_action="kill")
+    harness = ToolHarness(
+        name=TOOL_NAME,
+        description=DESCRIPTION,
+        version=TOOL_VERSION,
+        exit_codes=EXIT_CODES,
+        examples=EXAMPLES,
+        fallback_action="kill",
+    )
     harness.add_action(
         "kill",
         "terminate processes by PID",
@@ -173,11 +181,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     return build_harness().run(normalize_argv(raw))
 
 
+if __name__ == "__main__":
+    sys.exit(main())
+
+
 __all__ = [
     "DESCRIPTION",
     "EXAMPLES",
     "EXIT_CODES",
     "TOOL_NAME",
+    "TOOL_VERSION",
     "build_harness",
     "configure_kill_parser",
     "configure_list_parser",
