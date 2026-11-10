@@ -5,17 +5,20 @@ session: antigravity-20261111-912b0b
 needs: []
 branch: task/T0072-let-devopscli-run-the-slow-test-suite-through
 worktree: .plan/work/T0072-let-devopscli-run-the-slow-test-suite-through
-status: active
+status: completed
 started_at: "2026-11-10T23:39:10Z"
-ended_at: —
+ended_at: "2026-11-10T23:55:24Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 1576.4, input: 1457370, output: 147534, cache_read: 47090842}
-work_duration: 716.1
-review_status: pending
+  review: {turns: 2, duration_s: 277.2, input: 24, output: 3124, cache_read: 439184, cache_write: 56632}
+work_duration: 974.0
+review_status: approved
 review_round: 1
+reviewed_by: "@claude"
+completion-commit: 15c4987a907df02c7018daa41d938198ebd790a1
 ---
 # T0072: Let DevopsCli run the slow test suite through test --slow, and run both suites in check and release
 
@@ -32,7 +35,7 @@ Let adapters without a slow suite skip it with an `INFO` message instead of fail
 - [x] **[Implement]** Add a slow-test hook to `Project` and its adapters, and wire it into `test`, `check`, and `release`.
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Document `test --slow` in devops-scripts.md and devops.md, and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -70,4 +73,11 @@ Let adapters without a slow suite skip it with an `INFO` message instead of fail
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude: Approved.
+  - Findings: [review-findings-1.md](T0072-let-devopscli-run-the-slow-test-suite-through/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
