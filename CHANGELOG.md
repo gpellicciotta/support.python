@@ -14,7 +14,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.3-pre
+## v2.0.4-pre
 - Library: Made the `DevopsCli` default description name `deploy` and the service groups that `set_deploy` and `add_services` enable ([cli.py](src/support_python/devops/cli.py)).
 - Library: Reworded the `DevopsCli` exit code 1 text to say a prerequisite is missing, instead of naming the Python virtual environment for every adapter.
 - Library: Made `DevopsCli` take help summaries and the `test` example from the project adapter, so `GradleProject` help names its Gradle tasks ([devops-scripts.md](docs/tutorials/devops-scripts.md)).
