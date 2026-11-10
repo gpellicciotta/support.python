@@ -9,13 +9,15 @@ Change `PLAN.md` and task frontmatter only through `plan` commands.
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this is
-`support-python` is a general-purpose Python support library and CLI for Python clients and ops scripts. It aims to have as few
+`support-python` is a general-purpose Python support library for Python clients and ops scripts. It aims to have as few
 third-party dependencies as possible so downstream consumers aren't burdened by transitive dependencies.
-Currently it provides guideline-compliant CLI logging (`CliLogger`/`LogLevel`), a shared CLI version/help
-argparse helper (`build_action_parser`/`print_version`/`print_help`), a stdlib-only REST-client HTTP
-transport (`Transport`/`UrllibTransport`/`RawResponse`/`TransportError`/`build_query_string`), and a narrow
-devops-script step runner (`run_step`); further modules are meant to be pulled out of hand-duplicated
-code as shared-library candidates are reviewed and approved (see `PLAN.md` and [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
+It ships the `support_python` library and five standalone console scripts: `processes`, `agent-files`, `agent-digest`,
+`lint-markdown`, and `git-repository-backup`. There is no `support-python` command and no `python -m support_python`.
+The library provides guideline-compliant CLI logging (`CliLogger`/`LogLevel`), the action-oriented `ToolHarness` CLI
+harness, a stdlib-only REST-client HTTP transport, Markdown linting, and the reusable `support_python.devops` package
+(`DevopsCli` over `PythonProject`/`GradleProject`/`NodeProject`, release, deploy, and service managers) that consumers'
+thin devops entry scripts build on (see [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
+[migration-v2.md](docs/migration-v2.md) maps every v1.x command, module, option, and config file to its v2.0.0 replacement.
 
 ## Commands
 All commands use the project's venv (`.venv`, created via `python -m venv .venv` — or run
@@ -25,16 +27,19 @@ dev extras, lints, tests, builds sdist/wheel):
   `.venv\Scripts\pip install -e ".[dev]"`
 - Lint: `.venv\Scripts\ruff check .` / `.venv\Scripts\ruff format --check .`
 - Run the test suite: `.venv\Scripts\python -m pytest` (or `python -m unittest discover -s tests`)
+- Lint, test, and build in one step: `python scripts/devops.py check` (also `lint`, `format`, `test`, `build`, `clean`,
+  `versions`, and `release [--dry-run]`, via `DevopsCli` and `PythonProject`).
 - Run the standalone CLIs (once installed): `.venv\Scripts\processes`, `.venv\Scripts\agent-files`,
-  `.venv\Scripts\lint-markdown`, and `.venv\Scripts\git-repository-backup`.
+  `.venv\Scripts\agent-digest`, `.venv\Scripts\lint-markdown`, and `.venv\Scripts\git-repository-backup`.
 
 Dependencies are declared once, in [pyproject.toml](pyproject.toml) — there is no separate `requirements.txt` to keep in sync.
 
 ## Architecture
 Modules under `src/support_python/` (library symbols are re-exported from the package root; tool modules under `support_python.tools` are not re-exported):
 - [logging.py](src/support_python/logging.py): `LogLevel`, `CliLogger`, `resolve_log_level`/`normalize_log_level`, `format_severity_indicator`/`format_log_message`, and `init_cli_logger` — unified guideline-compliant CLI logging.
-- [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, `get_full_version`/`resolve_build_metadata`, and `build_action_parser`/`print_version`/`print_help` — shared action-oriented CLI harness and argparse helpers.
-- [agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `agent-files` (see [agent-files.md](docs/tools/agent-files.md)).
+- [cli.py](src/support_python/cli.py): `ToolHarness`, `Action`, and `get_full_version`/`resolve_build_metadata` — the shared action-oriented CLI harness every tool builds on; `ToolHarness.run` configures UTF-8 output.
+- [agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py): deterministic global agent-files and skills synchronization (`SyncHarness`, `Tool`, `AgentFilesConfig`, `ToolRegistry`, `load_agent_files_config`) exposed via `agent-files` (see [agent-files.md](docs/tools/agent-files.md)); it installs an existing digest and never generates it.
+- [agent_digest.py](src/support_python/tools/agent_digest.py): Markdown digest and `<name>/SKILL.md` skill generation from `<PATH>...` inputs with budget and link checks, exposed via `agent-digest` (see [agent-digest.md](docs/tools/agent-digest.md)).
 - [net.py](src/support_python/net.py): stdlib-only REST-client transport (`Transport`, `UrllibTransport`, `RawResponse`,
   `TransportError`, `build_query_string`) and `is_port_in_use`. A non-2xx response is a normal `RawResponse`.
 - [git.py](src/support_python/git.py): Git runner and repository queries; failures return `None`, distinct from confirmed `False` results.
@@ -46,9 +51,10 @@ Modules under `src/support_python/` (library symbols are re-exported from the pa
 - [ratelimit.py](src/support_python/ratelimit.py): sliding-window task dispatch rate limiter (`TaskRateLimiter`) with injectable `now` timestamps and a 1-second minimum wait duration when blocked.
 - [errors.py](src/support_python/errors.py): REST-client exception hierarchy and status-code mapping helpers.
 - [__init__.py](src/support_python/devops/__init__.py), [steps.py](src/support_python/devops/steps.py), [services.py](src/support_python/devops/services.py): `stream_subprocess`, `run_step_command`, `resolve_executable`, `EXIT_COMMAND_NOT_FOUND`, and `run_step` in `devops.steps` plus Docker, MySQL, mail, server, and Cloud SQL proxy managers (including non-`PATH` proxy discovery) in `devops.services`, re-exported from `support_python.devops`.
-  Pin it via a consumer's own `scripts/requirements.txt`, never from a bootstrap script
+- [release.py](src/support_python/devops/release.py), [projects.py](src/support_python/devops/projects.py), [cli.py](src/support_python/devops/cli.py), [deploy.py](src/support_python/devops/deploy.py), [service_actions.py](src/support_python/devops/service_actions.py): `ReleasePipeline` and CHANGELOG helpers, `Project` adapters, `DevopsCli` with `add_action`/`set_deploy`/`add_services`, `DeployPipeline`/`DeployStep`, and the `docker`/`db`/`server`/`mail`/`client` action groups.
+  Pin `support_python` via a consumer's own `scripts/requirements.txt`, never from a bootstrap script
   (see [ADR-0001-devops-scripts-toolkit-scope.md](docs/adrs/ADR-0001-devops-scripts-toolkit-scope.md) and [ADR-0003-standalone-tools-and-reusable-devops.md](docs/adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
-- [capture.py](src/support_python/capture.py), [httpd.py](src/support_python/httpd.py): headless-Chrome view capture and the embedded static HTTP server.
+- [capture.py](src/support_python/capture.py), [httpd.py](src/support_python/httpd.py): headless-Chrome view capture (`run_capture_cli` on `build_capture_harness`) and the embedded static HTTP server.
 - [sql.py](src/support_python/sql.py): streaming SQL snapshot anonymizer. [crypto.py](src/support_python/crypto.py): password hashing and property decryption.
 - [dates.py](src/support_python/dates.py), [models.py](src/support_python/models.py), [tables.py](src/support_python/tables.py), [tokens.py](src/support_python/tokens.py), [env.py](src/support_python/env.py), [terminal.py](src/support_python/terminal.py), [version.py](src/support_python/version.py): wire dates and
   models, table rendering, token storage, env-file parsing, UTF-8 console setup, and project version lookup.

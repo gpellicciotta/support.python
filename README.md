@@ -7,7 +7,8 @@ Licensed under the [MIT License](LICENSE.md).
 See also:
 - [CHANGELOG](CHANGELOG.md)
 - [Documentation index](docs/index.md)
-- [PLAN](PLAN.md)
+- [Migrating to v2.0.0](docs/migration-v2.md)
+- `PLAN.md`: task index (local plan store)
 
 ## Bootstrap
 
@@ -29,10 +30,11 @@ python -m build
 This creates both source (`dist/*.tar.gz`) and binary wheel (`dist/*.whl`) packages.
 `python scripts/devops.py check` lints, tests, and builds through `.venv` in one step.
 On GitHub pushes/PRs, the same artifacts are built (after lint and tests) by
-`.github/workflows/python-package.yml`.
+[python-package.yml](.github/workflows/python-package.yml).
 
 ## Installing the command-line tools
-Installing the `support-python` package installs all standalone command-line tools (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, and `git-repository-backup`) together:
+Installing the `support-python` package installs all standalone command-line tools (`processes`, `agent-files`, `agent-digest`, `lint-markdown`, and `git-repository-backup`) together.
+Upgrading from v1.x, where they ran as `support-python` subcommands or wrapper scripts? See [migration-v2.md](docs/migration-v2.md).
 
 ```bash
 pipx install "git+https://github.com/gpellicciotta/support.python.git@v<version>"
@@ -102,7 +104,6 @@ saved_token = store.load_token()
 ## Common script utilities
 
 `support_python` provides focused modules for script and developer operations:
-
 - `terminal`: `configure_utf8_output` for cross-platform console standard stream encoding.
 - `version`: `get_project_version` for resolving version from Gradle properties or pyproject.toml.
 - `net`: `is_port_in_use` for checking TCP socket availability.
@@ -526,7 +527,7 @@ dependencies = [
 
 ### GitHub Releases
 
-When a release is published on GitHub, `.github/workflows/publish.yml` builds source and wheel packages,
+When a release is published on GitHub, [publish.yml](.github/workflows/publish.yml) builds source and wheel packages,
 attaching them as downloadable release assets.
 
 ## Version and dependencies

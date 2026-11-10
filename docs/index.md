@@ -17,13 +17,14 @@ Overview of all documentation for the `support-python` project.
 - [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
 - [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
 - [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also [README](../README.md#markdown-linter)).
-- [Agent files sync](tools/agent-files.md): Global agent instructions, skills synchronization, `agent-files.json` schema, and `ToolRegistry` exposed via `agent-files` (see also [README](../README.md#agent-files-sync)).
+- [Agent files sync](tools/agent-files.md): Global agent instructions, skills synchronization, `.agent-files.json` schema, and `ToolRegistry` exposed via `agent-files` (see also [README](../README.md#agent-files-sync)).
 - [Agent digest generator](tools/agent-digest.md): Markdown digest and skill derivation, front-matter ordering, and budget checks exposed via `agent-digest` (see also [README](../README.md#agent-digest-generator)).
 - [Duration and time helpers](../README.md#duration-and-time-formatting-helpers): Duration parsing, human-readable duration formatting, ISO-8601 and date parsing, and relative epoch formatting.
 - [Task rate limiter](../README.md#task-rate-limiter): Sliding-window task dispatch rate limiting (`TaskRateLimiter`) with configurable window and wait-duration calculation.
 - [DevOps script helpers and subprocess streaming](../README.md#devops-script-helpers-and-environment-managers): Subprocess line-by-line output streaming (`stream_subprocess`, `run_step_command`, `resolve_executable`), `run_step`, and local service managers.
 - [README](../README.md): Project overview, build, install, and usage.
 - [CHANGELOG](../CHANGELOG.md): Versioned changes and release history.
+- [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
 - `PLAN.md`: Task index by milestone (local plan store).
 - [LICENSE](../LICENSE.md): License terms (MIT).
 
