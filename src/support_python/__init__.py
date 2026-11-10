@@ -94,6 +94,7 @@ from .git import (
     get_github_repo,
     get_default_branch,
 )
+from .config import ResolvedSetting, Setting, SettingsSchema, add_config_actions, parse_setting_value, resolve_settings
 from .env import read_env_file, user_config_dir, user_config_path
 from .errors import (
     DEFAULT_NOT_FOUND_PATTERNS,
@@ -354,6 +355,12 @@ __all__ = [
     # Env
     "read_env_file",
     "user_config_dir",
+    "ResolvedSetting",
+    "Setting",
+    "SettingsSchema",
+    "add_config_actions",
+    "parse_setting_value",
+    "resolve_settings",
     "user_config_path",
     # Files
     "atomic_replace",

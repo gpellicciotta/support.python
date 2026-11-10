@@ -50,6 +50,7 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 - [Files and locking](tutorials/files-and-locking.md): Atomic UTF-8 text writes, retrying replaces and reads, and file, null, Redis, and MySQL locks with a backend factory.
 - [Process management](tutorials/process-management.md): Process hierarchy, descendants, open-path lookup, PID-reuse-safe liveness checks, and ancestor-protected termination.
 - [Markdown tables and linting](tutorials/markdown.md): ANSI-aware table formatting and alignment checks, and the in-memory linter API.
+- [Configuration](tutorials/configuration.md): Declaring settings, resolving them by the guideline precedence, and adding the standard `config` command group.
 - [Durations and rate limiting](tutorials/durations-and-rate-limiting.md): Duration and ISO-8601 parsing, human-readable and relative epoch formatting, and `TaskRateLimiter`.
 - [View capture](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.
 - [SQL anonymizer](tutorials/sql-anonymizer.md): Streaming, deterministic anonymization of `auth` and `counters` SQL dumps.

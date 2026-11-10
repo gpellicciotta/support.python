@@ -43,6 +43,11 @@ Functional and technical requirements for the `support-python` project.
   `list`/`check`/write verbs, `--dry-run` on write actions, `--format text|json` on `list` and `check`, and
   `--config` overrides for project-scoped (`./.<tool-name>.json`) and user-scoped (`~/.config/<tool-name>/config.json`)
   configuration files (see [ADR-0003-standalone-tools-and-reusable-devops.md](adrs/ADR-0003-standalone-tools-and-reusable-devops.md)).
+- Provide a reusable settings resolver and `config` command group (`Setting`, `SettingsSchema`, `resolve_settings`,
+  `add_config_actions` in `support_python.config`) that apply the configuration guidelines: precedence command line,
+  environment, project file, user file, system file, defaults; per-setting source reporting; dictionary merging; and
+  the `path`, `list`, `names`, `get`, `set`, `delete`, `edit` actions with `--format text|json`
+  (see [configuration.md](tutorials/configuration.md)).
 - Provide tabular formatting (`format_table`) and structured output rendering (`render_output`, `json_serial`)
   supporting human-readable tables, dataclass lists, dictionaries, and JSON output formatting (`support_python.tables`).
 - Provide pluggable session persistence (`TokenStore`, `FileTokenStore`) for CLI tools requiring multi-invocation
