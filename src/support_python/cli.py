@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 import inspect
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -107,7 +108,11 @@ class Action:
 
 
 class ToolHarness:
-    """Standardized CLI and logging harness enforcing the dev-guidelines CLI and logging conventions."""
+    """Standardized CLI and logging harness enforcing the dev-guidelines CLI and logging conventions.
+
+    For consumer ``__version__`` values, prefer :func:`~support_python.version.get_package_version` over raw ``importlib.metadata.version``.
+    This preserves in-development ``-pre`` versions, and :class:`ToolHarness` also maps trailing ``rc0`` back to ``-pre`` automatically.
+    """
 
     def __init__(
         self,
@@ -127,10 +132,10 @@ class ToolHarness:
         self.name, self.description, self.copyright = name, description, copyright
         self.repo_dir: Path = Path(repo_dir).resolve() if repo_dir is not None else _infer_caller_dir()
         if version is not None:
-            self.version = version
+            self.version = re.sub(r"rc0$", "-pre", version)
         else:
             inferred = get_project_version(self.repo_dir)
-            self.version = inferred if inferred != "0.0.0+unknown" else PROJECT_VERSION
+            self.version = re.sub(r"rc0$", "-pre", inferred if inferred != "0.0.0+unknown" else PROJECT_VERSION)
         self.default_log_file = Path(default_log_file).resolve() if default_log_file else None
         self.default_log_level = default_log_level
         self.exit_codes: dict[int, str] = {**DEFAULT_EXIT_CODES, **(exit_codes or {})}
@@ -175,7 +180,8 @@ class ToolHarness:
 
     def format_version(self) -> str:
         """Return single-line formatted version banner per CLI guidelines."""
-        return f"{self.name} v{get_full_version(self.version, cwd=self.repo_dir)} - {self.copyright}"
+        ver = re.sub(r"rc0$", "-pre", self.version)
+        return f"{self.name} v{get_full_version(ver, cwd=self.repo_dir)} - {self.copyright}"
 
     def _standard_option_rows(self) -> list[tuple[str, str]]:
         return [

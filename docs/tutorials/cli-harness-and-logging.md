@@ -15,6 +15,8 @@ All symbols are re-exported from `support_python`.
   `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.
   Its log messages then go to `stderr`, and only `emit`/`emit_json` write to `stdout`.
   `get_full_version`/`resolve_build_metadata` add build-metadata version suffixes.
+  Use `get_package_version` for consumer `__version__` values to preserve the `-pre` suffix.
+  `ToolHarness` also maps a trailing `rc0` back to `-pre` automatically.
 - `support_python.tables` provides tabular output formatting (`format_table`/`render_output`).
 - `support_python.tokens` provides persistent session token storage (`FileTokenStore`, `TokenStore`).
 
@@ -24,12 +26,15 @@ from support_python import (
     FileTokenStore,
     ToolHarness,
     format_table,
+    get_package_version,
     render_output,
 )
 
+# Resolve package version restoring -pre suffix for in-development versions
+__version__ = get_package_version("my-package")
 
 # Action-oriented CLI harness with standard banners, help, version, and logging
-harness = ToolHarness(name="my-tool", description="My tool description", version="1.0.0")
+harness = ToolHarness(name="my-tool", description="My tool description", version=__version__)
 harness.add_action("sync", "synchronize local state", handler=lambda args, logger: 0)
 
 

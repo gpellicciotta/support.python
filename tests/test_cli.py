@@ -260,6 +260,20 @@ class ToolHarnessUnitTests(unittest.TestCase):
         offending = [p.name for p in sorted(tools_dir.glob("*.py")) if "reconfigure(" in p.read_text(encoding="utf-8")]
         self.assertEqual(offending, [])
 
+    def test_version_output_maps_trailing_rc0_to_pre(self) -> None:
+        from support_python.cli import ToolHarness
+
+        harness = ToolHarness("demo", "Demo.", version="3.0.0rc0")
+        self.assertTrue(harness.format_version().startswith("demo v3.0.0-pre"))
+
+    def test_version_output_preserves_other_versions(self) -> None:
+        from support_python.cli import ToolHarness
+
+        for ver in ("3.0.0rc1", "3.0.0", "3.0.0-pre"):
+            with self.subTest(version=ver):
+                harness = ToolHarness("demo", "Demo.", version=ver)
+                self.assertTrue(harness.format_version().startswith(f"demo v{ver}"))
+
 
 class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
     def test_demo_cli_subprocess_end_to_end(self) -> None:
@@ -335,6 +349,39 @@ class ToolHarnessSubprocessIntegrationTests(unittest.TestCase):
             res_bad = run_cli("work", "--invalid-opt", "--log-file", str(log_path))
             self.assertEqual(res_bad.returncode, 2)
             self.assertIn("**[ERROR]**", res_bad.stderr)
+
+    def test_demo_cli_subprocess_version_maps_trailing_rc0_to_pre(self) -> None:
+        import os
+        from pathlib import Path
+        import subprocess
+        import sys
+        from tempfile import TemporaryDirectory
+
+        src_dir = str(Path(__file__).resolve().parent.parent / "src")
+        env = dict(os.environ)
+        env["PYTHONPATH"] = f"{src_dir}{os.pathsep}{env['PYTHONPATH']}" if env.get("PYTHONPATH") else src_dir
+
+        script_code = (
+            "from __future__ import annotations\nimport sys\nfrom support_python.cli import ToolHarness\n"
+            "harness = ToolHarness('demo', 'Demo CLI.', version='3.0.0rc0')\n"
+            "if __name__ == '__main__':\n    sys.exit(harness.run())\n"
+        )
+        with TemporaryDirectory() as tmp:
+            script_path = Path(tmp) / "demo_cli.py"
+            script_path.write_text(script_code, encoding="utf-8")
+
+            def run_cli(*cli_args: str):
+                return subprocess.run(
+                    [sys.executable, str(script_path), *cli_args],
+                    capture_output=True,
+                    text=True,
+                    env=env,
+                    timeout=10,
+                )
+
+            res = run_cli("--version")
+            self.assertEqual(res.returncode, 0)
+            self.assertTrue(res.stdout.startswith("demo v3.0.0-pre"))
 
     def test_tools_help_and_non_ascii_output_under_cp1252_pipe(self) -> None:
         import os
