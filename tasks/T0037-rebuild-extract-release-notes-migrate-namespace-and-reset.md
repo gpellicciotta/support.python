@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1362.6, input: 196, output: 74778, cache_read: 9321344, cache_write: 233654}
+review_status: pending
+review_round: 1
 ---
 # T0037: Rebuild extract-release-notes, migrate-namespace, and reset-history on support_python.devops.release, and delete scripts/_repo_common.py
 
@@ -62,4 +66,7 @@ Leave `scripts/install-from-github-release.py` self-contained and untouched.
 
 - [2026-11-10] **[Doc]**
   Documented repository targeting in README.md, docs/devops.md, and CHANGELOG.md.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
