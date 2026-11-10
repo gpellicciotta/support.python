@@ -13,7 +13,7 @@ Overview of all documentation for the `support-python` project.
 - [Git repository backup](tools/git-repository-backup.md): Bare mirror and encrypted 7-Zip archive backup and restore exposed via `git-repository-backup` (see also [README](../README.md#git-repository-backup)).
 - [Git helpers](../README.md#git-repository-helpers): Query contracts, tri-state booleans, porcelain parsing, and runner configuration.
 - [Locking](../README.md#locking): Lock base class, file lock, null lock, Redis lock, MySQL advisory lock, and backend factory.
-- [Process helpers and CLI](../README.md#process-hierarchy-and-safe-termination): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI.
+- [Process helpers and CLI](tools/processes.md): Process hierarchy, filtered listing, start-time lookup, liveness checks, and ancestor-protected `processes` CLI with `kill --dry-run` (see also [README](../README.md#process-hierarchy-and-safe-termination)).
 - [File helpers](../README.md#atomic-text-file-helpers): Atomic UTF-8 text writes, Windows-safe file replacement retries, and retry-hardened file reads.
 - [Markdown table helpers](../README.md#markdown-table-helpers): ANSI-aware Markdown table formatting, delimiter pipe splitting, and column alignment validation.
 - [Markdown linter](tools/lint-markdown.md): Automated Markdown style and link linter, rule registry, and JSON profiles exposed via `lint-markdown` (see also [README](../README.md#markdown-linter)).

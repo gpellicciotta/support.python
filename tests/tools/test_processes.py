@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from datetime import datetime
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -14,6 +15,7 @@ from unittest import mock
 
 import pytest
 
+from support_python.tables import render_output
 from support_python.tools.processes import build_harness, main, normalize_argv
 import support_python.processes as processes
 from support_python.processes import (
@@ -149,6 +151,63 @@ def test_processes_kill_protects_self_and_ancestors_and_reports_failures() -> No
     ):
         code, _, err = run_cli(["kill", "200"])
     assert code == 1 and "Permission denied to kill PID 200" in err
+
+
+def test_processes_kill_dry_run_reports_targets_without_terminating() -> None:
+    harness = build_harness()
+    assert harness._build_parser("kill").parse_args(["123"]).dry_run is False
+    assert harness._build_parser("kill").parse_args(["123", "--dry-run"]).dry_run is True
+    assert normalize_argv(["1234", "--dry-run"]) == ["kill", "1234", "--dry-run"]
+    with (
+        mock.patch.object(processes, "get_process_hierarchy", return_value={100, 1}),
+        mock.patch.object(processes, "terminate_process") as mock_term,
+        mock.patch.object(processes, "terminate_process_tree") as mock_tree,
+    ):
+        code, out, err = run_cli(["kill", "100", "200", "300", "--dry-run", "--force"])
+    assert code == 0 and mock_term.call_count == 0 and mock_tree.call_count == 0
+    assert "Would kill PID 200" in out and "Would kill PID 300" in out and "Killed PID" not in out
+    assert "Would skip protected PID 100" in err and "PID 200" not in err
+    with mock.patch.object(processes, "get_process_hierarchy", side_effect=OSError("denied")):
+        assert run_cli(["kill", "200", "--dry-run"])[0] == 1
+
+
+def test_processes_list_text_format_matches_former_table_output() -> None:
+    sample = [
+        ProcessInfo(pid=10, ppid=1, name="root", started=datetime(2026, 11, 7, 9, 0), cwd="/w"),
+        ProcessInfo(pid=20, ppid=10, name="leaf", started=datetime(2026, 11, 7, 10, 0), cwd="/w/sub"),
+    ]
+    expected = io.StringIO()
+    render_output(sample, output_format="table", file=expected)
+    with mock.patch("support_python.tools.processes.list_processes", return_value=sample):
+        default_code, default_out, _ = run_cli(["list"])
+        text_code, text_out, _ = run_cli(["list", "--format", "text"])
+        json_code, json_out, _ = run_cli(["list", "--format", "json"])
+        table_code, _, table_err = run_cli(["list", "--format", "table"])
+    assert default_code == 0 and expected.getvalue() in default_out
+    assert text_code == 0 and expected.getvalue() in text_out
+    assert json_code == 0 and [p["pid"] for p in json.loads(json_out)] == [10, 20]
+    assert table_code == 2 and "table" in table_err
+    assert build_harness()._build_parser("list").parse_args([]).format == "text"
+
+
+def test_processes_kill_dry_run_integration() -> None:
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    processes_bin = str(Path(sys.executable).parent / ("processes.exe" if sys.platform == "win32" else "processes"))
+    try:
+        assert processes.is_process_alive(child.pid) is True
+        dry_res = subprocess.run([processes_bin, "kill", str(child.pid), "--dry-run"], capture_output=True, text=True, timeout=30)
+        assert dry_res.returncode == 0 and f"Would kill PID {child.pid}" in dry_res.stdout
+        time.sleep(0.5)
+        assert child.poll() is None and processes.is_process_alive(child.pid) is True
+        # Windows taskkill without /F cannot stop a windowless console process, so the real kill forces it.
+        kill_res = subprocess.run([processes_bin, "kill", str(child.pid), "--force"], capture_output=True, text=True, timeout=30)
+        assert kill_res.returncode == 0 and f"Killed PID {child.pid}" in kill_res.stdout
+        child.wait(timeout=10)
+        assert processes.is_process_alive(child.pid) is False
+    finally:
+        if child.poll() is None:
+            subprocess.run([processes_bin, "kill", str(child.pid), "--force"], capture_output=True, text=True, timeout=30)
+            child.wait(timeout=10)
 
 
 def test_processes_list_and_kill_integration(tmp_path: Path) -> None:

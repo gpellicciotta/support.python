@@ -5,21 +5,26 @@ from __future__ import annotations
 import argparse
 from datetime import datetime
 import sys
-from typing import Sequence
+from typing import Any, Optional, Sequence
 
 from ..cli import ToolHarness
 from ..durations import parse_date_or_datetime
 from ..logging import CliLogger
+from .. import processes
 from ..processes import list_processes, safe_kill
 from ..tables import render_output
 
 TOOL_NAME = "processes"
 DESCRIPTION = "Safely terminate processes by PID and list running processes with hierarchy, path, and time filters."
-KILL_DETAIL = "Terminates each listed process ID in turn while protecting the current process and all ancestor processes."
+KILL_DETAIL = (
+    "Terminates each listed process ID in turn while protecting the current process and all ancestor processes. "
+    "With --dry-run, reports each PID it would kill or skip as protected, and terminates nothing."
+)
 LIST_DETAIL = "Lists running processes with optional filters for cwd, open paths, start timestamps, and hierarchy trees."
 EXAMPLES = [
     "processes kill 1234 5678",
     "processes kill 1234 --force",
+    "processes kill 1234 5678 --dry-run",
     "processes list --cwd /path/to/workdir",
     "processes list --open-path /path/to/file.txt --format json",
     "processes list --descendants-of 1234",
@@ -66,6 +71,7 @@ def configure_kill_parser(parser: argparse.ArgumentParser) -> None:
     """Register positional process IDs and termination flags for the ``kill`` subcommand."""
     parser.add_argument("pids", nargs="+", type=parse_pid, metavar="pid", help="One or more process IDs to terminate.")
     parser.add_argument("-f", "--force", action="store_true", help="Force termination (SIGKILL or taskkill /F).")
+    parser.add_argument("--dry-run", action="store_true", help="Report the PIDs that would be killed; terminate nothing.")
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
@@ -76,11 +82,28 @@ def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--started-after", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="Lower start-time bound.")
     parser.add_argument("--ancestors-of", type=parse_pid, default=None, metavar="PID", help="Filter ancestors of PID.")
     parser.add_argument("--descendants-of", type=parse_pid, default=None, metavar="PID", help="Filter descendants of PID.")
-    parser.add_argument("--format", choices=["table", "json"], default="table", help="Output rendering format (table or json).")
+    parser.add_argument("--format", choices=["text", "json"], default="text", help="Output rendering format (text or json).")
+
+
+def report_kill_plan(pids: Sequence[int], logger: CliLogger) -> bool:
+    """Report whether each PID would be killed or skipped as protected, without terminating anything."""
+    try:
+        protected_pids = processes.get_process_hierarchy(processes.os.getpid())
+    except Exception as exc:
+        logger.error(f"Cannot inspect protected process hierarchy: {exc}")
+        return False
+    for pid in pids:
+        if pid in protected_pids:
+            logger.warning(f"Would skip protected PID {pid} (current script or ancestor process).")
+        else:
+            logger.info(f"Would kill PID {pid}")
+    return True
 
 
 def run_kill(args: argparse.Namespace, logger: CliLogger) -> int:
     """Execute the ``kill`` subcommand."""
+    if args.dry_run:
+        return 0 if report_kill_plan(args.pids, logger) else 1
     return 0 if safe_kill(args.pids, logger=logger, force=args.force) else 1
 
 
@@ -95,13 +118,39 @@ def run_list(args: argparse.Namespace, logger: CliLogger) -> int:
         descendants_of=args.descendants_of,
     )
     logger.debug_msg(f"Matched {len(matched)} process(es)")
-    render_output(matched, output_format=args.format)
+    render_output(matched, output_format="json" if args.format == "json" else "table")
     return 0
 
 
+class JsonModeLogger(CliLogger):
+    """CLI logger that keeps ``stdout`` free for a JSON document by sending console messages to ``stderr``."""
+
+    def log(self, message: str = "", level: Optional[str] = None, origin: Optional[str] = None, **kwargs: Any) -> None:
+        if kwargs.get("to_stdout", True) and not kwargs.get("to_stderr", False):
+            kwargs.update(to_stdout=False, to_stderr=True)
+        super().log(message, level=level, origin=origin, **kwargs)
+
+
+class ProcessesHarness(ToolHarness):
+    """Tool harness routing log output to ``stderr`` when ``--format json`` is selected."""
+
+    def create_logger(self, args: argparse.Namespace) -> CliLogger:
+        base = super().create_logger(args)
+        if getattr(args, "format", "text") != "json":
+            return base
+        return JsonModeLogger(
+            log_file=base.log_file,
+            log_level=base.effective_level if base._explicit_level_set else None,
+            debug=base.debug_flag,
+            verbose=base.verbose,
+        )
+
+
 def build_harness() -> ToolHarness:
-    """Construct the :class:`~support_python.cli.ToolHarness` for the ``processes`` CLI."""
-    harness = ToolHarness(name=TOOL_NAME, description=DESCRIPTION, exit_codes=EXIT_CODES, examples=EXAMPLES, fallback_action="kill")
+    """Construct the :class:`ProcessesHarness` for the ``processes`` CLI."""
+    harness = ProcessesHarness(
+        name=TOOL_NAME, description=DESCRIPTION, exit_codes=EXIT_CODES, examples=EXAMPLES, fallback_action="kill"
+    )
     harness.add_action(
         "kill",
         "terminate processes by PID",
@@ -154,6 +203,8 @@ __all__ = [
     "DESCRIPTION",
     "EXAMPLES",
     "EXIT_CODES",
+    "JsonModeLogger",
+    "ProcessesHarness",
     "TOOL_NAME",
     "build_harness",
     "configure_kill_parser",
@@ -162,6 +213,7 @@ __all__ = [
     "normalize_argv",
     "parse_pid",
     "parse_timestamp",
+    "report_kill_plan",
     "run_kill",
     "run_list",
 ]

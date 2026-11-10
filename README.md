@@ -429,7 +429,7 @@ except LockTimeoutError as error:
 - Timeouts and TTLs are floats in seconds.
 
 ## Process hierarchy and safe termination
-The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [tools/processes.py](src/support_python/tools/processes.py).
+The package exports process helpers from [processes.py](src/support_python/processes.py) and the `processes` CLI from [tools/processes.py](src/support_python/tools/processes.py) (see [processes.md](docs/tools/processes.md)).
 All helpers use only the Python standard library and `ctypes`.
 
 ```python
@@ -459,6 +459,7 @@ safe_kill([pid])  # Skips the current process and its ancestors with a warning.
 processes list --cwd . --format json
 processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
 processes kill 1234 5678 --force
+processes kill 1234 5678 --dry-run
 processes list --descendants-of 1234
 ```
 

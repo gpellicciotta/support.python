@@ -1,0 +1,41 @@
+# Processes
+
+Cross-platform process listing and ancestor-protected termination, implemented in [processes.py](../../src/support_python/tools/processes.py) and exposed on the command line as `processes`.
+
+---
+
+## Command-Line Interface
+Run actions through the `processes` console script, built on the helpers in [processes.py](../../src/support_python/processes.py):
+```bash
+processes kill PID... [--force] [--dry-run]
+processes list [--cwd PATH] [--open-path PATH] [--started-before TIMESTAMP] [--started-after TIMESTAMP] [--ancestors-of PID] [--descendants-of PID] [--format text|json]
+```
+
+- `kill` is the default action, so `processes 1234` runs `processes kill 1234`.
+- `kill` terminates each PID in turn and skips the current process and its ancestors with a `WARN` message.
+- `--force` terminates with `SIGKILL` on POSIX or `taskkill /F` on Windows.
+- `--dry-run` prints `Would kill PID {{pid}}` or `Would skip protected PID {{pid}}` per PID, terminates nothing, and exits `0`.
+- `list` prints running processes that match every given filter.
+- `--cwd PATH` keeps processes whose working directory is `PATH` or below it.
+- `--open-path PATH` keeps processes holding `PATH` open.
+- `--started-before` and `--started-after` take ISO-8601 dates or datetimes as start-time bounds.
+- `--ancestors-of PID` and `--descendants-of PID` keep the process tree above or below `PID`, `PID` included.
+- `--format text|json` selects the human-readable table or a single JSON array on `stdout` (default: `text`).
+- In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
+- The former `--format table` value is rejected with exit code `2`; use `--format text` instead.
+
+Exit codes:
+- `0` on success, including protected PIDs that were skipped.
+- `1` on operational failure while inspecting or terminating processes.
+- `2` on invalid arguments.
+
+---
+
+## Examples
+```bash
+processes kill 1234 5678 --dry-run
+processes kill 1234 --force
+processes list --cwd /path/to/workdir
+processes list --open-path /path/to/file.txt --format json
+processes list --descendants-of 1234
+```
