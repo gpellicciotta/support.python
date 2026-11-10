@@ -45,8 +45,10 @@ from .crypto import (
 )
 from .dates import (
     DATE_FORMAT,
+    format_date,
     format_datetime,
     from_wire_date,
+    parse_date,
     parse_datetime,
     to_wire_date,
 )
@@ -249,8 +251,10 @@ __all__ = [
     "get_default_branch",
     # Dates
     "DATE_FORMAT",
+    "format_date",
     "format_datetime",
     "from_wire_date",
+    "parse_date",
     "parse_datetime",
     "to_wire_date",
     # Durations

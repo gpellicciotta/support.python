@@ -23,7 +23,10 @@ Functional and technical requirements for the `support-python` project.
 
 ### Dates and Wire Serialization
 - Provide wire datetime parsing and formatting (`parse_datetime`, `format_datetime`, `from_wire_date`, `to_wire_date`)
-  strictly adhering to UTC `yyyy-MM-dd'T'HH:mm:ss'Z'` format (`support_python.dates`).
+  in UTC `yyyy-MM-dd'T'HH:mm:ss'Z'` format (`support_python.dates`); `format_datetime(..., millis=True)` adds `.SSS`.
+  Parsing also accepts 1 to 6 fractional digits and `+HH:MM`/`-HH:MM` offsets, converting to UTC, per the
+  [REST API Guidelines](https://github.com/gpellicciotta/dev-guidelines/blob/main/guidelines/rest-api-guidelines.md#dates-and-times).
+- Provide `YYYY-MM-DD` date-only parsing and formatting (`parse_date`, `format_date`) in `support_python.dates`.
 
 ### Cryptography
 - Provide deterministic password hash computation matching service authentication standards (`get_standard_password_hash`)

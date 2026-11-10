@@ -215,6 +215,16 @@ class LogEntryTests(unittest.TestCase):
         self.assertEqual(entry.message, "Rate limit reached")
         self.assertEqual(entry.timestamp, datetime(2026, 9, 18, 14, 5, 0, tzinfo=timezone.utc))
 
+    def test_log_entry_from_wire_millisecond_timestamp(self) -> None:
+        entry = LogEntry.from_wire({"message": "Edited", "level": "INFO", "timestamp": "2026-11-06T10:15:30.123Z"})
+        self.assertEqual(entry.timestamp, datetime(2026, 11, 6, 10, 15, 30, 123000, tzinfo=timezone.utc))
+        self.assertEqual(entry.time, "2026-11-06T10:15:30.123Z")
+
+    def test_log_entry_from_wire_out_of_range_timestamp_keeps_raw_time(self) -> None:
+        entry = LogEntry.from_wire({"message": "Edge", "timestamp": "0001-01-01T00:00:00+01:00"})
+        self.assertIsNone(entry.timestamp)
+        self.assertEqual(entry.time, "0001-01-01T00:00:00+01:00")
+
     def test_log_entry_from_wire_arbitrary_time_string(self) -> None:
         data = {
             "message": "Custom time format",

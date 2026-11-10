@@ -55,14 +55,23 @@ except ApiError as e:
 
 ## Models and wire helpers
 `support_python.dates` provides wire datetime serialization and parsing.
+`parse_datetime` accepts `Z` instants with up to 6 fractional digits and `+HH:MM`/`-HH:MM` offsets, always returning UTC.
+`parse_date` and `format_date` handle `YYYY-MM-DD` date-only values:
 `support_python.models` provides kebab-case enum converters and metadata models for REST client libraries:
 
 ```python
-from support_python import ApiInfo, ApiRoute, ServerStatus, WireEnum, format_datetime, parse_datetime
+from support_python import ApiInfo, ApiRoute, ServerStatus, WireEnum, format_date, format_datetime, parse_date, parse_datetime
 
 # Wire datetime helpers (UTC yyyy-MM-dd'T'HH:mm:ss'Z')
 parsed_dt = parse_datetime("2026-09-18T14:00:00Z")
 wire_date = format_datetime(parsed_dt)
+edited = parse_datetime("2026-11-06T10:15:30.123Z")  # milliseconds are kept
+format_datetime(edited, millis=True)  # "2026-11-06T10:15:30.123Z"
+parse_datetime("2026-11-08T18:00:00+01:00")  # 2026-11-08 17:00:00+00:00
+
+# Date-only helpers (YYYY-MM-DD)
+due = parse_date("2026-11-04")  # datetime.date(2026, 11, 4)
+format_date(due)  # "2026-11-04"
 
 
 # Base enum mapping to kebab-case wire strings
