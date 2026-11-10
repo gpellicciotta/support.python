@@ -13,8 +13,10 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1355.8, input: 503910, output: 65250, cache_read: 12716666}
+  review: {turns: 4, duration_s: 1128.2, input: 52, output: 12750, cache_read: 1220160, cache_write: 98182}
 review_status: pending
 review_round: 1
+work_duration: 1262.1
 ---
 # T0030: Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json
 
