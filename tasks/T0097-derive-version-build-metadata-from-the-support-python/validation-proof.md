@@ -55,9 +55,9 @@ Exit code: 0
 platform win32 -- Python 3.12.8, pytest-9.2.0, pluggy-1.7.0
 rootdir: C:\Dev-Projects\support.python\.plan\work\T0097-derive-version-build-metadata-from-the-support-python
 configfile: pyproject.toml
-collected 35 items
+collected 36 items
 
-tests\test_cli.py ...................................                    [100%]
+tests\test_cli.py ....................................                   [100%]
 
-============================= 35 passed in 34.83s =============================
+============================= 36 passed in 37.18s =============================
 ```

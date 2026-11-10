@@ -6,9 +6,10 @@
 
 ### Tests
 - Unit: `resolve_build_metadata` extracts short commit hash from distribution install metadata (`direct_url.json`).
-- Unit: `resolve_build_metadata` returns `unknown` when `support_python` is located inside an enclosing foreign Git repository.
-- Integration: a test installing into a venv inside a foreign Git repository shows no foreign hash for `agent-files version` and `--version`.
+- Unit: `resolve_build_metadata` keeps consumer repository's own hash when running from consumer repo root containing a `.venv`.
+- Unit: `resolve_build_metadata` returns the checkout hash for source or editable checkouts of `support.python`.
+- Integration: a test installing a wheel into a venv inside a foreign Git repository shows no foreign hash for `agent-files version` and `--version`.
 
 Completion check: `python -m pytest tests/test_cli.py` passes.
 
-Size estimate: 4 files, 80 lines
+Size estimate: 4 files, 175 lines

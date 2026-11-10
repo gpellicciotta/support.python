@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 2561.8, input: 1509646, output: 191684, cache_read: 29324806}
-review_status: pending
+  review: {turns: 2, duration_s: 617.8, input: 52, output: 11932, cache_read: 1080768, cache_write: 70490}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1613.2
 ---
 # T0097: Derive version build metadata from the support.python checkout, not an enclosing repository
 
@@ -47,4 +50,14 @@ Completion check: a test installing into a venv inside a foreign Git repository 
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude: The stated goal is met.
+  - Findings: [review-findings-1.md](T0097-derive-version-build-metadata-from-the-support-python/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Addressed review round 1 rework preserving consumer repository build metadata.
+
+- [2026-11-10] **[Verify]**
+  Verified 36 tests passing including consumer and source checkout unit tests.
 
