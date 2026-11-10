@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [x] T0062 Allow up to two trailing spaces in lint-markdown MD011, so Markdown hard line breaks pass and fix keeps them.
-- [~] T0060 [owner: @claude-code] Provide a reusable settings resolver and config command group in support_python, per the configuration guidelines.
+- [x] T0060 Provide a reusable settings resolver and config command group in support_python, per the configuration guidelines.
 - [x] T0057 Use kebab-case configuration keys in all tools, still accepting snake_case keys, per the configuration guidelines.
 
 ---
