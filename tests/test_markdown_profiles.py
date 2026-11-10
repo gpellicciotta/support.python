@@ -244,7 +244,7 @@ def test_default_vs_dev_guidelines_profile_behavior_and_t0014_parity(tmp_path: P
     assert code_cfg_def == 0
     assert "MD015" not in out_cfg_def.getvalue()
 
-    # End-to-end CLI parity with .markdown-lint.json set to dev-guidelines
+    # End-to-end CLI parity with legacy .markdown-lint.json set to dev-guidelines
     cfg_path.write_text(json.dumps({"profile": "dev-guidelines"}), encoding="utf-8")
     out, err = io.StringIO(), io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
@@ -252,3 +252,23 @@ def test_default_vs_dev_guidelines_profile_behavior_and_t0014_parity(tmp_path: P
     assert code == 1
     assert "MD015 [no-blank-line-after-subheading]" in out.getvalue()
     assert "T0050-old-task.md" not in out.getvalue()
+
+
+def test_config_filename_constants_and_load_profile_fallback(tmp_path: Path) -> None:
+    """Verify DEFAULT_CONFIG_FILENAME is .lint-markdown.json and LEGACY_CONFIG_FILENAME is .markdown-lint.json."""
+    from support_python.markdown import profiles
+
+    assert profiles.DEFAULT_CONFIG_FILENAME == ".lint-markdown.json"
+    assert getattr(profiles, "LEGACY_CONFIG_FILENAME", None) == ".markdown-lint.json"
+
+    # Directory lookup with only legacy file
+    legacy_file = tmp_path / ".markdown-lint.json"
+    legacy_file.write_text(json.dumps({"disable": ["MD018"]}), encoding="utf-8")
+    prof_leg = load_profile(tmp_path)
+    assert "MD018" not in prof_leg.enabled_rules
+
+    # Directory lookup when both exist: .lint-markdown.json wins
+    new_file = tmp_path / ".lint-markdown.json"
+    new_file.write_text(json.dumps({"profile": "dev-guidelines"}), encoding="utf-8")
+    prof_both = load_profile(tmp_path)
+    assert prof_both == DEV_GUIDELINES_PROFILE

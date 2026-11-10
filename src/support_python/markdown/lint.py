@@ -82,6 +82,24 @@ class LintIssue:
                 pass
         return f"{path_str}:{self.line_number}:{self.column_number}: {self.rule_id} [{self.rule_name}] {self.message}"
 
+    def to_dict(self, relative_to: Optional[Path] = None) -> dict[str, object]:
+        """Serialize this issue as a JSON-compatible dictionary."""
+        path_str = str(self.file_path)
+        if relative_to:
+            try:
+                path_str = str(self.file_path.relative_to(relative_to))
+            except ValueError:
+                pass
+        return {
+            "path": path_str,
+            "line": self.line_number,
+            "column": self.column_number,
+            "rule_id": self.rule_id,
+            "rule_name": self.rule_name,
+            "message": self.message,
+            "fixable": self.fixable,
+        }
+
 
 def normalize_alignment(align: Optional[str]) -> str:
     """Normalize alignment specifier to 'left', 'center', or 'right'."""

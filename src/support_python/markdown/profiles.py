@@ -10,7 +10,8 @@ from typing import Any, Iterable
 from support_python.markdown.registry import RuleRegistry
 from support_python.markdown.rules import DEFAULT_REGISTRY
 
-DEFAULT_CONFIG_FILENAME = ".markdown-lint.json"
+DEFAULT_CONFIG_FILENAME = ".lint-markdown.json"
+LEGACY_CONFIG_FILENAME = ".markdown-lint.json"
 
 ALL_RULE_IDS: frozenset[str] = frozenset(DEFAULT_REGISTRY.rule_ids())
 GENERIC_RULE_IDS: frozenset[str] = frozenset(rid for rid in ALL_RULE_IDS if rid != "MD015")
@@ -85,13 +86,24 @@ def get_profile(name: str, registry: RuleRegistry | None = None) -> LintProfile:
     return base
 
 
+def _resolve_dir_config_file(directory: Path) -> Path | None:
+    """Find '.lint-markdown.json' or fallback '.markdown-lint.json' inside directory."""
+    primary = directory / DEFAULT_CONFIG_FILENAME
+    if primary.is_file():
+        return primary
+    legacy = directory / LEGACY_CONFIG_FILENAME
+    if legacy.is_file():
+        return legacy
+    return None
+
+
 def load_profile(
     config_path: Path | str | None = None,
     *,
     profile: str | LintProfile | None = None,
     registry: RuleRegistry | None = None,
 ) -> LintProfile:
-    """Load and validate a LintProfile from a '.markdown-lint.json' path or built-in profile name."""
+    """Load and validate a LintProfile from a '.lint-markdown.json' path or built-in profile name."""
     reg = registry if registry is not None else DEFAULT_REGISTRY
 
     if isinstance(profile, LintProfile):
@@ -112,11 +124,9 @@ def load_profile(
     target: Path | None = None
     if config_path is not None:
         candidate = Path(config_path).expanduser()
-        target = candidate / DEFAULT_CONFIG_FILENAME if candidate.is_dir() else candidate
+        target = (_resolve_dir_config_file(candidate) or (candidate / DEFAULT_CONFIG_FILENAME)) if candidate.is_dir() else candidate
     elif profile is None:
-        cwd_candidate = Path.cwd() / DEFAULT_CONFIG_FILENAME
-        if cwd_candidate.is_file():
-            target = cwd_candidate
+        target = _resolve_dir_config_file(Path.cwd())
 
     if target is None or not target.exists():
         return base
@@ -184,6 +194,7 @@ __all__ = [
     "DEFAULT_PROFILE",
     "DEV_GUIDELINES_PROFILE",
     "GENERIC_RULE_IDS",
+    "LEGACY_CONFIG_FILENAME",
     "LintProfile",
     "PROFILES",
     "get_profile",

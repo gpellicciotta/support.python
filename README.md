@@ -516,9 +516,10 @@ issues = check_table_alignment(table)
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
 
 ## Markdown linter
-`support_python.markdown` ([lint.py](src/support_python/markdown/lint.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provides `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` (also re-exported from `support_python`), with the `lint-markdown` CLI in [lint_markdown.py](src/support_python/tools/lint_markdown.py) (see [lint-markdown.md](docs/tools/lint-markdown.md)):
+`support_python.markdown` ([lint.py](src/support_python/markdown/lint.py), [registry.py](src/support_python/markdown/registry.py), [rules.py](src/support_python/markdown/rules.py), [profiles.py](src/support_python/markdown/profiles.py)) provides `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` (also re-exported from `support_python`), with the `lint-markdown` CLI in [lint_markdown.py](src/support_python/tools/lint_markdown.py) reading `.lint-markdown.json` (or legacy `.markdown-lint.json` with a warning; see [lint-markdown.md](docs/tools/lint-markdown.md)):
 ```bash
-lint-markdown [check|fix] [paths...] [--fix] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown check [paths...] [--format text|json] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
+lint-markdown fix [paths...] [--dry-run] [--offline] [--profile PROFILE] [--config PATH] [--rules MD001,MD017] [--exclude GLOB]
 ```
 
 ## Agent files sync

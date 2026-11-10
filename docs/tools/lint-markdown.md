@@ -7,16 +7,20 @@ Automated Markdown style, structure, and link validation implemented in [lint.py
 ## Command-Line Interface
 Run Markdown linting through the `lint-markdown` console script in [lint_markdown.py](../../src/support_python/tools/lint_markdown.py):
 ```bash
-lint-markdown [check|fix] [PATH ...] [--profile PROFILE] [--config PATH] [--rules RULES] [--offline] [--fix]
+lint-markdown check [PATH...] [--format text|json] [--rules IDS] [--profile NAME] [--config PATH] [--offline] [--exclude GLOB]
+lint-markdown fix [PATH...] [--dry-run] [--rules IDS] [--profile NAME] [--config PATH] [--offline] [--exclude GLOB]
+lint-markdown help [--verbose]
+lint-markdown version
 ```
 
-Supported profile and rule options:
+Supported actions, profile, and rule options:
+- `check` lints Markdown files and exits `1` if violations are found; `--format text|json` selects text output or a single JSON object (`{"files_checked": N, "issues": [{"path", "line", "column", "rule_id", "rule_name", "message", "fixable"}]}`) on `stdout`.
+- `fix` rewrites files in-place (`MD005`, `MD010`, `MD011`, `MD012`, `MD015`, `MD016`, `MD017`) and then lints; `--dry-run` lists planned fixes without writing and exits `0`.
 - `--profile PROFILE` selects a built-in profile (`default` or `dev-guidelines`).
-- `--config PATH` loads explicit JSON settings from a `.markdown-lint.json` file.
+- `--config PATH` loads explicit JSON settings from a `.lint-markdown.json` file.
 - `--rules RULES` overrides active rules with a comma-separated list of `MD0xx` codes.
 - `--exclude GLOB` appends path exclusion globs to the profile and default excludes.
 - `--offline` disables external HTTP link checks (`MD018`).
-- `--fix` applies safe formatting fixes in-place (`MD005`, `MD010`, `MD011`, `MD012`, `MD015`, `MD016`, `MD017`).
 
 ---
 
@@ -24,14 +28,14 @@ Supported profile and rule options:
 The profile loader in [profiles.py](../../src/support_python/markdown/profiles.py) provides two built-in profiles:
 - `default` enables generic rules (`MD001` through `MD014` and `MD016` through `MD019`), leaving `MD015` and historical-task exemptions disabled.
 - `dev-guidelines` enables all 19 rules (`MD001` through `MD019`, including `MD015`) and activates `.plan/tasks/` historical-task exemptions.
-- On the CLI, omitting both `--profile` and `.markdown-lint.json` selects `default`.
-- A `.markdown-lint.json` file that omits the `"profile"` key also uses `default` as its base profile.
+- On the CLI, omitting both `--profile` and `.lint-markdown.json` selects `default`.
+- A `.lint-markdown.json` file that omits the `"profile"` key also uses `default` as its base profile.
 - Direct `MarkdownLinter()` calls with `profile=None` enable all 19 rules and historical-task exemptions; pass `profile="default"` for the generic profile.
 
 ---
 
 ## JSON Configuration Schema
-When `--config` is omitted, the CLI discovers `.markdown-lint.json` in the target path or project root, falling back to `default` when absent.
+When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the target path or project root (falling back to legacy `.markdown-lint.json` with a deprecation warning until `v3.0.0`), or falls back to `default` when absent.
 ```json
 {
   "profile": "dev-guidelines",

@@ -55,7 +55,6 @@ class TestCLIAndMain(unittest.TestCase):
             "--rules",
             "--offline",
             "--timeout",
-            "--fix",
             "--log-file",
             "--log-level",
             "Exit codes:",
@@ -63,6 +62,7 @@ class TestCLIAndMain(unittest.TestCase):
         )
         for expected in expected_tokens:
             self.assertIn(expected, out)
+        self.assertNotIn("--fix", out)
 
     def test_help_verbose_adds_action_details_and_rule_catalog(self) -> None:
         _, short_help, _ = run_main(["help"])
@@ -83,6 +83,12 @@ class TestCLIAndMain(unittest.TestCase):
                 self.assertIn(f"Usage:\n  lint-markdown {action}", out)
                 other_action = "fix" if action == "check" else "check"
                 self.assertNotIn(f"Detailed Action Description: {other_action}", out)
+                if action == "check":
+                    self.assertIn("--format", out)
+                    self.assertNotIn("--dry-run", out)
+                else:
+                    self.assertIn("--dry-run", out)
+                    self.assertNotIn("--format", out)
 
     def test_help_subcommand_with_action_argument(self) -> None:
         code, out, err = run_main(["help", "check"])
@@ -132,12 +138,116 @@ class TestCLIAndMain(unittest.TestCase):
             self.assertEqual((code, p.read_bytes()), (0, b"# Title\n\n- Asterisk bullet\n"))
             self.assertIn("Auto-fixed formatting issues in 1 file.", out)
 
-    def test_fix_option_on_check_applies_fixes(self) -> None:
+    def test_fix_flag_is_unknown_option_and_exits_two(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             p = Path(tmp_dir) / "dirty.md"
-            p.write_bytes(b"# Title\n\n* Asterisk bullet \n")
-            code, _, _ = run_main(["check", "--fix", tmp_dir])
-            self.assertEqual((code, p.read_bytes()), (0, b"# Title\n\n- Asterisk bullet\n"))
+            original = b"# Title\n\n* Asterisk bullet \n"
+            p.write_bytes(original)
+            for argv in (["check", "--fix", tmp_dir], ["fix", "--fix", tmp_dir]):
+                code, out, err = run_main(argv)
+                self.assertEqual((code, out, p.read_bytes()), (2, "", original), argv)
+                self.assertTrue(err.startswith(f"{ERROR_INDICATOR} "), err)
+                self.assertIn("--fix", err)
+
+    def test_fix_dry_run_reports_planned_fixes_writes_nothing_and_exits_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            p = Path(tmp_dir) / "dirty.md"
+            original = b"# Title\n\n* Asterisk bullet \n\n### Skipped H3\n"
+            p.write_bytes(original)
+            code, out, err = run_main(["fix", "--dry-run", "--offline", tmp_dir])
+            self.assertEqual(code, 0, err)
+            self.assertEqual(p.read_bytes(), original)
+            self.assertIn("dirty.md", out)
+            self.assertIn("MD005", out)
+            self.assertIn("MD011", out)
+            self.assertNotIn("MD001", out)
+
+    def test_check_format_json_outputs_only_json_on_stdout(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dirty = Path(tmp_dir) / "dirty.md"
+            dirty.write_bytes(b"# Dirty Document\n\n* Asterisk bullet\n\n### Skipped H3\n")
+            code, out, _ = run_main(["check", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual(code, 1)
+            payload = json.loads(out)
+            self.assertEqual(payload["files_checked"], 1)
+            issues = payload["issues"]
+            self.assertEqual(len(issues), 2)
+            expected_keys = {"path", "line", "column", "rule_id", "rule_name", "message", "fixable"}
+            for issue in issues:
+                self.assertEqual(set(issue.keys()), expected_keys)
+                self.assertTrue(issue["path"].endswith("dirty.md"))
+            by_rule = {i["rule_id"]: i for i in issues}
+            self.assertEqual(by_rule["MD005"]["fixable"], True)
+            self.assertEqual(by_rule["MD005"]["line"], 3)
+            self.assertEqual(by_rule["MD005"]["column"], 1)
+            self.assertEqual(by_rule["MD005"]["rule_name"], "dash-bullets")
+            self.assertEqual(by_rule["MD001"]["fixable"], False)
+            self.assertEqual(by_rule["MD001"]["line"], 5)
+
+    def test_check_format_json_clean_directory_outputs_empty_issues_and_exits_zero(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            (Path(tmp_dir) / "clean.md").write_bytes(b"# Clean Document\n\n- Item 1\n")
+            code, out, err = run_main(["check", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual((code, err), (0, ""))
+            payload = json.loads(out)
+            self.assertEqual(payload, {"files_checked": 1, "issues": []})
+
+    def test_check_format_json_error_reports_to_stderr_and_keeps_stdout_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            doc = Path(tmp_dir) / "doc.md"
+            doc.write_bytes(b"# Title\n")
+            with patch.object(MarkdownLinter, "lint_content", side_effect=RuntimeError("boom")):
+                code, out, err = run_main(["check", "--format", "json", "--offline", str(doc)])
+            self.assertEqual((code, out), (1, ""))
+            self.assertIn(f"{ERROR_INDICATOR} Execution error during check: boom", err)
+            self.assertRegex(err, r"\*\*\[ERROR\]\*\* Finished lint-markdown check in \d+\.\ds with status: failed")
+
+    def test_cli_config_discovery_new_name_legacy_warning_and_both_present(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            doc = tmp_root / "doc.md"
+            doc.write_bytes(b"# Title\n\n### Skipped H3\n")
+
+            # Legacy config only: honors config and emits one WARN mentioning rename and v3.0.0
+            legacy_cfg = tmp_root / ".markdown-lint.json"
+            legacy_cfg.write_text(json.dumps({"disable": ["MD001"]}), encoding="utf-8")
+            code_leg, _, err_leg = run_main(["check", "--offline", str(tmp_root)])
+            self.assertEqual(code_leg, 0, err_leg)
+            self.assertIn(format_severity_indicator("WARN"), err_leg)
+            self.assertIn(".markdown-lint.json", err_leg)
+            self.assertIn(".lint-markdown.json", err_leg)
+            self.assertIn("v3.0.0", err_leg)
+
+            # Both present in same directory: new config wins (enables MD001), no legacy warning
+            new_cfg = tmp_root / ".lint-markdown.json"
+            new_cfg.write_text(json.dumps({"rules": ["MD001"]}), encoding="utf-8")
+            code_both, out_both, err_both = run_main(["check", "--offline", str(tmp_root)])
+            self.assertEqual(code_both, 1)
+            self.assertIn("MD001", out_both)
+            self.assertNotIn(".markdown-lint.json", err_both)
+
+            # New config only: honors config without warning
+            legacy_cfg.unlink()
+            new_cfg.write_text(json.dumps({"disable": ["MD001"]}), encoding="utf-8")
+            code_new, _, err_new = run_main(["check", "--offline", str(tmp_root)])
+            self.assertEqual((code_new, err_new), (0, ""))
+
+            # Nearest directory wins: sub/.markdown-lint.json beats parent/.lint-markdown.json with warning
+            (tmp_root / ".git").mkdir()
+            new_cfg.write_text(json.dumps({"disable": ["MD005"]}), encoding="utf-8")
+            sub = tmp_root / "sub"
+            sub.mkdir()
+            (sub / "sub.md").write_bytes(b"# Title\n\n### Skipped H3\n")
+            (sub / ".markdown-lint.json").write_text(json.dumps({"disable": ["MD001"]}), encoding="utf-8")
+            code_sub, _, err_sub = run_main(["check", "--offline", str(sub)])
+            self.assertEqual(code_sub, 0, err_sub)
+            self.assertIn(".markdown-lint.json", err_sub)
 
     def test_offline_flag_in_cli(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -311,6 +421,25 @@ class TestEndToEnd(unittest.TestCase):
             dirty.write_bytes(b"# Title\n\n* Asterisk bullet \n")
             code_fix, _, err_fix = run_main(["fix", "--offline", str(dirty)])
             self.assertEqual((code_fix, dirty.read_bytes()), (0, b"# Title\n\n- Asterisk bullet\n"), err_fix)
+
+    def test_script_entry_point_json_output_and_legacy_config_warning(self) -> None:
+        import json
+
+        res_json = self._run_script("check", "--offline", "--format", "json", "docs")
+        self.assertEqual(res_json.returncode, 0, res_json.stderr)
+        payload = json.loads(res_json.stdout)
+        self.assertGreaterEqual(payload["files_checked"], 1)
+        self.assertEqual(payload["issues"], [])
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            (tmp_root / "doc.md").write_bytes(b"# Title\n\n### Skipped H3\n")
+            (tmp_root / ".markdown-lint.json").write_text(json.dumps({"disable": ["MD001"]}), encoding="utf-8")
+            res_leg = self._run_script("check", "--offline", str(tmp_root))
+            self.assertEqual(res_leg.returncode, 0, res_leg.stderr)
+            self.assertIn(".markdown-lint.json", res_leg.stderr)
+            self.assertIn(".lint-markdown.json", res_leg.stderr)
+            self.assertIn("v3.0.0", res_leg.stderr)
 
 
 if __name__ == "__main__":
