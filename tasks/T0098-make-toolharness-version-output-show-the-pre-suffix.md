@@ -5,12 +5,16 @@ session: antigravity-20261110-089e87
 needs: []
 branch: task/T0098-make-toolharness-version-output-show-the-pre-suffix
 worktree: .plan/work/T0098-make-toolharness-version-output-show-the-pre-suffix
-status: active
+status: completed
 started_at: "2026-11-10T20:34:52Z"
-ended_at: —
+ended_at: "2026-11-10T20:48:08Z"
 review: none
 preview: none
 protocol: adhoc
+usage:
+  worker: {turns: 2, duration_s: 1559.0, input: 1750800, output: 101130, cache_read: 44968850}
+work_duration: 795.9
+completion-commit: 4b44ff918e86f7f17a189d6db4eaaaeee25f1480
 ---
 # T0098: Make ToolHarness version output show the -pre suffix instead of the PEP 440 rc0 form from package metadata
 
@@ -44,4 +48,7 @@ Recommend `get_package_version` for consumer `__version__` values in the `ToolHa
   - Files touched: 4.
   - Lines touched: 69.
   - Reopenings: 0.
+
+- [2026-11-10] **[Complete]**
+  Task completed successfully.
 
