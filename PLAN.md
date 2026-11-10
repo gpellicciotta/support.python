@@ -37,10 +37,10 @@ An overview of all tasks and their planning.
 - [x] T0049 Move the README DevOps helpers section into a docs/tutorials/devops-scripts.md tutorial and link it from the README.
 - [x] T0050 Move the README CLI, logging, script utility, REST client, view capture, and SQL sections into docs/tutorials pages.
 - [x] T0052 Move the README Git, file, locking, process, Markdown, duration, and rate limiter sections into docs/tutorials pages.
-- [ ] T0051 Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
+- [x] T0051 Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
 - [ ] T0053 Share JSON output handling in ToolHarness and CliLogger, and use it in agent-files, lint-markdown, processes, and git-repository-backup.
 
 ---
 
 ## Backlog
-*(Currently no tasks)*
+- [ ] T0054 [protocol: adhoc] Give extract-release-notes, migrate-namespace, reset-history, and install-from-github-release working --help and --version options.
