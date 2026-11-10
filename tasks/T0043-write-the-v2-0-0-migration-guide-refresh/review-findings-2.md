@@ -3,7 +3,7 @@ task: T0043
 round: 2
 verdict: approved
 reviewer: "@claude-2"
-reviewed_at: 2026-11-10T05:07:35Z
+reviewed_at: 2026-11-10T05:11:04Z
 reviewed_commit: "56ea281"
 base_commit: "65b2446"
 branch: task/T0043-write-the-v2-0-0-migration-guide-refresh
