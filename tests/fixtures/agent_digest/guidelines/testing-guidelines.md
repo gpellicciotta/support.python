@@ -4,6 +4,8 @@ skill:
   description: >-
     Standards for automated unit, integration, CLI, and multi-modal UI verification.
     Use when writing tests, verifying bug fixes, running CLI tools, or inspecting user interfaces.
+  references:
+    - references/playwright-recipes.md
 ---
 
 # Testing Guidelines

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -498,7 +499,7 @@ class TestMergedCheckAction(unittest.TestCase):
             self.assertEqual(code, 1)
             self.assertIn("author", err)
             self.assertIn("extra_key", err)
-            self.assertIn("Orphan reference file 'references/orphan.md'", err)
+            self.assertIn("Unlisted file 'references/orphan.md'", err)
 
 
 class TestGenerateAgentDigestCli(unittest.TestCase):
@@ -826,7 +827,14 @@ class TestCheckJsonFormat(unittest.TestCase):
                         "bytes": len(digest_path.read_bytes()),
                         "max_bytes": generate_agent_digest.MAX_DIGEST_BYTES,
                     },
-                    "skills": [{"name": "sample-guidelines", "path": "skills/sample-guidelines/SKILL.md", "status": "up-to-date"}],
+                    "skills": [
+                        {
+                            "name": "sample-guidelines",
+                            "path": "skills/sample-guidelines/SKILL.md",
+                            "status": "up-to-date",
+                            "files": [],
+                        }
+                    ],
                     "issues": [],
                 },
             )
@@ -878,6 +886,211 @@ class TestCheckJsonFormat(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertNotIn("{", out)
             self.assertIn("is up to date", out)
+
+
+REFERENCE_GUIDELINE = """---
+skill:
+  name: ref-guidelines
+  description: Reference guidelines.
+  references:
+    - references/recipes.md
+---
+
+# Ref Guidelines
+
+- Rule.
+- See [Recipes](references/recipes.md).
+"""
+
+REFERENCE_FILE = """# Recipes
+
+- Back to [Ref](../ref-guidelines.md).
+- Sibling [General](../general-guidelines.md).
+"""
+
+
+def make_reference_sources(root: Path) -> tuple[Path, Path, Path]:
+    """Create a guidelines directory whose skill lists one Markdown reference."""
+    src_dir = root / "guidelines"
+    (src_dir / "references").mkdir(parents=True)
+    (src_dir / "general-guidelines.md").write_text("# General\n\n- Core rule.\n", encoding="utf-8")
+    (src_dir / "ref-guidelines.md").write_text(REFERENCE_GUIDELINE, encoding="utf-8")
+    (src_dir / "references" / "recipes.md").write_text(REFERENCE_FILE, encoding="utf-8")
+    return src_dir, src_dir / "agent-digest.md", root / "skills"
+
+
+def display_rel(root: Path, path: Path) -> str:
+    """Return path relative to the temp root, matching display_path output."""
+    return generate_agent_digest.display_path(path, generate_agent_digest.find_project_root(root / "guidelines"))
+
+
+class TestSkillReferences(unittest.TestCase):
+    def _args(self, action: str, src_dir: Path, digest_path: Path, skills_dir: Path, *extra: str) -> list[str]:
+        return [action, str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), *extra]
+
+    def _fm(self, *refs: str) -> str:
+        items = "".join(f"    - {ref}\n" for ref in refs)
+        return f"---\nskill:\n  name: s\n  description: D.\n  references:\n{items}---\n# S\n\n- Rule.\n"
+
+    def test_parse_accepts_references_list(self) -> None:
+        fm, _ = generate_agent_digest.split_frontmatter(self._fm("references/a.md", "b.md"))
+        self.assertEqual(fm["skill"]["references"], ["references/a.md", "b.md"])
+
+    def test_invalid_reference_entries_are_rejected(self) -> None:
+        bad = ["/abs.md", "C:/abs.md", "a\\b.md", "../x.md", "a/../../x.md", "SKILL.md", "./SKILL.md", ""]
+        for entry in bad:
+            with self.subTest(entry=entry), tempfile.TemporaryDirectory() as tmpdir:
+                src = Path(tmpdir) / "g"
+                src.mkdir()
+                (src / "s.md").write_text(self._fm(f"'{entry}'"), encoding="utf-8")
+                with self.assertRaises(generate_agent_digest.FrontmatterError) as ctx:
+                    generate_agent_digest.collect_input_files([src])
+                self.assertIn("s.md", str(ctx.exception))
+
+    def test_duplicate_reference_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src = Path(tmpdir) / "g"
+            src.mkdir()
+            (src / "s.md").write_text(self._fm("a.md", "./a.md"), encoding="utf-8")
+            with self.assertRaises(generate_agent_digest.FrontmatterError):
+                generate_agent_digest.collect_input_files([src])
+
+    def test_referenced_files_are_excluded_from_collection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir, _, _ = make_reference_sources(Path(tmpdir))
+            (src_dir / "references" / "unlisted.md").write_text("# Unlisted\n", encoding="utf-8")
+            names = [p.name for p in generate_agent_digest.collect_input_files([src_dir])]
+            self.assertNotIn("recipes.md", names)
+            self.assertIn("unlisted.md", names)
+            self.assertIn("ref-guidelines.md", names)
+
+    def test_rewrites_links_in_copied_markdown_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            code, _, err = run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 0, err)
+            copied = (skills_dir / "ref-guidelines" / "references" / "recipes.md").read_text(encoding="utf-8")
+            self.assertIn("- Back to the `ref-guidelines` skill.", copied)
+            self.assertIn("- Sibling General.", copied)
+            skill = (skills_dir / "ref-guidelines" / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("[Recipes](references/recipes.md)", skill)
+
+    def test_links_between_references_are_skill_relative(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            guide = (src_dir / "ref-guidelines.md").read_text(encoding="utf-8")
+            (src_dir / "ref-guidelines.md").write_text(
+                guide.replace("    - references/recipes.md\n", "    - references/recipes.md\n    - references/other.md\n"),
+                encoding="utf-8",
+            )
+            (src_dir / "references" / "other.md").write_text("# Other\n", encoding="utf-8")
+            (src_dir / "references" / "recipes.md").write_text("# R\n\n- See [Other](other.md).\n", encoding="utf-8")
+            self.assertEqual(run_main(self._args("generate", src_dir, digest_path, skills_dir))[0], 0)
+            copied = (skills_dir / "ref-guidelines" / "references" / "recipes.md").read_text(encoding="utf-8")
+            self.assertIn("[Other](other.md)", copied)
+
+    def test_generate_and_check_round_trip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            self.assertEqual(run_main(self._args("generate", src_dir, digest_path, skills_dir))[0], 0)
+            self.assertEqual(run_main(self._args("check", src_dir, digest_path, skills_dir))[0], 0)
+            ref = src_dir / "references" / "recipes.md"
+            ref.write_text(REFERENCE_FILE + "- Extra.\n", encoding="utf-8")
+            code, _, err = run_main(self._args("check", src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 1)
+            self.assertIn("references/recipes.md", err)
+            self.assertEqual(run_main(self._args("generate", src_dir, digest_path, skills_dir))[0], 0)
+            self.assertEqual(run_main(self._args("check", src_dir, digest_path, skills_dir))[0], 0)
+
+    def test_non_markdown_reference_is_copied_byte_for_byte(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            data = b"\x00\x01\r\n\xff[x](../y.md)"
+            (src_dir / "references" / "asset.bin").write_bytes(data)
+            guide = (src_dir / "ref-guidelines.md").read_text(encoding="utf-8")
+            (src_dir / "ref-guidelines.md").write_text(
+                guide.replace("    - references/recipes.md\n", "    - references/recipes.md\n    - references/asset.bin\n")
+                + "- See [Asset](references/asset.bin).\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(run_main(self._args("generate", src_dir, digest_path, skills_dir))[0], 0)
+            self.assertEqual((skills_dir / "ref-guidelines" / "references" / "asset.bin").read_bytes(), data)
+            self.assertEqual(run_main(self._args("check", src_dir, digest_path, skills_dir))[0], 0)
+
+    def test_generate_fails_for_missing_reference_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            (src_dir / "references" / "recipes.md").unlink()
+            code, _, err = run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 1)
+            self.assertIn("references/recipes.md", err)
+            self.assertFalse(skills_dir.exists())
+
+    def test_check_reports_missing_stale_and_unlisted_reference_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            skill_dir = skills_dir / "ref-guidelines"
+            copy = skill_dir / "references" / "recipes.md"
+
+            copy.unlink()
+            code, out, _ = run_main(self._args("check", src_dir, digest_path, skills_dir, "--format", "json"))
+            self.assertEqual(code, 1)
+            doc = json.loads(out)
+            self.assertIn("missing-skill-file", [i["check"] for i in doc["issues"]])
+            self.assertEqual(doc["skills"][0]["files"], [{"path": f"{display_rel(root, copy)}", "status": "missing"}])
+
+            copy.write_text("changed\n", encoding="utf-8")
+            code, out, _ = run_main(self._args("check", src_dir, digest_path, skills_dir, "--format", "json"))
+            doc = json.loads(out)
+            self.assertIn("stale-skill-file", [i["check"] for i in doc["issues"]])
+            self.assertEqual(doc["skills"][0]["files"][0]["status"], "stale")
+
+            run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            (skill_dir / "references" / "extra.md").write_text("# Extra\n", encoding="utf-8")
+            code, out, _ = run_main(self._args("check", src_dir, digest_path, skills_dir, "--format", "json"))
+            self.assertEqual(code, 1)
+            self.assertIn("unlisted-file", [i["check"] for i in json.loads(out)["issues"]])
+
+    def test_check_reports_missing_reference_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            (src_dir / "references" / "recipes.md").unlink()
+            code, out, _ = run_main(self._args("check", src_dir, digest_path, skills_dir, "--format", "json"))
+            self.assertEqual(code, 1)
+            self.assertIn("missing-reference", [i["check"] for i in json.loads(out)["issues"]])
+
+    def test_check_reports_listed_reference_not_linked_from_skill(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            guide = (src_dir / "ref-guidelines.md").read_text(encoding="utf-8")
+            guide = guide.replace("- See [Recipes](references/recipes.md).\n", "")
+            (src_dir / "ref-guidelines.md").write_text(guide, encoding="utf-8")
+            run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            code, _, err = run_main(self._args("check", src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 1)
+            self.assertIn("Orphan reference file 'references/recipes.md'", err)
+
+    def test_dry_run_writes_nothing_and_reports_would_create(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            code, out, err = run_main(self._args("generate", src_dir, digest_path, skills_dir, "--dry-run"))
+            self.assertEqual(code, 0, err)
+            self.assertRegex(out, r"Would create \S*references/recipes\.md")
+            self.assertFalse(skills_dir.exists())
+            run_main(self._args("generate", src_dir, digest_path, skills_dir))
+            _, out, _ = run_main(self._args("generate", src_dir, digest_path, skills_dir, "--dry-run"))
+            self.assertRegex(out, r"\S*references/recipes\.md is up to date\.")
 
 
 if __name__ == "__main__":

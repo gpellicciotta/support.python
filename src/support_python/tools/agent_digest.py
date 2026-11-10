@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -151,6 +152,40 @@ def split_frontmatter(content: str) -> Tuple[Dict | None, str]:
     return data if data else None, body
 
 
+def parse_skill_references(skill_meta: Dict, filename: str) -> List[str]:
+    """Validate and return the normalized POSIX paths listed under ``skill.references``.
+
+    Raises:
+        FrontmatterError: When the value is not a list or an entry is empty, absolute, uses backslashes,
+            escapes the guideline directory, repeats another entry, or names SKILL.md.
+    """
+    raw = skill_meta.get("references", [])
+    if not isinstance(raw, list):
+        raise FrontmatterError(f"Invalid 'skill.references' in {filename}: expected a list of paths")
+    result: List[str] = []
+    for entry in raw:
+        if not entry:
+            raise FrontmatterError(f"Empty reference path in {filename}")
+        if "\\" in entry:
+            raise FrontmatterError(f"Reference path '{entry}' in {filename} must use forward slashes")
+        if entry.startswith("/") or re.match(r"^[A-Za-z]:", entry):
+            raise FrontmatterError(f"Reference path '{entry}' in {filename} must be relative")
+        normalized = posixpath.normpath(entry)
+        if normalized == ".." or normalized.startswith("../"):
+            raise FrontmatterError(f"Reference path '{entry}' in {filename} escapes the guideline directory")
+        if normalized.lower() == "skill.md":
+            raise FrontmatterError(f"Reference path '{entry}' in {filename} must not be SKILL.md")
+        if normalized in result:
+            raise FrontmatterError(f"Duplicate reference path '{entry}' in {filename}")
+        result.append(normalized)
+    return result
+
+
+def skill_reference_entries(filepath: Path, skill_meta: Dict) -> List[Tuple[str, Path]]:
+    """Return (skill-relative POSIX path, resolved source path) for each reference of a skill guideline."""
+    return [(rel, (filepath.parent / rel).resolve()) for rel in parse_skill_references(skill_meta, filepath.name)]
+
+
 def collect_input_files(
     paths: Sequence[Path | str],
     digest_path: Path | str = DEFAULT_DIGEST_PATH,
@@ -201,14 +236,27 @@ def collect_input_files(
             for _, resolved_file in rel_files:
                 _add_candidate(resolved_file)
 
+    parsed: Dict[Path, Dict | None] = {}
+    errors: Dict[Path, str] = {}
+    referenced: Set[Path] = set()
+    for filepath in candidates:
+        try:
+            fm, _ = split_frontmatter(filepath.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            errors[filepath] = f"Invalid front-matter in {filepath.name}: {exc}"
+            continue
+        parsed[filepath] = fm
+        if fm and isinstance(fm.get("skill"), dict):
+            referenced.update(source for _, source in skill_reference_entries(filepath, fm["skill"]))
+
     indexed: List[Tuple[int, int, Path]] = []
     unindexed: List[Path] = []
     for pos, filepath in enumerate(candidates):
-        content = filepath.read_text(encoding="utf-8")
-        try:
-            fm, _ = split_frontmatter(content)
-        except ValueError as exc:
-            raise FrontmatterError(f"Invalid front-matter in {filepath.name}: {exc}") from exc
+        if filepath in referenced:
+            continue
+        if filepath in errors:
+            raise FrontmatterError(errors[filepath])
+        fm = parsed[filepath]
         if fm and "index" in fm:
             idx_val = fm["index"]
             if isinstance(idx_val, bool) or not isinstance(idx_val, int):
@@ -280,8 +328,14 @@ def rewrite_markdown_links(
     digest_files: Set[Path] | None = None,
     link_base: str | None = None,
     repo_root: Path | None = None,
+    own_references: Dict[Path, str] | None = None,
+    current_dir_in_skill: str = "",
 ) -> str:
-    """Apply link rewrite rules to Markdown text outside of code fences."""
+    """Apply link rewrite rules to Markdown text outside of code fences.
+
+    ``own_references`` maps resolved source paths of the skill's listed references to their skill-relative paths;
+    ``current_dir_in_skill`` is the directory of the rewritten file inside the skill, used to relativize links.
+    """
     base_dir = (source_dir or Path.cwd()).resolve()
     skills_dir = (skills_root or DEFAULT_SKILLS_DIR).resolve()
     resolved_repo_root = (repo_root or find_project_root(base_dir)).resolve()
@@ -327,18 +381,32 @@ def rewrite_markdown_links(
             if raw_target.startswith(("http://", "https://", "mailto:", "#")):
                 return match.group(0)
 
+            def skill_rel(target: str) -> str:
+                if not current_dir_in_skill:
+                    return target
+                return posixpath.relpath(target, current_dir_in_skill)
+
+            # Rule 0: Link to a listed reference of the same skill, copied beside SKILL.md
+            if own_skill_name and own_references:
+                try:
+                    listed = own_references.get((base_dir / url_path).resolve())
+                except (ValueError, OSError):
+                    listed = None
+                if listed is not None:
+                    return f"[{link_text}]({skill_rel(listed)}{fragment_suffix})"
+
             # Rule 1: Link to a file inside the same skill directory
             if own_skill_name:
                 for prefix in (f"../skills/{own_skill_name}/", f"../{skills_dir.name}/{own_skill_name}/"):
                     if url_path.startswith(prefix):
-                        rel_target = url_path[len(prefix) :]
+                        rel_target = skill_rel(url_path[len(prefix) :])
                         return f"[{link_text}]({rel_target}{fragment_suffix})"
 
                 own_skill_dir = skills_dir / own_skill_name
                 try:
                     resolved = (base_dir / url_path).resolve()
                     if own_skill_dir.exists() and resolved.is_relative_to(own_skill_dir.resolve()):
-                        rel_target = resolved.relative_to(own_skill_dir.resolve()).as_posix()
+                        rel_target = skill_rel(resolved.relative_to(own_skill_dir.resolve()).as_posix())
                         return f"[{link_text}]({rel_target}{fragment_suffix})"
                 except (ValueError, OSError):
                     pass
@@ -483,6 +551,7 @@ def build_skill_content(
     digest_files: Set[Path] | None = None,
     link_base: str | None = None,
     repo_root: Path | None = None,
+    own_references: Dict[Path, str] | None = None,
 ) -> str:
     """Construct SKILL.md content from frontmatter metadata and guideline body."""
     collected_lines: List[str] = []
@@ -501,6 +570,7 @@ def build_skill_content(
         digest_files=digest_files,
         link_base=link_base,
         repo_root=repo_root,
+        own_references=own_references,
     )
 
     cleaned = clean_markdown_lines(rewritten_body.splitlines())
@@ -543,8 +613,66 @@ def build_skills(
                     digest_files=digest_files,
                     link_base=effective_link_base,
                     repo_root=resolved_repo_root,
+                    own_references={source: rel for rel, source in skill_reference_entries(filepath, skill_meta)},
                 )
     return skills
+
+
+def build_skill_references(
+    paths: Sequence[Path | str],
+    digest_path: Path | str = DEFAULT_DIGEST_PATH,
+    skills_dir: Path | str = DEFAULT_SKILLS_DIR,
+    link_base: str | None = None,
+    repo_root: Path | None = None,
+) -> Tuple[Dict[str, Dict[str, bytes]], List[Tuple[Path, str]]]:
+    """Build the expected reference file copies of every skill.
+
+    Returns:
+        A mapping of skill_name -> {skill-relative POSIX path: expected bytes}, and the (guideline, path) pairs of
+        listed references whose source file does not exist. Markdown references get SKILL.md link rewriting;
+        every other file type is copied byte for byte.
+    """
+    input_files = collect_input_files(paths, digest_path=digest_path, skills_dir=skills_dir)
+    resolved_repo_root = (repo_root or find_project_root(Path(paths[0]))).resolve()
+    effective_link_base = link_base if link_base is not None else (derive_link_base(resolved_repo_root) or "")
+    skill_by_path, skill_by_name, digest_files = _classify_inputs(input_files)
+
+    copies: Dict[str, Dict[str, bytes]] = {}
+    missing: List[Tuple[Path, str]] = []
+    for filepath in input_files:
+        fm, _ = split_frontmatter(filepath.read_text(encoding="utf-8"))
+        if not (fm and isinstance(fm.get("skill"), dict) and fm["skill"].get("name")):
+            continue
+        name = fm["skill"]["name"]
+        entries = skill_reference_entries(filepath, fm["skill"])
+        own_references = {source: rel for rel, source in entries}
+        files: Dict[str, bytes] = {}
+        for rel, source in entries:
+            if not source.is_file():
+                missing.append((filepath, rel))
+                continue
+            data = source.read_bytes()
+            if rel.lower().endswith(".md"):
+                text = data.decode("utf-8").replace("\r\n", "\n")
+                rewritten = rewrite_markdown_links(
+                    text,
+                    own_skill_name=name,
+                    source_dir=source.parent,
+                    skills_root=Path(skills_dir),
+                    skill_names_by_path=skill_by_path,
+                    skill_names_by_name=skill_by_name,
+                    digest_files=digest_files,
+                    link_base=effective_link_base,
+                    repo_root=resolved_repo_root,
+                    own_references=own_references,
+                    current_dir_in_skill=posixpath.dirname(rel),
+                )
+                if text.endswith("\n"):
+                    rewritten += "\n"
+                data = rewritten.encode("utf-8")
+            files[rel] = data
+        copies[name] = files
+    return copies, missing
 
 
 def build_digest(
@@ -686,12 +814,24 @@ def format_violations(violations: List[Tuple[int, int, str]], scope: str) -> str
     return "\n".join(lines)
 
 
-def report_planned_write(path: Path, content: str, detail: str, logger: CliLogger, repo_root: Path | None = None) -> None:
+CRLF = bytes([13, 10])
+LF = bytes([10])
+
+
+def same_file_content(path: Path, expected: bytes) -> bool:
+    """Return whether ``path`` holds ``expected``; Markdown files compare equal across CRLF and LF checkouts."""
+    current = path.read_bytes()
+    if path.suffix.lower() == ".md":
+        return current.replace(CRLF, LF) == expected.replace(CRLF, LF)
+    return current == expected
+
+
+def report_planned_write(path: Path, content: str | bytes, detail: str, logger: CliLogger, repo_root: Path | None = None) -> None:
     """Log whether a dry run would create, update, or leave ``path`` unchanged when writing ``content``."""
     shown = display_path(path, repo_root)
     if not path.exists():
         logger.info(f"Would create {shown} ({detail}).")
-    elif path.read_text(encoding="utf-8") != content:
+    elif (not same_file_content(path, content)) if isinstance(content, bytes) else (path.read_text(encoding="utf-8") != content):
         logger.info(f"Would update {shown} ({detail}).")
     else:
         logger.info(f"{shown} is up to date.")
@@ -731,6 +871,13 @@ def action_generate(
         f"and skills to {display_path(skills_out, repo_root)} (max_words={max_words}, max_bytes={max_bytes})."
     )
 
+    reference_copies, missing_references = build_skill_references(
+        input_files, digest_path=digest_out, skills_dir=skills_out, link_base=link_base, repo_root=repo_root
+    )
+    if missing_references:
+        for guideline, rel in missing_references:
+            logger.error(f"Reference '{rel}' listed in {guideline.name} does not exist.")
+        return 1
     skills = build_skills(
         input_files,
         digest_path=digest_out,
@@ -743,10 +890,18 @@ def action_generate(
         skill_path = skill_dir / "SKILL.md"
         if dry_run:
             report_planned_write(skill_path, skill_content, f"{len(skill_content.splitlines())} lines", logger, repo_root)
-            continue
-        skill_dir.mkdir(parents=True, exist_ok=True)
-        skill_path.write_text(skill_content, encoding="utf-8", newline="\n")
-        logger.info(f"Generated {display_path(skill_path, repo_root)} ({len(skill_content.splitlines())} lines).")
+        else:
+            skill_dir.mkdir(parents=True, exist_ok=True)
+            skill_path.write_text(skill_content, encoding="utf-8", newline="\n")
+            logger.info(f"Generated {display_path(skill_path, repo_root)} ({len(skill_content.splitlines())} lines).")
+        for rel, data in sorted(reference_copies.get(skill_name, {}).items()):
+            target = skill_dir / rel
+            if dry_run:
+                report_planned_write(target, data, f"{len(data)} bytes", logger, repo_root)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            logger.info(f"Generated {display_path(target, repo_root)} ({len(data)} bytes).")
 
     digest_text = build_digest(
         input_files,
@@ -819,7 +974,7 @@ def action_check(
 
     # 1. Front-matter validation across all collected input files
     allowed_top_keys = {"index", "skill"}
-    allowed_skill_keys = {"name", "description"}
+    allowed_skill_keys = {"name", "description", "references"}
     for filepath in input_files:
         try:
             content = filepath.read_text(encoding="utf-8")
@@ -889,6 +1044,17 @@ def action_check(
         link_base=link_base,
         repo_root=repo_root,
     )
+    reference_copies, missing_references = build_skill_references(
+        input_files, digest_path=digest_out, skills_dir=skills_out, link_base=link_base, repo_root=repo_root
+    )
+    for guideline, rel in missing_references:
+        fail(
+            "missing-reference",
+            guideline,
+            f"Reference '{rel}' listed in {guideline.name} does not exist.",
+            repo_root,
+        )
+        has_error = True
     logger.debug_msg(f"Comparing {len(skills)} derived skill(s) under {display_path(skills_out, repo_root)}.")
     stale_skills = 0
     skill_statuses: List[Dict[str, Any]] = []
@@ -906,7 +1072,32 @@ def action_check(
                 report = format_stale_report(skill_path, current_skill, expected_skill, max_lines=30, repo_root=repo_root)
                 fail("stale-skill", skill_path, report, repo_root)
                 stale_skills += 1
-        skill_statuses.append({"name": skill_name, "path": display_path(skill_path, repo_root), "status": status})
+        file_statuses: List[Dict[str, str]] = []
+        for rel, expected_data in sorted(reference_copies.get(skill_name, {}).items()):
+            ref_path = skills_out / skill_name / rel
+            ref_status = "up-to-date"
+            if not ref_path.is_file():
+                ref_status = "missing"
+                fail("missing-skill-file", ref_path, f"{display_path(ref_path, repo_root)} does not exist.", repo_root)
+                stale_skills += 1
+            elif not same_file_content(ref_path, expected_data):
+                ref_status = "stale"
+                try:
+                    report = format_stale_report(
+                        ref_path,
+                        ref_path.read_bytes().decode("utf-8"),
+                        expected_data.decode("utf-8"),
+                        max_lines=30,
+                        repo_root=repo_root,
+                    )
+                except UnicodeDecodeError:
+                    report = f"{display_path(ref_path, repo_root)} is out of date."
+                fail("stale-skill-file", ref_path, report, repo_root)
+                stale_skills += 1
+            file_statuses.append({"path": display_path(ref_path, repo_root), "status": ref_status})
+        skill_statuses.append(
+            {"name": skill_name, "path": display_path(skill_path, repo_root), "status": status, "files": file_statuses}
+        )
         if status == "up-to-date" and logger.verbose:
             logger.info(f"{display_path(skill_path, repo_root)} is up to date.")
     if stale_skills:
@@ -925,7 +1116,15 @@ def action_check(
             for subfile in sorted(skill_dir.rglob("*")):
                 if subfile.is_file() and subfile.name != "SKILL.md":
                     rel_subfile = subfile.relative_to(skill_dir).as_posix()
-                    if f"]({rel_subfile})" not in skill_text and f"]({rel_subfile}#" not in skill_text:
+                    if rel_subfile not in reference_copies.get(skill_dir.name, {}):
+                        fail(
+                            "unlisted-file",
+                            subfile,
+                            f"Unlisted file '{rel_subfile}' in skill '{skill_dir.name}' is not in 'skill.references'",
+                            repo_root,
+                        )
+                        has_error = True
+                    elif f"]({rel_subfile})" not in skill_text and f"]({rel_subfile}#" not in skill_text:
                         fail(
                             "orphan-file",
                             subfile,
