@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [ ] T0047 [protocol: adhoc] Make test_is_process_alive_current_dead_and_expected_start derive its stale time from the process start, not from now minus 60s.
-- [ ] T0048 Add --dry-run to agent-digest generate and --format text|json to agent-digest check, as ADR-0003 requires.
+- [ ] T0048 [needs: T0053] Add --dry-run to agent-digest generate and --format text|json to agent-digest check, as ADR-0003 requires.
 - [ ] T0046 Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2.
 - [ ] T0045 Keep ToolHarness help option columns separated when an option name exceeds 23 characters.
 - [x] T0019 Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script.
@@ -35,9 +35,10 @@ An overview of all tasks and their planning.
 - [x] T0043 Write the v2.0.0 migration guide, refresh CLAUDE.md, and record migration backlog tasks in consumer repositories.
 - [x] T0044 Rebuild the capture view CLI on ToolHarness, and remove build_action_parser, print_help, print_version, and format_version.
 - [x] T0049 Move the README DevOps helpers section into a docs/tutorials/devops-scripts.md tutorial and link it from the README.
-- [ ] T0050 Move the README CLI, logging, script utility, REST client, view capture, and SQL sections into docs/tutorials pages.
-- [ ] T0052 [needs: T0050] Move the README Git, file, locking, process, Markdown, duration, and rate limiter sections into docs/tutorials pages.
-- [ ] T0051 [needs: T0050, T0052] Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
+- [x] T0050 Move the README CLI, logging, script utility, REST client, view capture, and SQL sections into docs/tutorials pages.
+- [ ] T0052 Move the README Git, file, locking, process, Markdown, duration, and rate limiter sections into docs/tutorials pages.
+- [ ] T0051 [needs: T0052] Restructure the README into bootstrap, build, install, command-line tools, and library sections linking to tool docs and tutorials.
+- [ ] T0053 Share JSON output handling in ToolHarness and CliLogger, and use it in agent-files, lint-markdown, processes, and git-repository-backup.
 
 ---
 
