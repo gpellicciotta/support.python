@@ -36,7 +36,7 @@ def _first_json_block(doc_name: str) -> dict[str, Any]:
 
 
 def _snake(data: Any) -> Any:
-    """Return data with every dict key rewritten to snake_case, except tool names used as keys."""
+    """Return data with every dict key rewritten to snake_case."""
     if isinstance(data, dict):
         return {k.replace("-", "_"): _snake(v) for k, v in data.items()}
     if isinstance(data, list):
