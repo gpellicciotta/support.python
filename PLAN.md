@@ -15,10 +15,10 @@ An overview of all tasks and their planning.
 - [x] T0027 Rename backup-git-repos to git-repository-backup, read its legacy config with a warning, and add JSON list output.
 - [x] T0028 Make ToolHarness configure UTF-8 output for every tool, and remove the ToolLogger and TeeLogger logger aliases.
 - [x] T0029 Align agent-files with ADR-0003: canonical sync and check verbs, JSON list output, and .agent-files.json with legacy fallback.
-- [ ] T0030 Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
+- [x] T0030 Align lint-markdown with ADR-0003: drop the --fix flag, add JSON check output, and rename its config to .lint-markdown.json.
 - [ ] T0031 Align processes with ADR-0003: add kill --dry-run and rename the table output format to text.
 - [ ] T0032 Make agent-files consume an existing digest and skills directory instead of regenerating the digest itself.
-- [ ] T0033 [needs: T0030] Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
+- [ ] T0033 Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
 - [x] T0034 Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged.
 - [ ] T0035 Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins.
 - [ ] T0036 [needs: T0035] Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development.
