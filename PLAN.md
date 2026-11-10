@@ -5,7 +5,7 @@ An overview of all tasks and their planning.
 
 ## Next Milestone
 - [-] T0096 [reason: Kept publish.yml: docs/devops.md relies on it to replace local assets with a clean CI build and to cover manual releases.] Remove publish.yml, since ReleasePipeline already attaches the wheel and sdist to the GitHub release.
-- [ ] T0095 Name the deploy action and enabled service groups in the DevopsCli default description.
+- [x] T0095 Name the deploy action and enabled service groups in the DevopsCli default description.
 - [ ] T0094 Let run_capture_cli accept app-specific options and pass their values to the capture and tour handlers.
 - [x] T0091 Make DevopsCli help summaries and examples come from the project adapter, so GradleProject help describes Gradle tasks.
 - [x] T0089 Replace the stale update-global-agent-files.py text in the agent-files guarded block marker, still recognizing existing blocks.
@@ -38,6 +38,7 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
+- [ ] T0097 Derive version build metadata from the support.python checkout, not an enclosing repository.
 - [-] T0093 [reason: ReleasePipeline accepts frozen versions for resumed releases; release tasks such as doFullRelease own the -pre precondition.] Make GradleProject.release refuse a version without -pre before the confirmation, as ReleasePipeline does.
 - [x] T0092 Let project adapters supply the DevopsCli exit-code text, dropping the virtual environment wording for Gradle and npm projects.
 - [~] T0046 [owner: @claude-code] Migrate pinned sibling consumers (auth, counters.server, todos.server, template.python) off build_action_parser, print_help, and print_version when they upgrade to support-python v2
