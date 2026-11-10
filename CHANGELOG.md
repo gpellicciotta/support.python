@@ -15,6 +15,7 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v2.0.7-pre
+- CLI: Fixed `lint-markdown` `MD014` skipping root-relative links such as `/docs/guide.md` on Linux and macOS ([rules.py](src/support_python/markdown/rules.py)).
 - Library: Added `capture_options` and `prepare_capture` hooks to `CaptureAppConfig`, so capture CLIs can add app-specific options ([view-capture.md](docs/tutorials/view-capture.md)).
 - Library: Made `ToolHarness` run its fallback action when the command line starts with an option, as `run_capture_cli` already did ([cli.py](src/support_python/cli.py)).
 - Docs: Documented project-local `.venv` installs and the kept names whose v2 output changed in [migration-v2.md](docs/migration-v2.md).

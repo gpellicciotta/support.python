@@ -944,6 +944,25 @@ class TestDiscoverMarkdownFilesGitIgnore(unittest.TestCase):
             self.assertEqual(len(md014), 1)
             self.assertIn("/docs/missing.md", md014[0].message)
 
+    def test_root_relative_link_resolves_where_a_leading_slash_is_absolute(self) -> None:
+        # POSIX treats "/docs/missing.md" as absolute; simulate that on every platform.
+        original = Path.is_absolute
+
+        def posix_is_absolute(path: Path) -> bool:
+            return str(path).startswith(("/", "\\")) or original(path)
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            (proj_root / ".git").mkdir()
+            (proj_root / "docs").mkdir()
+            (proj_root / "docs" / "guide.md").write_text("# Guide\n", encoding="utf-8")
+            doc_file = proj_root / "doc.md"
+            content = b"# Document\n\nSee [Guide](/docs/guide.md) and [Missing](/docs/missing.md).\n"
+            with patch.object(Path, "is_absolute", posix_is_absolute):
+                issues = MarkdownLinter().lint_content(doc_file, content)
+            md014 = [i for i in issues if i.rule_id == "MD014"]
+            self.assertEqual([("/docs/missing.md" in i.message) for i in md014], [True])
+
 
 class TestChangelogReleasedHeadings(unittest.TestCase):
     def setUp(self) -> None:

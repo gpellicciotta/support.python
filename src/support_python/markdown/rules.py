@@ -286,13 +286,13 @@ class MD014ValidRelativeLinks(Rule):
                 continue
             unquoted_path = urllib.parse.unquote(path_part)
             target_path = Path(unquoted_path)
-            if target_path.is_absolute():
+            # A single leading slash means the project root on every platform; POSIX would call it absolute.
+            if unquoted_path.startswith(("/", "\\")) and not unquoted_path.startswith(("//", "\\\\")):
+                resolved = (ctx.project_root / unquoted_path.lstrip("/\\")).resolve()
+            elif target_path.is_absolute() or unquoted_path.startswith(("//", "\\\\")):
                 continue
-            resolved = (
-                (ctx.project_root / unquoted_path.lstrip("/\\")).resolve()
-                if unquoted_path.startswith(("/", "\\"))
-                else (ctx.file_path.parent / target_path).resolve()
-            )
+            else:
+                resolved = (ctx.file_path.parent / target_path).resolve()
             if not resolved.exists():
                 issues.append(
                     self.issue(ctx, f"Relative link '{target}' does not resolve to an existing file on disk", column_number=col)
