@@ -13,9 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 2920.4, input: 795370, output: 176008, cache_read: 12058534}
-work_duration: 1405.9
-review_status: pending
+  review: {turns: 2, duration_s: 481.6, input: 68, output: 23106, cache_read: 2073640, cache_write: 138180}
+work_duration: 1744.5
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
 ---
 # T0020: Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check
 
@@ -47,6 +49,9 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
 - [2026-11-09] **[Decide]**
   User changed the decision on 2026-11-09: `check` replaces `validate`, matching the ADR-0003 verb convention.
 
+- [2026-11-10] **[Read]**
+  Read agent_digest.py, agent_files.py, test_agent_digest.py, test_agent_files.py, cli.py, logging.py, git.py, and dev-guidelines layout constants.
+
 - [2026-11-10] **[Verify]**
   Verified red-phase failures for path collection, index ordering, output options, link-base derivation, and merged check.
 
@@ -56,6 +61,9 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
   - Lines touched: 2059.
   - Reopenings: 0.
 
+- [2026-11-10] **[Doc]**
+  Authored docs/tools/agent-digest.md and updated README.md, docs/index.md, CHANGELOG.md, and validation-proof.md.
+
 - [2026-11-10] **[Verify]**
   Verified 136 passed tests across test_agent_digest.py, test_agent_files.py, and test_console_scripts.py, ruff check/format clean, lint-markdown clean across docs, and zero-diff agent-digest check on dev-guidelines.
 
@@ -63,11 +71,8 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
   Completion validation found 1 errors; pending fix turn 1 of 2.
   - TF020.
 
-- [2026-11-10] **[Read]**
-  Read agent_digest.py, agent_files.py, test_agent_digest.py, test_agent_files.py, cli.py, logging.py, git.py, and dev-guidelines layout constants.
-
 - [2026-11-10] **[Doc]**
-  Authored docs/tools/agent-digest.md and updated README.md, docs/index.md, CHANGELOG.md, and validation-proof.md.
+  Added missing step-coverage log entries for Read and Doc to resolve TF020 before review.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
@@ -76,4 +81,17 @@ dev-guidelines will call `agent-digest generate <PATH>...` and `agent-digest che
   Size note: diff is 8 files and 2063 lines, above the large line but under three times the 700-line estimate.
   - Accepted by the orchestrator under the user's size delegation.
   - Most lines rework the ported generator; splitting would leave it half-generalized.
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude: The code change meets the technical spec, but the new tool documentation describes behavior that does not exist.
+  - Findings: [review-findings-1.md](T0020-generalize-agent-digest-to-take-markdown-paths-order/review-findings-1.md).
+
+- [2026-11-10] **[Doc]**
+  Rewrote docs/tools/agent-digest.md to match implemented options, front-matter keys, link rewriting, and check rules, and updated validation-proof.md with base-commit red-phase output and dev-guidelines generate proof.
+
+- [2026-11-10] **[Implement]**
+  Formatted startup banner paths with as_posix() and cached missing link_base fallback in build_skills and build_digest.
+
+- [2026-11-10] **[Verify]**
+  Verified test_agent_digest.py (26 passed, 15 subtests), ruff check/format, lint-markdown on docs/tools/agent-digest.md, and zero-diff generate on dev-guidelines.
 
