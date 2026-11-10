@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 787.4, input: 136, output: 49656, cache_read: 4459302, cache_write: 144140}
+  worker: {turns: 4, duration_s: 1111.6, input: 164, output: 55758, cache_read: 5786078, cache_write: 161414}
 work_duration: 406.1
+review_status: pending
+review_round: 1
 ---
 # T0039: Add a GradleProject adapter to support_python.devops for gradlew-based lint, test, build, check, clean, and release
 
@@ -65,4 +67,7 @@ Allow delegating `release` to a Gradle task instead of `ReleasePipeline`.
 - [2026-11-10] **[Verify]**
   Completion validation found 1 errors; pending fix turn 1 of 2.
   - TF018.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
