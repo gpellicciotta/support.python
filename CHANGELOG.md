@@ -14,7 +14,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.1-pre
+## v2.0.2-pre
+- Library: Made `DevopsCli` take help summaries and the `test` example from the project adapter, so `GradleProject` help names its Gradle tasks ([devops-scripts.md](docs/tutorials/devops-scripts.md)).
+- Library: Made `devops release --skip-checks` warn that it has no effect on a project with its own release, such as a `GradleProject` with a `release_task`.
 
 ## v2.0.0 [released: 2026-11-10]
 - CLI: Replaced the stale `update-global-agent-files.py` text in the `agent-files` begin marker, still syncing blocks with the old marker ([agent-files.md](docs/tools/agent-files.md)).

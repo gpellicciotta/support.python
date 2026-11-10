@@ -265,6 +265,16 @@ class HarnessTests(DevopsCliTestCase):
         for action in ("lint", "format", "test", "build", "check", "clean", "versions", "release"):
             self.assertIn(f"devops {action}", out)
 
+    def test_help_examples_use_the_project_test_selection_example(self) -> None:
+        code, out, _ = run_cli(self.cli(venv=False), "help", "--verbose")
+        self.assertEqual(code, 0)
+        self.assertIn("devops test tests/test_cli.py -- -k version", out)
+
+    def test_help_keeps_the_generic_summaries_for_python_projects(self) -> None:
+        code, out, _ = run_cli(self.cli(venv=False), "help")
+        self.assertEqual(code, 0)
+        self.assertIn("run lint, test, and build, stopping at the first failure", out)
+
     def test_custom_name_and_description(self) -> None:
         make_repo(self.root, venv=False)
         cli = DevopsCli(PythonProject(self.root, runner=self.runner), name="ops", description="Custom ops.")

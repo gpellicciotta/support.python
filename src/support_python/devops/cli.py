@@ -56,14 +56,8 @@ class DevopsCli:
         self.harness = ToolHarness(
             name, description or DEFAULT_DESCRIPTION, version=version, exit_codes=EXIT_CODES, repo_dir=project.root
         )
-        self.harness.set_examples(
-            [
-                f"{name} check",
-                f"{name} test tests/test_cli.py -- -k version",
-                f"{name} versions",
-                f"{name} release --dry-run",
-            ]
-        )
+        test_example = [f"{name} test {project.test_selection_example}"] if project.test_selection_example else []
+        self.harness.set_examples([f"{name} check", *test_example, f"{name} versions", f"{name} release --dry-run"])
         self._add_standard_actions()
 
     def add_action(self, name: str, summary: str, handler: Callable[..., int], **kwargs: Any) -> None:
@@ -172,14 +166,18 @@ class DevopsCli:
         return self.harness.run(argv)
 
     def _add_standard_actions(self) -> None:
-        add = self.harness.add_action
+        overrides = self.project.action_summaries()
+
+        def add(name: str, summary: str, handler: Callable[..., int], **kwargs: Any) -> None:
+            self.harness.add_action(name, overrides.get(name, summary), handler, **kwargs)
+
         add("lint", "check lint and formatting without changing files", self._operation("lint"), usage_suffix="")
         add("format", "reformat the sources in place", self._operation("format"), usage_suffix="")
         add(
             "test",
             "run the test suite, or a selection of it",
             self._test,
-            detail="Run the test suite. Pass test paths as SELECTION; put runner options after `--`.",
+            detail="Run the test suite. Pass test paths or names as SELECTION; put runner options after `--`.",
             usage_suffix="[SELECTION...] [-- RUNNER-OPTIONS...]",
             configure_parser=lambda parser: parser.add_argument("selection", nargs="*"),
         )
@@ -243,6 +241,8 @@ class DevopsCli:
         self.project.logger = logger
         released = self.project.release(dry_run=args.dry_run, assume_yes=args.yes)
         if released is not None:
+            if args.skip_checks:
+                logger.warning("--skip-checks has no effect on a project with its own release.")
             return 0 if released else 1
         pipeline = ReleasePipeline(
             root=self.project.root,

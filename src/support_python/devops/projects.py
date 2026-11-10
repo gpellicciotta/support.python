@@ -34,7 +34,13 @@ class Project(ABC):
         runner: Runs a command as ``runner(argv, root, logger)`` and returns its exit code.
         logger: Logger receiving progress and errors; :class:`~support_python.devops.cli.DevopsCli` replaces it
             with the logger of the running action.
+        test_selection_example: Selection shown in the ``devops test`` help example; empty omits the example.
+
+    :class:`~support_python.devops.cli.DevopsCli` reads the help summaries and the example once, when it is built,
+    so set adapter attributes such as task lists before building it.
     """
+
+    test_selection_example: str = ""
 
     def __init__(self, root: Path, *, runner: Runner = run_step_command, logger: Optional[CliLogger] = None) -> None:
         self.root = Path(root).resolve()
@@ -69,6 +75,10 @@ class Project(ABC):
         """Return the build outputs to attach to a release."""
         return []
 
+    def action_summaries(self) -> dict[str, str]:
+        """Return help summaries replacing the generic ones of :class:`~support_python.devops.cli.DevopsCli`, by action."""
+        return {}
+
     def release(self, *, dry_run: bool = False, assume_yes: bool = False) -> Optional[bool]:
         """Run the project's own release instead of :class:`~support_python.devops.release.ReleasePipeline`.
 
@@ -90,6 +100,8 @@ class Project(ABC):
 
 class PythonProject(Project):
     """A Python project with a ``.venv`` holding ruff, pytest, and build, and a src layout."""
+
+    test_selection_example = "tests/test_cli.py -- -k version"
 
     @property
     def venv_python(self) -> Path:
@@ -151,6 +163,8 @@ class GradleProject(Project):
         release_args: Extra arguments passed to ``release_task`` after the confirmation.
     """
 
+    test_selection_example = "com.example.AppTest"
+
     def __init__(
         self,
         root: Path,
@@ -208,6 +222,24 @@ class GradleProject(Project):
     def release_assets(self) -> list[Path]:
         return sorted(self.root.glob("build/libs/*.jar")) + sorted(self.root.glob("*/build/libs/*.jar"))
 
+    def action_summaries(self) -> dict[str, str]:
+        """Return help summaries naming the Gradle tasks each action runs."""
+
+        def tasks(names: Sequence[str]) -> str:
+            return " ".join(names) or "(default tasks)"
+
+        summaries = {
+            "lint": f"check lint and formatting: gradle {tasks(self.lint_tasks)}",
+            "format": f"reformat the sources in place: gradle {tasks(self.format_tasks)}",
+            "test": f"run the tests, adding --tests per selection item: gradle {tasks(self.test_tasks)}",
+            "build": f"build the outputs: gradle {tasks(self.build_tasks)}",
+            "check": f"run the full check: gradle {tasks(self.check_tasks)}",
+            "clean": f"remove build outputs: gradle {tasks(self.clean_tasks)}",
+        }
+        if self.release_task is not None:
+            summaries["release"] = f"confirm, then release with the Gradle task {self.release_task}"
+        return summaries
+
     def release(
         self, *, dry_run: bool = False, assume_yes: bool = False, input_fn: Optional[Callable[[str], str]] = None
     ) -> Optional[bool]:
@@ -245,6 +277,8 @@ class NodeProject(Project):
     npm resolves through :func:`~support_python.devops.steps.resolve_executable`, so Windows finds ``npm.cmd``.
     ``build`` runs the ``build`` script when ``package.json`` defines one, then packs the tarball into ``dist/``.
     """
+
+    test_selection_example = "test/cli.test.js"
 
     @property
     def dist_dir(self) -> Path:

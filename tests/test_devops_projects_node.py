@@ -207,6 +207,12 @@ class NodeReleaseTests(NodeTestCase):
     def test_release_uses_release_pipeline(self) -> None:
         self.assertIsNone(self.project().release())
 
+    def test_help_examples_use_an_npm_test_selection(self) -> None:
+        code, out, _ = run_cli(self.cli(), "help", "--verbose")
+        self.assertEqual(code, 0)
+        self.assertNotIn("tests/test_cli.py", out)
+        self.assertIn("devops test test/cli.test.js", out)
+
     def test_versions_reads_package_json(self) -> None:
         code, out, err = run_cli(self.cli(), "versions")
         self.assertEqual(code, 0, out + err)

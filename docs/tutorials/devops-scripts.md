@@ -129,6 +129,9 @@ Its actions are:
 - `help` and `version`, from `ToolHarness`.
 
 Commands go through an injectable `runner` (default `run_step_command`), and `add_action` adds project-specific actions.
+Each adapter's `action_summaries()` replaces the generic help summaries, and `test_selection_example` sets the `test` help example.
+`GradleProject` names the Gradle tasks of each action in its help, and its `release_task` in the `release` summary.
+`DevopsCli` reads both when it is built, so set adapter attributes such as task lists first.
 A consumer's devops script stays as thin as this repository's own [devops.py](../../scripts/devops.py):
 
 ```python
@@ -163,6 +166,7 @@ Test selection items starting with `-` pass to Gradle unchanged.
 It reads the version from `gradle.properties` and releases `build/libs/*.jar` and `*/build/libs/*.jar`.
 With `release_task`, `release` asks for the typed confirmation, then runs that task with `release_args` instead of `ReleasePipeline`.
 `release --dry-run` runs the task with Gradle's own `--dry-run` and no prompt.
+`release --skip-checks` has no effect with a `release_task` and logs a warning.
 For example, `GradleProject(REPO_ROOT, release_task="doFullRelease", release_args=["-PreleaseConfirmed=yes"])`.
 
 ### NodeProject

@@ -271,6 +271,48 @@ class GradleReleaseDelegationTests(GradleTestCase):
         self.assertEqual(self.runner.calls, [])
 
 
+class GradleHelpTests(GradleTestCase):
+    def help_line(self, out: str, action: str) -> str:
+        return next(line for line in out.splitlines() if line.strip().startswith(f"{action} ") and "devops" not in line)
+
+    def test_help_summaries_name_the_gradle_tasks_of_each_action(self) -> None:
+        code, out, _ = run_cli(self.cli(), "help")
+        self.assertEqual(code, 0)
+        self.assertIn("spotlessCheck checkstyleMain checkstyleTest", self.help_line(out, "lint"))
+        self.assertIn("spotlessApply", self.help_line(out, "format"))
+        self.assertIn("gradle build", self.help_line(out, "check"))
+        self.assertNotIn("from scratch", self.help_line(out, "build"))
+        self.assertNotIn("stopping at the first failure", self.help_line(out, "check"))
+
+    def test_help_summaries_follow_task_list_overrides(self) -> None:
+        code, out, _ = run_cli(self.cli(lint_tasks=["ktlintCheck"], check_tasks=["check", "assemble"]), "help")
+        self.assertEqual(code, 0)
+        self.assertIn("ktlintCheck", self.help_line(out, "lint"))
+        self.assertIn("check assemble", self.help_line(out, "check"))
+
+    def test_help_summary_of_an_empty_task_list_names_gradle_default_tasks(self) -> None:
+        code, out, _ = run_cli(self.cli(format_tasks=[]), "help")
+        self.assertEqual(code, 0)
+        self.assertIn("gradle (default tasks)", self.help_line(out, "format"))
+
+    def test_help_release_summary_names_the_release_task(self) -> None:
+        code, out, _ = run_cli(self.cli(release_task="doFullRelease"), "help")
+        self.assertEqual(code, 0)
+        self.assertIn("doFullRelease", self.help_line(out, "release"))
+
+    def test_help_examples_use_a_gradle_test_filter(self) -> None:
+        code, out, _ = run_cli(self.cli(), "help", "--verbose")
+        self.assertEqual(code, 0)
+        self.assertNotIn("tests/test_cli.py", out)
+        self.assertIn("devops test com.example.AppTest", out)
+
+    def test_skip_checks_with_a_release_task_warns_that_it_is_ignored(self) -> None:
+        code, out, err = run_cli(self.cli(release_task="doFullRelease"), "release", "--dry-run", "--skip-checks")
+        self.assertEqual(code, 0)
+        self.assertIn("--skip-checks", out + err)
+        self.assertEqual(self.runner.tails(), [["doFullRelease", "--dry-run"]])
+
+
 class GradleWrapperIntegrationTests(unittest.TestCase):
     """Runs a fake wrapper script through the real step runner and checks the arguments it received."""
 
