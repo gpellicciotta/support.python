@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 2937.6, input: 646172, output: 157004, cache_read: 12093552}
-review_status: pending
+  review: {turns: 2, duration_s: 353.0, input: 20, output: 5686, cache_read: 667706, cache_write: 7024}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude"
+work_duration: 1664.1
 ---
 # T0019: Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script
 
@@ -67,4 +70,17 @@ Generalization follows in T0020.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude: Rejected.
+  - Findings: [review-findings-1.md](T0019-port-the-dev-guidelines-agent-digest-generator-into/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Addressed round 1 review findings: bound generator.REPO_ROOT to _resolve_repo_root() in ensure_digest, updated generate-agent-digest references, and removed unused constants.
+
+- [2026-11-10] **[Verify]**
+  Verified 141 passed in test_agent_files.py and test_agent_digest.py (task-217), clean ruff checks, and --repo-root CLI reproduction.
+  - Files touched: 6.
+  - Lines touched: 170.
+  - Reopenings: 0.
 
