@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 812.4, input: 128, output: 42740, cache_read: 3876218, cache_write: 119714}
+work_duration: 418.4
 ---
 # T0035: Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins
 
@@ -54,4 +57,8 @@ Leave the scripts unchanged; T0037 rebuilds them on this module.
 - [2026-11-10] **[Doc]**
   Documented the release helpers in README.md and added a v2.0.19-pre CHANGELOG.md entry.
   - New-line Markdown lint is clean; ten remaining issues predate this task.
+
+- [2026-11-10] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF018.
 
