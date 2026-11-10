@@ -13,8 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 2, duration_s: 1238.6, input: 196, output: 77190, cache_read: 9131532, cache_write: 217988}
-review_status: pending
+  review: {turns: 2, duration_s: 340.4, input: 68, output: 15684, cache_read: 1881694, cache_write: 113074}
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude-2"
+work_duration: 807.2
 ---
 # T0033: Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action
 
@@ -64,4 +67,18 @@ Document writing a plugin rule in `docs/tools/lint-markdown.md`.
 
 - [2026-11-10] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-10] **[Review]**
+  Round 1 rejected by @claude-2: Rejected for three small correctness defects in the new plugin path; the overall design is sound.
+  - Findings: [review-findings-1.md](T0033-let-lint-markdown-load-extra-rules-from-plugin/review-findings-1.md).
+
+- [2026-11-10] **[Implement]**
+  Addressed review round 1: shared plugin dedup across config and --plugin, uppercase source lookup, and directory --config plugin loading, each with a red-then-green test.
+
+- [2026-11-10] **[Verify]**
+  Recorded task outcomes after rework; full suite and ruff passed.
+  - 776 passed, 3 skipped.
+  - Files touched: 9.
+  - Lines touched: 653.
+  - Reopenings: 0.
 

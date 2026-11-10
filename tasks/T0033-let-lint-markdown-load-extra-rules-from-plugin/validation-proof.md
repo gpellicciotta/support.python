@@ -67,3 +67,31 @@ Command: `lint-markdown check --offline docs/tools/lint-markdown.md`, exit code 
 ```text
 All 1 markdown files passed linting.
 ```
+
+### Review Round 1 Rework
+- `build_linter` shares one `loaded` set across config and `--plugin` entries, so a plugin listed in both loads once.
+- `rules` looks up plugin sources by the uppercased rule ID, matching `load_plugins` keys.
+- `--config DIR` resolves to the directory's config file via `resolve_config_file` before reading `plugins`.
+
+Red phase: `.venv/Scripts/python -m pytest -q tests/test_markdown_plugins.py`, exit code 1.
+```text
+E       assert 0 == 1
+E       AssertionError: **[ERROR]** Plugin 'rules/no_todo.py': rule ID 'X001' is already registered
+E       assert 2 == 1
+E       AssertionError: assert 'builtin' == 'lower.py'
+FAILED tests/test_markdown_plugins.py::test_check_reads_plugins_from_config_directory
+FAILED tests/test_markdown_plugins.py::test_check_loads_plugin_listed_in_config_and_option_once
+FAILED tests/test_markdown_plugins.py::test_rules_action_reports_plugin_source_for_lowercase_rule_id
+3 failed, 24 passed in 1.23s
+```
+
+Green phase: `.venv/Scripts/python -m pytest -q`, exit code 0.
+```text
+776 passed, 3 skipped, 81 subtests passed in 102.52s (0:01:42)
+```
+
+Commands: `.venv/Scripts/ruff check .` and `.venv/Scripts/ruff format --check .`, exit code 0.
+```text
+All checks passed!
+132 files already formatted
+```

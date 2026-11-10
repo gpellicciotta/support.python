@@ -3,7 +3,7 @@ task: T0033
 round: 1
 verdict: rejected
 reviewer: "@claude-2"
-reviewed_at: 2026-11-10T01:52:37Z
+reviewed_at: 2026-11-10T01:55:31Z
 reviewed_commit: "8b35e40"
 base_commit: "3db050a"
 branch: task/T0033-let-lint-markdown-load-extra-rules-from-plugin
