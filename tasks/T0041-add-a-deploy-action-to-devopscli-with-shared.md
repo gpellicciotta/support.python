@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1358.2, input: 156, output: 60082, cache_read: 6812040, cache_write: 204554}
+review_status: pending
+review_round: 1
 ---
 # T0041: Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification
 
@@ -55,4 +59,7 @@ Run the steps in order, stopping at the first failure, then the optional verific
   - Files touched: 7.
   - Lines touched: 652.
   - Reopenings: 0.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
