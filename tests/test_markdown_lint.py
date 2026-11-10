@@ -234,12 +234,24 @@ class TestRuleMD011TrailingWhitespace(unittest.TestCase):
         md011 = [i for i in issues if i.rule_id == "MD011"]
         self.assertEqual(md011, [])
 
-    def test_trailing_whitespace_flags_md011(self) -> None:
-        content = b"# Title\n\nLine with trailing space. \n"
-        issues = self.linter.lint_content(Path("test.md"), content)
-        md011 = [i for i in issues if i.rule_id == "MD011"]
-        self.assertEqual(len(md011), 1)
-        self.assertTrue(md011[0].fixable)
+    def md011(self, content: bytes) -> list:
+        return [i for i in self.linter.lint_content(Path("test.md"), content) if i.rule_id == "MD011"]
+
+    def test_one_and_two_trailing_spaces_pass(self) -> None:
+        self.assertEqual(self.md011(b"# Title\n\nLine with one space. \n"), [])
+        self.assertEqual(self.md011(b"# Title\n\nHard break line.  \nNext line.\n"), [])
+
+    def test_three_spaces_or_tabs_flag_md011(self) -> None:
+        for line in (b"Three spaces.   ", b"Tab.\t", b"Space then tab. \t", b"Tab then space.\t "):
+            issues = self.md011(b"# Title\n\n" + line + b"\n")
+            self.assertEqual(len(issues), 1, line)
+            self.assertTrue(issues[0].fixable)
+            self.assertIn("two", issues[0].message)
+
+    def test_fix_trims_long_runs_to_two_spaces_and_removes_tabs(self) -> None:
+        content = b"# Title\n\nFour.    \nTab.\t\nMixed. \t \nTwo.  \nOne. \n"
+        fixed = self.linter.fix_content(Path("test.md"), content)
+        self.assertEqual(fixed, b"# Title\n\nFour.  \nTab.\nMixed.\nTwo.  \nOne. \n")
 
 
 class TestRuleMD012MixedLineEndings(unittest.TestCase):
@@ -728,9 +740,9 @@ class TestMarkdownLinterFix(unittest.TestCase):
         self.linter = MarkdownLinter()
 
     def test_fix_content_cleans_formatting(self) -> None:
-        raw = b"# Title\r\n\n* Bullet 1 \r\n+ Bullet 2\t\n\tTab indent\n"
+        raw = b"# Title\r\n\n* Bullet 1   \r\n+ Bullet 2\t\n\tTab indent\n"
         fixed = self.linter.fix_content(Path("test.md"), raw)
-        expected = b"# Title\n\n- Bullet 1\n- Bullet 2\n    Tab indent\n"
+        expected = b"# Title\n\n- Bullet 1  \n- Bullet 2\n    Tab indent\n"
         self.assertEqual(fixed, expected)
 
     def test_fix_content_removes_blank_line_after_subheading(self) -> None:

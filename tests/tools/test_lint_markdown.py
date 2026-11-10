@@ -133,15 +133,15 @@ class TestCLIAndMain(unittest.TestCase):
     def test_fix_action_modifies_files_and_returns_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             p = Path(tmp_dir) / "dirty.md"
-            p.write_bytes(b"# Title\n\n* Asterisk bullet \n")
+            p.write_bytes(b"# Title\n\n* Asterisk bullet   \n")
             code, out, _ = run_main(["fix", tmp_dir])
-            self.assertEqual((code, p.read_bytes()), (0, b"# Title\n\n- Asterisk bullet\n"))
+            self.assertEqual((code, p.read_bytes()), (0, b"# Title\n\n- Asterisk bullet  \n"))
             self.assertIn("Auto-fixed formatting issues in 1 file.", out)
 
     def test_fix_flag_is_unknown_option_and_exits_two(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             p = Path(tmp_dir) / "dirty.md"
-            original = b"# Title\n\n* Asterisk bullet \n"
+            original = b"# Title\n\n* Asterisk bullet   \n"
             p.write_bytes(original)
             for argv in (["check", "--fix", tmp_dir], ["fix", "--fix", tmp_dir]):
                 code, out, err = run_main(argv)
@@ -152,7 +152,7 @@ class TestCLIAndMain(unittest.TestCase):
     def test_fix_dry_run_reports_planned_fixes_writes_nothing_and_exits_zero(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             p = Path(tmp_dir) / "dirty.md"
-            original = b"# Title\n\n* Asterisk bullet \n\n### Skipped H3\n"
+            original = b"# Title\n\n* Asterisk bullet   \n\n### Skipped H3\n"
             p.write_bytes(original)
             code, out, err = run_main(["fix", "--dry-run", "--offline", tmp_dir])
             self.assertEqual(code, 0, err)
@@ -161,6 +161,19 @@ class TestCLIAndMain(unittest.TestCase):
             self.assertIn("MD005", out)
             self.assertIn("MD011", out)
             self.assertNotIn("MD001", out)
+
+    def test_two_space_hard_line_breaks_pass_check_and_plan_no_fix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            p = Path(tmp_dir) / "breaks.md"
+            original = b"# Title\n\nFirst line.  \nSecond line.\n"
+            p.write_bytes(original)
+            code, out, err = run_main(["check", "--offline", tmp_dir])
+            self.assertEqual(code, 0, out + err)
+            self.assertNotIn("MD011", out)
+            code, out, err = run_main(["fix", "--dry-run", "--offline", tmp_dir])
+            self.assertEqual(code, 0, err)
+            self.assertNotIn("MD011", out)
+            self.assertEqual(p.read_bytes(), original)
 
     def test_check_format_json_outputs_only_json_on_stdout(self) -> None:
         import json
@@ -431,9 +444,9 @@ class TestEndToEnd(unittest.TestCase):
             self.assertIn("All 1 markdown files passed linting.", out)
 
             dirty = Path(tmp_dir) / "dirty.md"
-            dirty.write_bytes(b"# Title\n\n* Asterisk bullet \n")
+            dirty.write_bytes(b"# Title\n\n* Asterisk bullet   \n")
             code_fix, _, err_fix = run_main(["fix", "--offline", str(dirty)])
-            self.assertEqual((code_fix, dirty.read_bytes()), (0, b"# Title\n\n- Asterisk bullet\n"), err_fix)
+            self.assertEqual((code_fix, dirty.read_bytes()), (0, b"# Title\n\n- Asterisk bullet  \n"), err_fix)
 
     def test_script_entry_point_json_output_and_legacy_config_warning(self) -> None:
         import json

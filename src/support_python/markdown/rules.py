@@ -193,14 +193,19 @@ class MD010NoTabs(Rule):
 
 
 class MD011TrailingWhitespace(Rule):
-    """Rule MD011: Lines must not contain trailing whitespace."""
+    """Rule MD011: Lines may end in at most two spaces (a Markdown hard line break) and never in a tab."""
 
     rule_id, name, scope, fixable = "MD011", "trailing-whitespace", "raw_line", True
-    description = "Lines must not contain trailing whitespace"
+    description = "Lines must not end in a tab or in more than two spaces"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
-        if ctx.line.endswith((" ", "\t")):
-            return [self.issue(ctx, "Line contains trailing whitespace", column_number=len(ctx.line))]
+        trailing = ctx.line[len(ctx.line.rstrip(" \t")) :]
+        if "\t" in trailing or len(trailing) > 2:
+            return [
+                self.issue(
+                    ctx, "Line has trailing whitespace; at most two trailing spaces are allowed", column_number=len(ctx.line)
+                )
+            ]
         return []
 
 

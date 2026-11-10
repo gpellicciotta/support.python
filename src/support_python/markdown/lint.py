@@ -370,7 +370,7 @@ class MarkdownLinter:
         "MD008": ("no-raw-urls", "Raw unformatted URLs in prose must use markdown links or code spans"),
         "MD009": ("no-file-uri", "Local file:/// URIs must not be used for repository references"),
         "MD010": ("no-tabs", "Hard tabs must not be used for indentation"),
-        "MD011": ("trailing-whitespace", "Lines must not contain trailing whitespace"),
+        "MD011": ("trailing-whitespace", "Lines must not end in a tab or in more than two spaces"),
         "MD012": ("line-endings", "Files should use LF line endings"),
         "MD013": ("no-task-ids-in-changelog", "Changelog bullets must not contain task identifiers (Tnnnn or Annnn)"),
         "MD014": ("valid-relative-links", "Relative markdown links must resolve to existing files on disk"),
@@ -785,13 +785,18 @@ class MarkdownLinter:
                     quote_prefix = line[: len(line) - len(unquoted)]
                     fixed_line = f"{quote_prefix}{indent_ws}- {item_body}"
 
+            # Fix trailing whitespace
+            if self.is_rule_enabled("MD011"):
+                stripped = fixed_line.rstrip(" \t")
+                trailing = fixed_line[len(stripped) :]
+                if "\t" in trailing:
+                    fixed_line = stripped
+                elif len(trailing) > 2:
+                    fixed_line = stripped + "  "
+
             # Fix hard tabs (outside or inside code blocks, convert tab to 4 spaces)
             if self.is_rule_enabled("MD010"):
                 fixed_line = fixed_line.replace("\t", "    ")
-
-            # Fix trailing whitespace
-            if self.is_rule_enabled("MD011"):
-                fixed_line = fixed_line.rstrip(" \t")
 
             fixed_lines.append(fixed_line)
 
