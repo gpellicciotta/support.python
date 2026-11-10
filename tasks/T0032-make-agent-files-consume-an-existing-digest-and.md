@@ -1,11 +1,12 @@
 ---
 id: T0032
-owner: ~
-needs: [T0020]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@claude"
+session: claude-20261110-4207e1
+needs: []
+branch: task/T0032-make-agent-files-consume-an-existing-digest-and
+worktree: .plan/work/T0032-make-agent-files-consume-an-existing-digest-and
+status: active
+started_at: "2026-11-10T01:28:46Z"
 ended_at: —
 review: agent
 preview: none
@@ -20,12 +21,12 @@ Make `sync` and `check` exit 1 with a hint to run `agent-digest generate` when t
 Keep explicit `--digest`, `--skills-dir`, and config keys working.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read every agent-files use of the digest generator, digest sources, and default digest and skills paths.
-- [ ] **[Implement]** Write failing tests for no generator calls, the new defaults, and the missing-digest hint.
-- [ ] **[Verify]**    Run the new tests and record their failures as red-phase proof.
-- [ ] **[Implement]** Remove generator use and dev-guidelines path constants, and apply the new defaults.
-- [ ] **[Verify]**    Run the full suite and the installed integration scenario from the technical spec.
-- [ ] **[Doc]**       Update docs/tools/agent-files.md, README.md, and CHANGELOG.md.
+- [x] **[Read]**      Read every agent-files use of the digest generator, digest sources, and default digest and skills paths.
+- [x] **[Implement]** Write failing tests for no generator calls, the new defaults, and the missing-digest hint.
+- [x] **[Verify]**    Run the new tests and record their failures as red-phase proof.
+- [x] **[Implement]** Remove generator use and dev-guidelines path constants, and apply the new defaults.
+- [x] **[Verify]**    Run the full suite and the installed integration scenario from the technical spec.
+- [x] **[Doc]**       Update docs/tools/agent-files.md, README.md, and CHANGELOG.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
@@ -34,3 +35,14 @@ Keep explicit `--digest`, `--skills-dir`, and config keys working.
 
 - [2026-11-09] **[Decide]**
   Scope agreed with the user on 2026-11-09 as part of the v2.0.0 standalone-tools and reusable-devops restructuring. Digest freshness becomes agent-digest check's job; agent-files only installs what it is given.
+
+- [2026-11-10] **[Implement]**
+  Removed digest generation from agent-files; sync and check now install the existing agent-digest.md and agent-skills, exiting 1 with an agent-digest generate hint.
+
+- [2026-11-10] **[Verify]**
+  Full suite, ruff, docs lint, and the installed integration scenario passed; proof in validation-proof.md.
+  - 749 passed, 3 skipped.
+  - Files touched: 6.
+  - Lines touched: 381.
+  - Reopenings: 0.
+
