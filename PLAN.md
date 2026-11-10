@@ -21,9 +21,9 @@ An overview of all tasks and their planning.
 - [x] T0033 Let lint-markdown load extra rules from plugin modules and list all active rules with a rules action.
 - [x] T0034 Convert support_python.devops into a package with steps and services modules, keeping its public imports unchanged.
 - [x] T0035 Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins.
-- [ ] T0036 Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development.
-- [ ] T0037 [needs: T0036] Rebuild extract-release-notes, migrate-namespace, and reset-history on support_python.devops.release, and delete scripts/_repo_common.py.
-- [ ] T0038 [needs: T0036] Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them.
+- [x] T0036 Add a dry-runnable ReleasePipeline that freezes, tags, pushes, publishes a GitHub release with assets, and reopens development.
+- [ ] T0037 Rebuild extract-release-notes, migrate-namespace, and reset-history on support_python.devops.release, and delete scripts/_repo_common.py.
+- [ ] T0038 Add DevopsCli and PythonProject to support_python.devops, and rebuild this repository's scripts/devops.py on them.
 - [ ] T0039 [needs: T0038] Add a GradleProject adapter to support_python.devops for gradlew-based lint, test, build, check, clean, and release.
 - [ ] T0040 [needs: T0039] Add a NodeProject adapter to support_python.devops for npm-based lint, format, test, build, check, clean, and release.
 - [ ] T0041 [needs: T0038] Add a deploy action to DevopsCli with shared preconditions, typed confirmation, project deploy steps, and post-deploy verification.
