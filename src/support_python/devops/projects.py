@@ -59,6 +59,11 @@ class Project(ABC):
     def test(self, selection: Sequence[str] = ()) -> bool:
         """Run the test suite, or the tests and runner options in ``selection``."""
 
+    def test_slow(self, selection: Sequence[str] = ()) -> bool:
+        """Run the slow test suite, or skip it when the project has none."""
+        self.logger.info("No slow test suite configured; skipping.")
+        return True
+
     @abstractmethod
     def build(self) -> bool:
         """Build the distributable outputs from scratch."""
@@ -68,8 +73,8 @@ class Project(ABC):
         """Remove build outputs."""
 
     def check(self) -> bool:
-        """Run lint, then test, then build, stopping at the first failure."""
-        return self.lint() and self.test() and self.build()
+        """Run lint, then test, then test_slow, then build, stopping at the first failure."""
+        return self.lint() and self.test() and self.test_slow() and self.build()
 
     def release_assets(self) -> list[Path]:
         """Return the build outputs to attach to a release."""
@@ -121,6 +126,9 @@ class PythonProject(Project):
     def test(self, selection: Sequence[str] = ()) -> bool:
         return self._python("-m", "pytest", "-q", *selection)
 
+    def test_slow(self, selection: Sequence[str] = ()) -> bool:
+        return self._python("-m", "pytest", "-m", "slow", "--timeout=120", *selection)
+
     def build(self) -> bool:
         if not self._has_venv():
             return False
@@ -155,6 +163,7 @@ class GradleProject(Project):
         lint_tasks: Tasks run by :meth:`lint`.
         format_tasks: Tasks run by :meth:`format`.
         test_tasks: Tasks run by :meth:`test`.
+        slow_test_tasks: Tasks run by :meth:`test_slow`.
         build_tasks: Tasks run by :meth:`build`.
         check_tasks: Tasks run by :meth:`check`.
         clean_tasks: Tasks run by :meth:`clean`.
@@ -174,6 +183,7 @@ class GradleProject(Project):
         lint_tasks: Sequence[str] = ("spotlessCheck", "checkstyleMain", "checkstyleTest"),
         format_tasks: Sequence[str] = ("spotlessApply",),
         test_tasks: Sequence[str] = ("test",),
+        slow_test_tasks: Sequence[str] = ("slowTest",),
         build_tasks: Sequence[str] = ("build",),
         check_tasks: Sequence[str] = ("build",),
         clean_tasks: Sequence[str] = ("clean",),
@@ -185,6 +195,7 @@ class GradleProject(Project):
         self.lint_tasks = list(lint_tasks)
         self.format_tasks = list(format_tasks)
         self.test_tasks = list(test_tasks)
+        self.slow_test_tasks = list(slow_test_tasks)
         self.build_tasks = list(build_tasks)
         self.check_tasks = list(check_tasks)
         self.clean_tasks = list(clean_tasks)
@@ -209,6 +220,16 @@ class GradleProject(Project):
         for item in selection:
             filters.extend([item] if item.startswith("-") else ["--tests", item])
         return self._gradle(*self.test_tasks, *filters)
+
+    def test_slow(self, selection: Sequence[str] = ()) -> bool:
+        """Run ``slow_test_tasks`` with a ``--tests`` filter per selection item; skip when empty."""
+        if not self.slow_test_tasks:
+            self.logger.info("No slow test tasks configured; skipping.")
+            return True
+        filters: list[str] = []
+        for item in selection:
+            filters.extend([item] if item.startswith("-") else ["--tests", item])
+        return self._gradle(*self.slow_test_tasks, *filters)
 
     def build(self) -> bool:
         return self._gradle(*self.build_tasks)
@@ -293,6 +314,16 @@ class NodeProject(Project):
     def test(self, selection: Sequence[str] = ()) -> bool:
         """Run ``npm test``, passing ``selection`` to the test script after ``--``."""
         return self._has_script("test") and self._npm("test", *(["--", *selection] if selection else []))
+
+    def test_slow(self, selection: Sequence[str] = ()) -> bool:
+        """Run ``npm run test:slow``, passing ``selection`` after ``--``, or skip when undefined."""
+        scripts = self._scripts()
+        if scripts is None:
+            return False
+        if "test:slow" not in scripts:
+            self.logger.info("npm script 'test:slow' is not defined in package.json; skipping.")
+            return True
+        return self._npm("run", "test:slow", *(["--", *selection] if selection else []))
 
     def build(self) -> bool:
         scripts = self._scripts()

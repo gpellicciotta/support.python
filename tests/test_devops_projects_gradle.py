@@ -95,6 +95,20 @@ class GradleTaskMappingTests(GradleTestCase):
         run_cli(self.cli(), "test", "demo.CoreTest", "--", "--info")
         self.assertEqual(self.runner.tails(), [["test", "--tests", "demo.CoreTest", "--info"]])
 
+    def test_test_slow_runs_the_slow_test_task(self) -> None:
+        run_cli(self.cli(), "test", "--slow")
+        self.assertEqual(self.runner.tails(), [["slowTest"]])
+
+    def test_test_slow_adds_a_tests_filter_per_selection_item(self) -> None:
+        run_cli(self.cli(), "test", "--slow", "demo.SlowTest", "demo.OtherSlowTest.method")
+        self.assertEqual(self.runner.tails(), [["slowTest", "--tests", "demo.SlowTest", "--tests", "demo.OtherSlowTest.method"]])
+
+    def test_test_slow_skips_with_info_when_no_slow_tasks(self) -> None:
+        code, out, err = run_cli(self.cli(slow_test_tasks=[]), "test", "--slow")
+        self.assertEqual(code, 0)
+        self.assertIn("skipping", (out + err).lower())
+        self.assertEqual(self.runner.calls, [])
+
     def test_build_runs_the_build_task(self) -> None:
         run_cli(self.cli(), "build")
         self.assertEqual(self.runner.tails(), [["build"]])
@@ -133,6 +147,7 @@ class GradleOverrideTests(GradleTestCase):
             lint_tasks=["spotlessCheck"],
             format_tasks=["fmt"],
             test_tasks=["test", "integrationTest"],
+            slow_test_tasks=["integrationTest"],
             build_tasks=["assemble"],
             check_tasks=["check", "assemble"],
             clean_tasks=["cleanAll"],
@@ -140,6 +155,7 @@ class GradleOverrideTests(GradleTestCase):
         self.assertTrue(project.lint())
         self.assertTrue(project.format())
         self.assertTrue(project.test(["demo.CoreTest"]))
+        self.assertTrue(project.test_slow(["demo.SlowTest"]))
         self.assertTrue(project.build())
         self.assertTrue(project.check())
         self.assertTrue(project.clean())
@@ -149,6 +165,7 @@ class GradleOverrideTests(GradleTestCase):
                 ["spotlessCheck"],
                 ["fmt"],
                 ["test", "integrationTest", "--tests", "demo.CoreTest"],
+                ["integrationTest", "--tests", "demo.SlowTest"],
                 ["assemble"],
                 ["check", "assemble"],
                 ["cleanAll"],

@@ -110,6 +110,20 @@ class PythonProjectActionTests(DevopsCliTestCase):
         code, _, _ = run_cli(self.cli(failures=["pytest"]), "test")
         self.assertEqual(code, 1)
 
+    def test_test_slow_runs_pytest_slow_with_timeout(self) -> None:
+        code, _, _ = run_cli(self.cli(), "test", "--slow")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.runner.tails(), [["-m", "pytest", "-m", "slow", "--timeout=120"]])
+
+    def test_test_slow_passes_selection_through(self) -> None:
+        code, _, _ = run_cli(self.cli(), "test", "--slow", "tests/test_a.py", "--", "-k", "slow")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.runner.tails(), [["-m", "pytest", "-m", "slow", "--timeout=120", "tests/test_a.py", "-k", "slow"]])
+
+    def test_test_slow_failure_exits_1(self) -> None:
+        code, _, _ = run_cli(self.cli(failures=["pytest"]), "test", "--slow")
+        self.assertEqual(code, 1)
+
     def test_build_removes_dist_then_builds(self) -> None:
         cli = self.cli()
         stale = self.root / "dist" / "stale.whl"
@@ -133,9 +147,16 @@ class PythonProjectActionTests(DevopsCliTestCase):
                 ["-m", "ruff", "check", "."],
                 ["-m", "ruff", "format", "--check", "."],
                 ["-m", "pytest", "-q"],
+                ["-m", "pytest", "-m", "slow", "--timeout=120"],
                 ["-m", "build", "-o", "dist"],
             ],
         )
+
+    def test_check_stops_when_slow_suite_fails(self) -> None:
+        code, _, _ = run_cli(self.cli(failures=["slow"]), "check")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.runner.tails()[-1], ["-m", "pytest", "-m", "slow", "--timeout=120"])
+        self.assertNotIn(["-m", "build", "-o", "dist"], self.runner.tails())
 
     def test_check_stops_at_the_first_failure(self) -> None:
         code, _, _ = run_cli(self.cli(failures=["pytest"]), "check")
@@ -389,6 +410,61 @@ class ProjectBaseTests(unittest.TestCase):
             self.assertFalse(Demo(Path(tmp)).check())
             self.assertEqual(Demo(Path(tmp)).release_assets(), [])
         self.assertEqual(calls, ["lint", "test"])
+
+    def test_check_runs_lint_test_test_slow_and_build(self) -> None:
+        calls: list[str] = []
+
+        class Demo(Project):
+            def lint(self) -> bool:
+                calls.append("lint")
+                return True
+
+            def format(self) -> bool:
+                return True
+
+            def test(self, selection: Sequence[str] = ()) -> bool:
+                calls.append("test")
+                return True
+
+            def test_slow(self, selection: Sequence[str] = ()) -> bool:
+                calls.append("test_slow")
+                return True
+
+            def build(self) -> bool:
+                calls.append("build")
+                return True
+
+            def clean(self) -> bool:
+                return True
+
+        with TemporaryDirectory() as tmp:
+            self.assertTrue(Demo(Path(tmp)).check())
+        self.assertEqual(calls, ["lint", "test", "test_slow", "build"])
+
+    def test_default_test_slow_skips_with_info(self) -> None:
+        class MinimalProject(Project):
+            def lint(self) -> bool:
+                return True
+
+            def format(self) -> bool:
+                return True
+
+            def test(self, selection: Sequence[str] = ()) -> bool:
+                return True
+
+            def build(self) -> bool:
+                return True
+
+            def clean(self) -> bool:
+                return True
+
+        with TemporaryDirectory() as tmp:
+            project = MinimalProject(Path(tmp))
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), redirect_stderr(err):
+                result = project.test_slow()
+            self.assertTrue(result)
+            self.assertIn("skipping", (out.getvalue() + err.getvalue()).lower())
 
 
 if __name__ == "__main__":

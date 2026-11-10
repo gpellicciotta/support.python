@@ -98,6 +98,36 @@ class NodeScriptMappingTests(NodeTestCase):
         run_cli(self.cli(), "test", "tests/core.test.js", "--", "--reporter=dot")
         self.assertEqual(self.runner.tails(), [["test", "--", "tests/core.test.js", "--reporter=dot"]])
 
+    def test_test_slow_runs_npm_run_test_slow(self) -> None:
+        run_cli(self.cli(scripts={**ALL_SCRIPTS, "test:slow": "vitest run --config vitest.slow.config.js"}), "test", "--slow")
+        self.assertEqual(self.runner.tails(), [["run", "test:slow"]])
+
+    def test_test_slow_passes_selection_items_after_a_separator(self) -> None:
+        run_cli(self.cli(scripts={**ALL_SCRIPTS, "test:slow": "vitest run"}), "test", "--slow", "test/slow.test.js")
+        self.assertEqual(self.runner.tails(), [["run", "test:slow", "--", "test/slow.test.js"]])
+
+    def test_test_slow_skips_with_info_when_script_is_missing(self) -> None:
+        code, out, err = run_cli(self.cli(scripts=ALL_SCRIPTS), "test", "--slow")
+        self.assertEqual(code, 0)
+        self.assertIn("skipping", (out + err).lower())
+        self.assertEqual(self.runner.calls, [])
+
+    def test_check_runs_slow_suite_when_defined(self) -> None:
+        scripts = {**ALL_SCRIPTS, "test:slow": "vitest run"}
+        code, _, _ = run_cli(self.cli(scripts=scripts), "check")
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            self.runner.tails(),
+            [["run", "lint"], ["test"], ["run", "test:slow"], ["run", "build"], ["pack", "--pack-destination", "dist"]],
+        )
+
+    def test_check_stops_when_slow_suite_fails(self) -> None:
+        scripts = {**ALL_SCRIPTS, "test:slow": "vitest run"}
+        code, _, _ = run_cli(self.cli(scripts=scripts, failures=["test:slow"]), "check")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.runner.tails()[-1], ["run", "test:slow"])
+        self.assertNotIn(["run", "build"], self.runner.tails())
+
     def test_build_runs_the_build_script_then_packs_into_dist(self) -> None:
         code, _, _ = run_cli(self.cli(), "build")
         self.assertEqual(code, 0)

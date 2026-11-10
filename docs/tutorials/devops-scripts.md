@@ -121,8 +121,8 @@ sys.exit(pipeline.run())
 ## DevopsCli and project adapters
 `DevopsCli` turns a `Project` into the standard `devops` command line on `ToolHarness`.
 Its actions are:
-- `lint`, `format`, `test`, `build`, and `clean`.
-- `check`, which runs lint, test, and build, stopping at the first failure.
+- `lint`, `format`, `test` (with `--slow` for the slow suite), `build`, and `clean`.
+- `check`, which runs lint, fast and slow tests, and build, stopping at the first failure.
 - `versions`, which exits 1 when the version file and the top `CHANGELOG.md` heading differ.
 - `release`, which runs `ReleasePipeline` with `check` as its quality check and `build` as its post-freeze build hook.
   It attaches the outputs of that post-freeze build, never the `-pre` build from `check`.
@@ -149,18 +149,20 @@ if __name__ == "__main__":
 
 ### PythonProject
 `PythonProject` runs ruff, pytest, and build through `{{project-root}}/.venv` and exits 1 with a bootstrap hint when it is missing.
+`test --slow` runs `pytest -m slow --timeout=120` through the venv.
 
 ### GradleProject
 `GradleProject` runs `gradlew.bat` on Windows and `./gradlew` elsewhere, adding `--console=plain` (`gradle_options`):
 
-| Action   | Default Gradle tasks                                | Keyword override |
-| :------- | :-------------------------------------------------- | :--------------- |
-| `lint`   | `spotlessCheck checkstyleMain checkstyleTest`       | `lint_tasks`     |
-| `format` | `spotlessApply`                                     | `format_tasks`   |
-| `test`   | `test`, plus `--tests ITEM` per selection item      | `test_tasks`     |
-| `build`  | `build`                                             | `build_tasks`    |
-| `check`  | `build`, once, since Gradle's build runs the checks | `check_tasks`    |
-| `clean`  | `clean`                                             | `clean_tasks`    |
+| Action        | Default Gradle tasks                                | Keyword override  |
+| :------------ | :-------------------------------------------------- | :---------------- |
+| `lint`        | `spotlessCheck checkstyleMain checkstyleTest`       | `lint_tasks`      |
+| `format`      | `spotlessApply`                                     | `format_tasks`    |
+| `test`        | `test`, plus `--tests ITEM` per selection item      | `test_tasks`      |
+| `test --slow` | `slowTest`, plus `--tests ITEM` per selection item  | `slow_test_tasks` |
+| `build`       | `build`                                             | `build_tasks`     |
+| `check`       | `build`, once, since Gradle's build runs the checks | `check_tasks`     |
+| `clean`       | `clean`                                             | `clean_tasks`     |
 
 Test selection items starting with `-` pass to Gradle unchanged.
 It reads the version from `gradle.properties` and releases `build/libs/*.jar` and `*/build/libs/*.jar`.
@@ -172,14 +174,15 @@ For example, `GradleProject(REPO_ROOT, release_task="doFullRelease", release_arg
 ### NodeProject
 `NodeProject` runs npm scripts, resolving `npm` through `resolve_executable` so Windows finds `npm.cmd`:
 
-| Action   | npm commands                                                          |
-| :------- | :-------------------------------------------------------------------- |
-| `lint`   | `npm run lint`                                                        |
-| `format` | `npm run format`                                                      |
-| `test`   | `npm test`, plus `-- ITEM...` with selection items                    |
-| `build`  | `npm run build` when defined, then `npm pack --pack-destination dist` |
-| `check`  | lint, test, then build                                                |
-| `clean`  | removes `dist/`                                                       |
+| Action        | npm commands                                                                |
+| :------------ | :-------------------------------------------------------------------------- |
+| `lint`        | `npm run lint`                                                              |
+| `format`      | `npm run format`                                                            |
+| `test`        | `npm test`, plus `-- ITEM...` with selection items                          |
+| `test --slow` | `npm run test:slow`, plus `-- ITEM...` with selection items (skips if none) |
+| `build`       | `npm run build` when defined, then `npm pack --pack-destination dist`       |
+| `check`       | lint, fast and slow tests, then build                                       |
+| `clean`       | removes `dist/`                                                             |
 
 A script missing from `package.json` fails with an error naming it.
 `build` clears `dist/` first; the version lives in `package.json`, and `release` attaches `dist/*.tgz`.

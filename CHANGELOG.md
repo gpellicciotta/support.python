@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.19-pre
+## v2.0.20-pre
+- Library: Added `test --slow` to `DevopsCli` and made `check` run both fast and slow suites ([cli.py](src/support_python/devops/cli.py)).
 - Test: Split test suite into parallel fast suite and marked slow suite with timeouts ([pyproject.toml](pyproject.toml)).
 - CLI: **[breaking]** Resolved GitHub repository links to sibling checkouts only for configured github-owners, defaulting to none ([lint.py](src/support_python/markdown/lint.py)).
 - Library: **[breaking]** Defaulted APP_AUTHOR and COPYRIGHT to empty, omitting the banner copyright suffix when empty, while bundled tools keep theirs ([cli.py](src/support_python/cli.py)).

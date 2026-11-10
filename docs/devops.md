@@ -45,7 +45,7 @@ Release with [devops.py](../scripts/devops.py) from a clean `main`.
 Preview first with `python scripts/devops.py release --dry-run`.
 The real run pushes and publishes, so run it only with explicit approval.
 1. Check preconditions: a clean tree on `main`, an authenticated `gh`, fresh tags, no existing release, and release notes.
-2. Run `check` (lint, test, build) as the quality gate; `--skip-checks` skips it.
+2. Run `check` (lint, fast and slow tests, build) as the quality gate; `--skip-checks` skips it.
 3. Ask for the typed `release v{{version}}` confirmation; `--yes` skips it.
 4. Freeze the `CHANGELOG.md` heading and the `pyproject.toml` version, and commit.
 5. Rebuild `dist/` at the frozen version; a failed build stops before anything is tagged or pushed.
@@ -69,15 +69,15 @@ To release by hand when the pipeline cannot run:
 It imports the package from `src/`, so it needs no install; its commands run through `.venv`.
 ```bash
 python scripts/devops.py lint | format | build | check | clean
-python scripts/devops.py test [SELECTION...] [-- PYTEST-OPTIONS...]
+python scripts/devops.py test [--slow] [SELECTION...] [-- PYTEST-OPTIONS...]
 python scripts/devops.py versions
 python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
 python scripts/devops.py help [--verbose] | version
 ```
 - `lint` runs `ruff check .` and `ruff format --check .`; `format` runs `ruff format .`.
-- `test` runs `pytest -q` (fast suite); slow tests run with `pytest -m slow --timeout=120`.
+- `test` runs `pytest -q` (fast suite) or `pytest -m slow --timeout=120` with `--slow`.
 - `build` removes `dist/` and runs `python -m build -o dist`.
-- `check` runs lint, test, and build, stopping at the first failure.
+- `check` runs lint, fast and slow tests, and build, stopping at the first failure.
 - `clean` removes `dist/`, `build/`, and `src/*.egg-info`; it needs no venv.
 - `versions` compares `pyproject.toml` with the top `CHANGELOG.md` heading and exits 1 on drift.
 - `release` runs `ReleasePipeline`, as described under [Making a Release](#making-a-release).

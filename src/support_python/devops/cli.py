@@ -215,9 +215,9 @@ class DevopsCli:
             "test",
             "run the test suite, or a selection of it",
             self._test,
-            detail="Run the test suite. Pass test paths or names as SELECTION; put runner options after `--`.",
-            usage_suffix="[SELECTION...] [-- RUNNER-OPTIONS...]",
-            configure_parser=lambda parser: parser.add_argument("selection", nargs="*"),
+            detail="Run the test suite. Pass --slow to run the slow suite. Pass test paths or names as SELECTION; put runner options after `--`.",
+            usage_suffix="[--slow] [SELECTION...] [-- RUNNER-OPTIONS...]",
+            configure_parser=_configure_test,
         )
         add("build", "build the distributable outputs from scratch", self._operation("build"), usage_suffix="")
         add(
@@ -256,6 +256,8 @@ class DevopsCli:
 
     def _test(self, args: argparse.Namespace, logger: CliLogger) -> int:
         self.project.logger = logger
+        if args.slow:
+            return 0 if self.project.test_slow(args.selection) else 1
         return 0 if self.project.test(args.selection) else 1
 
     def _versions(self, args: argparse.Namespace, logger: CliLogger) -> int:
@@ -293,6 +295,11 @@ class DevopsCli:
             runner=self.project.runner,
         )
         return pipeline.run()
+
+
+def _configure_test(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--slow", action="store_true", help="run the slow test suite")
+    parser.add_argument("selection", nargs="*")
 
 
 def _configure_release(parser: argparse.ArgumentParser) -> None:
