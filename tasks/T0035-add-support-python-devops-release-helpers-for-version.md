@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 812.4, input: 128, output: 42740, cache_read: 3876218, cache_write: 119714}
+  worker: {turns: 4, duration_s: 1062.0, input: 156, output: 48476, cache_read: 5028822, cache_write: 135888}
 work_duration: 418.4
+review_status: pending
+review_round: 1
 ---
 # T0035: Add support_python.devops.release helpers for version files, CHANGELOG freezing and reopening, release notes, and GitHub origins
 
@@ -61,4 +63,7 @@ Leave the scripts unchanged; T0037 rebuilds them on this module.
 - [2026-11-10] **[Verify]**
   Completion validation found 1 errors; pending fix turn 1 of 2.
   - TF018.
+
+- [2026-11-10] **[Review]**
+  Round 1 requested (mode: agent).
 
