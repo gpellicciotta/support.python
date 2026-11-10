@@ -4,8 +4,8 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
-- [ ] T0019 Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script.
-- [ ] T0020 [needs: T0019] Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check.
+- [x] T0019 Port the dev-guidelines agent digest generator unchanged into support_python.tools.agent_digest with an agent-digest console script.
+- [ ] T0020 Generalize agent-digest to take Markdown paths, order files by front-matter index, and fold validation into check.
 - [-] T0021 [reason: Superseded by T0024, which installs lint-markdown as a console script within the v2.0.0 tool restructuring.] Expose the Markdown linter as an installable lint-markdown console script.
 - [-] T0022 [reason: Superseded by T0024 and T0029, which install agent-files and align its verbs and tool name.] Expose the agent-files sync as an installable agent-files console script.
 - [x] T0023 Record ADR-0003 on tool, library, and script boundaries with shared CLI conventions, and open v2.0.0-pre.
