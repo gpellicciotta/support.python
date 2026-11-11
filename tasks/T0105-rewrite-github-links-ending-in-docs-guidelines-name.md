@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 141.8, input: 56, output: 10810, cache_read: 1206816, cache_write: 65960}
+  worker: {turns: 4, duration_s: 215.0, input: 88, output: 14366, cache_read: 1973004, cache_write: 79656}
 work_duration: 84.4
+review_status: pending
+review_round: 1
 ---
 # T0105: Rewrite GitHub links ending in docs/guidelines/{{name}}.md to the skill reference, as links ending in skills/{{name}}/SKILL.md are today
 
@@ -60,4 +62,7 @@ Specifications: [technical-spec.md](T0105-rewrite-github-links-ending-in-docs-gu
 
 - [2026-11-11] **[Doc]**
   Updated agent-digest.md and CHANGELOG.md.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
