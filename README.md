@@ -8,6 +8,7 @@ See also:
 - [CHANGELOG](CHANGELOG.md)
 - [Documentation index](docs/index.md)
 - [Migrating to v2.0.0](docs/migration-v2.md)
+- [Migrating to v3.0.0](docs/migration-v3.md)
 
 ## Bootstrap
 ```bash

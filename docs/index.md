@@ -10,6 +10,7 @@ Overview of all documentation for the `support-python` project.
 - [LICENSE](../LICENSE.md): License terms (MIT).
 - [DevOps & Operations](devops.md): Environment prerequisites, development workflows, testing, and release process.
 - [Migrating to v2.0.0](migration-v2.md): v1.x to v2.0.0 mapping of commands, modules, verbs, options, config files, and library API, plus the devops entry script migration pattern.
+- [Migrating to v3.0.0](migration-v3.md): Breaking changes since v2.0.0 in commands, config files, and library API, with replacements.
 
 ---
 

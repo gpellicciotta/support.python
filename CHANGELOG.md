@@ -15,6 +15,7 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v3.1.1-pre
+- Docs: Moved the breaking changes since v2.0.0 from [migration-v2.md](docs/migration-v2.md) into the new [migration-v3.md](docs/migration-v3.md).
 
 ## v3.1.0 [released: 2026-11-11]
 - Library: `terminate_process_tree` allows `taskkill` 15 seconds on Windows, and its lifecycle test retries under load ([processes.py](src/support_python/processes.py)).

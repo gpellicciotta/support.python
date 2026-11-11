@@ -76,23 +76,22 @@ Dry runs and JSON output are available on these actions in v2.0.0:
 - `json` mode prints one document on `stdout`.
 - `agent-digest` accepts neither option yet: `generate` always writes, and `check` prints text only.
 
-| Tool                    | v1.x                                            | v2.0.0                                                           |
-| :---------------------- | :---------------------------------------------- | :--------------------------------------------------------------- |
-| `agent-files`           | `update`                                        | `sync`                                                           |
-| `agent-files`           | `diff`                                          | `check`                                                          |
-| `agent-files`           | `sync` regenerates `guidelines/agent-digest.md` | Run `agent-digest generate` first; a missing digest exits `1`    |
-| `agent-files`           | Digest `guidelines/agent-digest.md`             | `./agent-digest.md`, or `--digest PATH` / `digest_path`          |
-| `agent-files`           | Skills directory `skills/`                      | `./agent-skills`, or `--skills-dir PATH` / `skills_dir`          |
-| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate {{path}}...` / `check {{path}}...`                     |
-| `agent-digest`          | `validate`                                      | `check {{path}}...`                                              |
-| `agent-digest`          | Output `guidelines/agent-digest.md`, `skills/`  | `--digest PATH` and `--skills-dir PATH`                          |
-| `lint-markdown`         | `check --fix`                                   | `fix`, with `fix --dry-run` to preview                           |
-| `processes`             | `list --format table`                           | `list --format text`; `table` now exits `2`                      |
-| `processes`             | No dry run                                      | `kill --dry-run`                                                 |
-| `processes`             | `kill` never asks                               | `kill` asks to confirm; `--yes` skips it, or exit `2` unattended |
-| `git-repository-backup` | Text-only `list`                                | `list --format text` or `list --format json`                     |
-| Capture CLIs            | `-v` shows the version                          | `-v` means `--verbose`; use `--version`                          |
-| Capture CLIs            | No arguments runs the default action            | No arguments shows help; invalid arguments exit `2`              |
+| Tool                    | v1.x                                            | v2.0.0                                                        |
+| :---------------------- | :---------------------------------------------- | :------------------------------------------------------------ |
+| `agent-files`           | `update`                                        | `sync`                                                        |
+| `agent-files`           | `diff`                                          | `check`                                                       |
+| `agent-files`           | `sync` regenerates `guidelines/agent-digest.md` | Run `agent-digest generate` first; a missing digest exits `1` |
+| `agent-files`           | Digest `guidelines/agent-digest.md`             | `./agent-digest.md`, or `--digest PATH` / `digest_path`       |
+| `agent-files`           | Skills directory `skills/`                      | `./agent-skills`, or `--skills-dir PATH` / `skills_dir`       |
+| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate {{path}}...` / `check {{path}}...`                  |
+| `agent-digest`          | `validate`                                      | `check {{path}}...`                                           |
+| `agent-digest`          | Output `guidelines/agent-digest.md`, `skills/`  | `--digest PATH` and `--skills-dir PATH`                       |
+| `lint-markdown`         | `check --fix`                                   | `fix`, with `fix --dry-run` to preview                        |
+| `processes`             | `list --format table`                           | `list --format text`; `table` now exits `2`                   |
+| `processes`             | No dry run                                      | `kill --dry-run`                                              |
+| `git-repository-backup` | Text-only `list`                                | `list --format text` or `list --format json`                  |
+| Capture CLIs            | `-v` shows the version                          | `-v` means `--verbose`; use `--version`                       |
+| Capture CLIs            | No arguments runs the default action            | No arguments shows help; invalid arguments exit `2`           |
 
 `agent-digest` orders its inputs by integer `index` front-matter; see [agent-digest.md](tools/agent-digest.md).
 To keep the v1.x dev-guidelines layout, pass the old paths explicitly:
@@ -115,9 +114,6 @@ Each tool reads its legacy path with a deprecation warning until `v3.0.0`; renam
 The `git-repository-backup` user config file location is listed in [git-repository-backup.md](tools/git-repository-backup.md#configuration-discovery-and-schema).
 Configuration keys in every tool accept kebab-case and snake_case spellings, so existing files keep working; docs use kebab-case.
 `--config PATH` still overrides discovery on every tool that reads configuration.
-`git-repository-backup` now warns, instead of exiting `2`, about unknown keys, malformed files, and invalid values, and also reads `GIT_REPOSITORY_BACKUP_*` variables and a system file.
-`lint-markdown` likewise warns about malformed files and wrong-typed values, reads `LINT_MARKDOWN_*` variables, a user file, and a system file, and replaces list settings as a whole across sources; the `{ "MD0xx": bool }` form of `rules` is no longer read by the tool.
-`agent-files` also warns about unknown keys, malformed files, and invalid values, except empty strings and invalid tool definitions, which still exit `2`; it reads `AGENT_FILES_*` variables, a user file, and a system file, and merges `tools` across sources by tool name.
 
 ---
 
@@ -148,45 +144,24 @@ The `support_python.devops` split moves mock patch targets:
 ## Library API
 Removed names and their replacements:
 
-| v1.x API                                                                                                     | v2.0.0 replacement                                        |
-| :----------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
-| `ToolLogger`, `TeeLogger`                                                                                    | `CliLogger`                                               |
-| `build_action_parser`                                                                                        | `ToolHarness` with `add_action`                           |
-| `print_help`, `print_version`                                                                                | The harness `help` and `version` actions                  |
-| `format_version`                                                                                             | `ToolHarness.format_version()`                            |
-| `format_support_message`                                                                                     | Removed, with no replacement                              |
-| `build_capture_parser`                                                                                       | `build_capture_harness`                                   |
-| `configure_utf8_output()` in tool `main`                                                                     | Drop the call; `ToolHarness.run` configures UTF-8 streams |
-| `transform_auth_users`, `transform_auth_credentials`, `transform_auth_tokens`, `transform_auth_applications` | Define the rules locally with `column_rules_transformer`  |
-| `transform_counters_users`, `transform_counters_webhooks`                                                    | Define the rules locally with `column_rules_transformer`  |
+| v1.x API                                 | v2.0.0 replacement                                        |
+| :--------------------------------------- | :-------------------------------------------------------- |
+| `ToolLogger`, `TeeLogger`                | `CliLogger`                                               |
+| `build_action_parser`                    | `ToolHarness` with `add_action`                           |
+| `print_help`, `print_version`            | The harness `help` and `version` actions                  |
+| `format_version`                         | `ToolHarness.format_version()`                            |
+| `format_support_message`                 | Removed, with no replacement                              |
+| `build_capture_parser`                   | `build_capture_harness`                                   |
+| `configure_utf8_output()` in tool `main` | Drop the call; `ToolHarness.run` configures UTF-8 streams |
 
 `run_capture_cli` log lines no longer carry a `cli_name` origin.
 
-The SQL anonymizer no longer knows the `auth` and `counters` schemas:
-- `anonymize_sql_stream(in, out, transformers)` and `anonymize_sql_string(sql, transformers)` require the `transformers` mapping.
-  The `app`, `custom_password`, and `custom_transformers` parameters are gone; a transformer closes over its own password.
-- `LocalMySqlManager(snapshot_transformers=...)` supplies the mapping; `snapshot_and_anonymize` logs an error and returns `None` without it.
-- `snapshot_and_anonymize` drops `custom_password`, and `db snapshot` drops `--custom-password`.
-- See [sql-anonymizer.md](tutorials/sql-anonymizer.md) for the rules the removed profiles applied.
-
-The crypto helpers no longer ship a fixed salt or AES key:
-- `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX` are removed from `support_python` and `support_python.crypto`.
-- `get_standard_password_hash(password, *, salt)` requires a non-empty `salt` as `bytes`; invalid values raise `ValueError`.
-- `decrypt_property_value(val, key_hex)` requires a hex AES key of 16, 24, or 32 bytes; invalid values raise `ValueError`.
-- `decrypt_property_value` raises `ImportError` for `aes:` values when `cryptography` is not installed.
-- `decrypt_property_value` raises `ValueError` for malformed `aes:` values instead of returning the ciphertext.
-- Output for the same explicit salt and key is unchanged.
-
 Kept names changed behavior; update tests that assert exact output:
 - `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.
-- `APP_AUTHOR` and `COPYRIGHT` default to `""`, omitting the ` - {copyright}` banner suffix when empty.
-  Pass `copyright` to `ToolHarness` or `DevopsCli` to set a custom copyright banner.
-  The five bundled tools and [devops.py](../scripts/devops.py) keep their banner through `TOOLS_COPYRIGHT`.
 - `format_log_message` and `CliLogger` stamp UTC times and keep blank lines inside multi-line messages.
 - `CliLogger.log_start` opens with `Starting {{name}} v{{version}} with configuration:`, as `ToolHarness` does.
 - `ToolHarness` in v2.0.0 runs its fallback action only when the first argument is not an option.
   A v1.x `tool --url x` call exits `2` there; later releases run the fallback action for it again.
-- `lint-markdown` resolves GitHub repository links to sibling checkouts only for owners configured in `github-owners`, defaulting to none.
 
 `MarkdownLinter`, `LintIssue`, `RuleRegistry`, `LintProfile`, and `load_profile` import from `support_python.markdown` or the package root.
 

@@ -9,6 +9,7 @@ A general-purpose Python library and five console tools for Python clients and o
 It ships `processes`, `agent-files`, `agent-digest`, `lint-markdown`, and `git-repository-backup`, plus the `support_python` library.
 See [README.md](README.md) for usage, [index.md](docs/index.md) for all documentation, and [devops.md](docs/devops.md) for operations.
 [migration-v2.md](docs/migration-v2.md) maps every v1.x name to its v2.0.0 replacement.
+[migration-v3.md](docs/migration-v3.md) maps every breaking change since v2.0.0 to its v3.0.0 replacement.
 
 ## Commands
 - Bootstrap a fresh checkout: `python scripts/bootstrap-dev-environment.py`
@@ -39,7 +40,7 @@ See [README.md](README.md) for usage, [index.md](docs/index.md) for all document
 - Build every console tool on `ToolHarness` and `CliLogger` instead of `argparse` and `print`.
 - Load `support_python` from `src/` in [devops.py](scripts/devops.py); this repository cannot pin itself in `scripts/requirements.txt`.
 - Keep [bootstrap-dev-environment.py](scripts/bootstrap-dev-environment.py) and [_cli_common.py](scripts/_cli_common.py) stdlib-only, without importing `support_python`.
-- Record every breaking v2 change in [migration-v2.md](docs/migration-v2.md) as well as in [CHANGELOG.md](CHANGELOG.md).
+- Record every breaking change after v3.0.0 in a new `docs/migration-v{{major}}.md` for its major version, as well as in [CHANGELOG.md](CHANGELOG.md).
 - Treat `tests/fixtures/agent_digest/` as a frozen dev-guidelines snapshot; change it only to test new digest behavior.
 
 ## Boundaries
