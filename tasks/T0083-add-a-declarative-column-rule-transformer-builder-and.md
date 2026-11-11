@@ -12,9 +12,11 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 1762.4, input: 1441224, output: 164746, cache_read: 46303810}
+  worker: {turns: 4, duration_s: 1811.4, input: 1441248, output: 166470, cache_read: 46685764, cache_write: 67968}
 work_duration: 894.4
 contributors: "@gemini"
+review_status: pending
+review_round: 1
 ---
 # T0083: Add a declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer
 
@@ -60,4 +62,7 @@ This task only adds API; T0084 removes the hardcoded schemas.
 
 - [2026-11-11] **[Doc]**
   Documented the builder in sql-anonymizer.md and updated CHANGELOG.md.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
