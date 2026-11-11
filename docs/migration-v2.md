@@ -117,6 +117,7 @@ Configuration keys in every tool accept kebab-case and snake_case spellings, so 
 `--config PATH` still overrides discovery on every tool that reads configuration.
 `git-repository-backup` now warns, instead of exiting `2`, about unknown keys, malformed files, and invalid values, and also reads `GIT_REPOSITORY_BACKUP_*` variables and a system file.
 `lint-markdown` likewise warns about malformed files and wrong-typed values, reads `LINT_MARKDOWN_*` variables, a user file, and a system file, and replaces list settings as a whole across sources; the `{ "MD0xx": bool }` form of `rules` is no longer read by the tool.
+`agent-files` also warns about unknown keys, malformed files, and invalid values, except empty strings and invalid tool definitions, which still exit `2`; it reads `AGENT_FILES_*` variables, a user file, and a system file, and merges `tools` across sources by tool name.
 
 ---
 

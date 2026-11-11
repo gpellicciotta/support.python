@@ -1809,14 +1809,12 @@ class AgentFilesConfigTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 cfg_mod.load_agent_files_config(Path(tmp_dir) / "does-not-exist.json")
 
-    def test_load_config_invalid_schema_raises_value_error(self) -> None:
+    def test_load_config_invalid_tool_or_empty_value_raises_value_error(self) -> None:
         from support_python.tools import agent_files_config as cfg_mod
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             root = Path(tmp_dir)
-            for idx, payload in enumerate(
-                ("{not valid json", '{"not_a_valid_field": 1}', '{"legacy_skill_names": "x"}', '{"tools": [{"name": "x"}]}')
-            ):
+            for idx, payload in enumerate(('{"tools": [{"name": "x"}]}', '{"marker": ""}')):
                 p = root / f"bad-{idx}.json"
                 p.write_text(payload, encoding="utf-8")
                 with self.assertRaises(ValueError):
@@ -2042,16 +2040,6 @@ class AgentFilesKebabConfigTests(unittest.TestCase):
 
 
 class AgentFilesKeyDiagnosticsTests(unittest.TestCase):
-    def test_unknown_config_key_is_named_in_kebab_case(self) -> None:
-        from support_python.tools import agent_files_config as cfg_mod
-
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            cfg_file = Path(tmp_dir).resolve() / ".agent-files.json"
-            cfg_file.write_text(json.dumps({"foo_bar": 1}), encoding="utf-8")
-            with self.assertRaises(ValueError) as ctx:
-                cfg_mod.load_agent_files_config(cfg_file)
-        self.assertIn("foo-bar", str(ctx.exception))
-
     def test_unknown_tool_key_is_named_with_tool(self) -> None:
         from support_python.tools import agent_files_config as cfg_mod
 
@@ -2084,3 +2072,174 @@ class AgentFilesKeyDiagnosticsTests(unittest.TestCase):
             cfg_mod.load_agent_files_config(cfg_file, logger=_Logger())
         self.assertEqual(len(messages), 2)
         self.assertTrue(any("'x'" in m for m in messages))
+
+
+class AgentFilesSharedSettingsTests(unittest.TestCase):
+    """Settings resolve through the shared resolver: environment, project, user, and system files, and the config group."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name).resolve()
+        self.root = self.tmp / "repo"
+        (self.root / ".git").mkdir(parents=True)
+        self.project_cfg = self.root / ".agent-files.json"
+        self.xdg = self.tmp / "xdg"
+        self.user_cfg = self.xdg / "agent-files" / "config.json"
+        self.system_cfg = self.tmp / "system" / "config.json"
+        previous = os.getcwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir, previous)
+        for patcher in (
+            mock.patch.object(sync_mod, "system_config_path", return_value=self.system_cfg, create=True),
+            mock.patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.xdg)}),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def write(self, path: Path, data: object) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    def load(self, **kwargs: object):
+        from support_python.tools import agent_files_config as cfg_mod
+
+        kwargs.setdefault("repo_root", self.root)
+        return cfg_mod.load_agent_files_config(**kwargs)
+
+    @staticmethod
+    def tool(name: str, target: str, **extra: object) -> dict:
+        return {"command": name, "target_file": target, **extra}
+
+    def test_environment_variable_beats_project_file_and_loses_to_option(self) -> None:
+        self.write(self.project_cfg, {"marker": "from-file"})
+        self.assertEqual(self.load().marker, "from-file")
+        with mock.patch.dict(os.environ, {"AGENT_FILES_MARKER": "custom"}):
+            self.assertEqual(self.load().marker, "custom")
+            self.assertEqual(self.load(marker="other").marker, "other")
+
+    def test_environment_variables_set_lists_and_booleans(self) -> None:
+        env = {"AGENT_FILES_LEGACY_SKILL_NAMES": "a, b", "AGENT_FILES_REPLACE_TOOLS": "yes"}
+        with mock.patch.dict(os.environ, env):
+            cfg = self.load()
+        self.assertEqual(cfg.legacy_skill_names, ("a", "b"))
+        self.assertEqual(cfg.tools, ())
+
+    def test_project_file_beats_user_file_and_user_file_beats_system_file(self) -> None:
+        self.write(self.system_cfg, {"marker": "system", "manifest-source": "system"})
+        self.assertEqual(self.load().marker, "system")
+        self.write(self.user_cfg, {"marker": "user"})
+        self.assertEqual((self.load().marker, self.load().manifest_source), ("user", "system"))
+        self.write(self.project_cfg, {"marker": "project"})
+        self.assertEqual(self.load().marker, "project")
+
+    def test_relative_repo_root_resolves_against_the_file_that_sets_it(self) -> None:
+        self.write(self.user_cfg, {"repo-root": "docs-root"})
+        cfg = self.load(repo_root=None)
+        self.assertEqual(cfg.repo_root, (self.user_cfg.parent / "docs-root").resolve())
+        self.assertEqual(cfg.digest_path, cfg.repo_root / "agent-digest.md")
+
+    def test_tools_merge_across_sources_by_tool_name(self) -> None:
+        self.write(self.system_cfg, {"tools": {"alpha": self.tool("alpha", "~/a.md"), "beta": self.tool("beta", "~/b.md")}})
+        user_tools = {"beta": self.tool("beta-user", "~/b-user.md"), "codex-cli": self.tool("codex", "~/c.md")}
+        self.write(self.user_cfg, {"tools": user_tools})
+        self.write(self.project_cfg, {"tools": {"claude-code": self.tool("claude", "~/claude.md")}})
+        by_name = {tool.name: tool for tool in self.load().tools}
+        for name in ("alpha", "beta", "claude-code", "codex-cli", "antigravity"):
+            self.assertIn(name, by_name)
+        self.assertEqual(by_name["beta"].command, "beta-user")
+        self.assertEqual(by_name["codex-cli"].command, "codex")
+        self.assertEqual(by_name["claude-code"].command, "claude")
+
+    def test_tools_list_form_still_loads(self) -> None:
+        self.write(self.project_cfg, {"tools": [{"name": "alpha", **self.tool("alpha", "~/a.md")}]})
+        self.assertIn("alpha", [tool.name for tool in self.load().tools])
+
+    def test_replace_tools_drops_the_defaults(self) -> None:
+        self.write(self.user_cfg, {"replace-tools": True, "tools": {"alpha": self.tool("alpha", "~/a.md")}})
+        self.assertEqual([tool.name for tool in self.load().tools], ["alpha"])
+
+    def test_malformed_user_file_warns_once_and_is_skipped(self) -> None:
+        self.user_cfg.parent.mkdir(parents=True)
+        self.user_cfg.write_text("{not json", encoding="utf-8")
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            cfg = self.load()
+        self.assertEqual(cfg.marker, "dev-guidelines")
+        self.assertEqual(err.getvalue().count(str(self.user_cfg)), 1)
+
+    def test_unknown_key_is_ignored_and_listed_with_debug(self) -> None:
+        self.write(self.project_cfg, {"marker": "m", "future-setting": 1})
+        code, _, err = _run_main(["list", "--repo-root", str(self.root)])
+        self.assertEqual(code, 0)
+        self.assertNotIn("future-setting", err)
+        log_file = self.tmp / "debug.log"
+        _run_main(["list", "--repo-root", str(self.root), "--debug", "--log-file", str(log_file)])
+        self.assertIn("future-setting", log_file.read_text(encoding="utf-8"))
+
+    def test_invalid_value_warns_and_falls_to_the_next_source(self) -> None:
+        self.write(self.user_cfg, {"replace-tools": "maybe", "marker": "user"})
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            cfg = self.load()
+        self.assertEqual(cfg.marker, "user")
+        self.assertIn("replace-tools", err.getvalue())
+        self.assertIn("claude-code", [tool.name for tool in cfg.tools])
+
+    def run_config(self, *argv: str) -> tuple[int, str, str]:
+        return _run_main(["config", *argv])
+
+    def test_config_list_names_every_setting_with_sources(self) -> None:
+        self.write(self.user_cfg, {"manifest-source": "mine"})
+        with mock.patch.dict(os.environ, {"AGENT_FILES_MARKER": "env-marker"}):
+            code, out, _ = self.run_config("list", "--format", "json")
+        self.assertEqual(code, 0)
+        by_name = {entry["name"]: entry for entry in json.loads(out)["settings"]}
+        self.assertEqual(
+            list(by_name),
+            [
+                "repo-root",
+                "digest-path",
+                "skills-dir",
+                "marker",
+                "marker-begin",
+                "marker-end",
+                "manifest-source",
+                "manifest-name",
+                "legacy-skill-names",
+                "replace-tools",
+                "tools",
+            ],
+        )
+        self.assertEqual((by_name["marker"]["value"], by_name["marker"]["source"]), ("env-marker", "env"))
+        self.assertEqual((by_name["manifest-source"]["value"], by_name["manifest-source"]["source"]), ("mine", "user"))
+
+    def test_config_targets_the_project_file_by_default(self) -> None:
+        code, out, _ = self.run_config("path")
+        self.assertEqual((code, out.strip()), (0, str(self.project_cfg)))
+        code, out, _ = self.run_config("path", "--all", "--format", "json")
+        self.assertEqual(
+            json.loads(out), {"project": str(self.project_cfg), "user": str(self.user_cfg), "system": str(self.system_cfg)}
+        )
+        self.assertEqual(self.run_config("set", "marker", "mine")[0], 0)
+        self.assertEqual(json.loads(self.project_cfg.read_text(encoding="utf-8")), {"marker": "mine"})
+        code, out, _ = self.run_config("get", "marker", "--verbose")
+        self.assertIn("source: project", out)
+        self.assertEqual(self.run_config("delete", "marker")[0], 0)
+        self.assertEqual(json.loads(self.project_cfg.read_text(encoding="utf-8")), {})
+
+    def test_config_set_user_file_and_reject_bad_values(self) -> None:
+        self.assertEqual(self.run_config("set", "replace-tools", "true", "--user")[0], 0)
+        self.assertEqual(json.loads(self.user_cfg.read_text(encoding="utf-8")), {"replace-tools": True})
+        self.assertEqual(self.run_config("set", "replace-tools", "maybe")[0], 2)
+        self.assertEqual(self.run_config("get", "bogus")[0], 2)
+
+    def test_config_runs_even_when_a_tool_entry_is_invalid(self) -> None:
+        self.write(self.project_cfg, {"tools": {"broken": {"command": "x"}}})
+        self.assertEqual(self.run_config("list")[0], 0)
+        self.assertEqual(self.run_config("delete", "tools")[0], 0)
+
+    def test_missing_config_option_file_still_exits_two(self) -> None:
+        code, _, err = _run_main(["list", "--config", str(self.tmp / "missing.json")])
+        self.assertEqual(code, 2)
+        self.assertIn("missing.json", err)

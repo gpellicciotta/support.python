@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
-from support_python.config import kebab_keys, normalize_config_keys
+from support_python.config import Setting, SettingsSchema, kebab_keys, normalize_config_keys, resolve_settings
 
 DEFAULT_CONFIG_FILENAME = ".agent-files.json"
 LEGACY_CONFIG_FILENAME = "agent-files.json"
@@ -23,23 +24,6 @@ DEFAULT_MANIFEST_SOURCE = "dev-guidelines"
 DEFAULT_MANIFEST_NAME = ".dev-guidelines-skills.json"
 DEFAULT_LEGACY_SKILL_NAMES: tuple[str, ...] = ("plan-task-usage", "ui-verification")
 
-_ALLOWED_CONFIG_KEYS = frozenset(
-    {
-        "repo_root",
-        "digest_path",
-        "digest",
-        "skills_dir",
-        "skills",
-        "marker",
-        "marker_begin",
-        "marker_end",
-        "manifest_source",
-        "manifest_name",
-        "legacy_skill_names",
-        "tools",
-        "replace_tools",
-    }
-)
 _ALLOWED_TOOL_KEYS = frozenset(
     {
         "name",
@@ -215,20 +199,76 @@ def _resolve_path(base: Path, raw: str | Path) -> Path:
     return candidate if candidate.is_absolute() else (base / candidate).resolve()
 
 
-def _read_and_validate_json(path: Path, logger: Any | None = None) -> dict[str, Any]:
-    try:
-        parsed = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise ValueError(f"Invalid JSON in {path}: {exc}") from exc
-    if isinstance(parsed, dict):
-        parsed = normalize_config_keys(parsed, source=path, logger=logger)
-    if not isinstance(parsed, dict):
-        raise ValueError(f"Invalid configuration schema in {path}: expected a JSON object")
-    if set(parsed.keys()) - _ALLOWED_CONFIG_KEYS:
-        raise ValueError(
-            f"Invalid configuration schema in {path}: unknown keys {kebab_keys(set(parsed.keys()) - _ALLOWED_CONFIG_KEYS)}"
-        )
-    return parsed
+def _tools_by_name(raw: Any) -> Any:
+    """Return the ``tools`` value as an object keyed by tool name, converting the list form."""
+    if isinstance(raw, str) and raw.lstrip().startswith("["):
+        raw = json.loads(raw)
+    if not isinstance(raw, list):
+        return raw
+    named: dict[str, Any] = {}
+    for entry in raw:
+        name = entry.get("name") if isinstance(entry, dict) else None
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("tool definition requires non-empty string 'name'")
+        named[name.strip()] = entry
+    return named
+
+
+#: The settings of the agent-files tool, in the order ``config list`` shows them.
+AGENT_FILES_SETTINGS = (
+    Setting(
+        "repo-root",
+        "string",
+        None,
+        "Repository root; a relative path resolves against the folder of the file that sets it. Defaults to the Git root.",
+    ),
+    Setting(
+        "digest-path",
+        "string",
+        None,
+        "Digest file to install; defaults to agent-digest.md in the repository root.",
+        aliases=("digest",),
+    ),
+    Setting(
+        "skills-dir",
+        "string",
+        None,
+        "Skills directory to install; defaults to agent-skills in the repository root.",
+        aliases=("skills",),
+    ),
+    Setting("marker", "string", DEFAULT_MARKER, "Identifier of the guarded block comments."),
+    Setting("marker-begin", "string", None, "Explicit opening guarded block line; derived from the marker when unset."),
+    Setting("marker-end", "string", None, "Explicit closing guarded block line; derived from the marker when unset."),
+    Setting("manifest-source", "string", DEFAULT_MANIFEST_SOURCE, "Ownership source recorded in the skills manifests."),
+    Setting(
+        "manifest-name",
+        "string",
+        None,
+        "Manifest file name inside each target skills folder; derived from the source when unset.",
+    ),
+    Setting(
+        "legacy-skill-names", "list", None, "Bootstrap skill names owned before a manifest exists; the built-in list when unset."
+    ),
+    Setting("replace-tools", "boolean", False, "Replace the built-in tools instead of merging the tools setting into them."),
+    Setting(
+        "tools",
+        "dict",
+        {},
+        "Tool definitions by name; sources merge by tool name, and files may also list named objects.",
+        normalize=_tools_by_name,
+    ),
+)
+
+
+def build_schema(**options: Any) -> SettingsSchema:
+    """Return the agent-files settings schema; ``options`` are passed to :class:`SettingsSchema`."""
+    return SettingsSchema("agent-files", AGENT_FILES_SETTINGS, **options)
+
+
+def _non_empty(name: str, value: Any) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"'{name}' must be a non-empty string")
+    return value
 
 
 def load_agent_files_config(
@@ -245,96 +285,109 @@ def load_agent_files_config(
     legacy_skill_names: Sequence[str] | None = None,
     base_tools: Sequence[Any] | None = None,
     logger: Any | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> AgentFilesConfig:
-    """Load, validate, and resolve agent-files sync settings from JSON and explicit overrides."""
-    from support_python.tools.agent_files import TOOLS as default_tools, find_project_root
+    """Resolve agent-files sync settings from the arguments, the environment, and the project, user, and system files.
 
-    raw: dict[str, Any] = {}
-    cfg_dir: Path | None = None
+    The arguments take the place of the command-line options. ``config_path`` replaces the discovered files. Unknown keys,
+    malformed files, and wrongly typed values warn and fall through to the next source.
+
+    Raises:
+        FileNotFoundError: ``config_path`` does not exist.
+        ValueError: A resolved value is empty or a tool definition is invalid.
+    """
+    from support_python.tools.agent_files import TOOLS as default_tools, find_project_root, system_config_path
+
+    env = os.environ if environ is None else environ
+    if logger is None:
+        from support_python.logging import CliLogger
+
+        logger = CliLogger()
+    cfg_file: Path | None = None
+    project_file = DEFAULT_CONFIG_FILENAME
     if config_path is not None:
-        resolved_cfg = Path(config_path).expanduser().resolve()
-        if not resolved_cfg.is_file():
-            raise FileNotFoundError(f"Configuration file not found: {resolved_cfg}")
-        cfg_dir, raw = resolved_cfg.parent, _read_and_validate_json(resolved_cfg, logger)
+        cfg_file = Path(config_path).expanduser().resolve()
+        if not cfg_file.is_file():
+            raise FileNotFoundError(f"Configuration file not found: {cfg_file}")
+        init_root = cfg_file.parent
     else:
-        init_root = Path(repo_root).expanduser().resolve() if repo_root is not None else find_project_root()
-        candidate = init_root / DEFAULT_CONFIG_FILENAME
-        legacy = init_root / LEGACY_CONFIG_FILENAME
-        if candidate.is_file():
-            cfg_dir, raw = candidate.parent, _read_and_validate_json(candidate, logger)
-            if legacy.is_file():
-                from support_python.logging import CliLogger
-
-                (logger or CliLogger()).warn(
-                    f"Legacy config {legacy} is ignored because {candidate} exists; remove {LEGACY_CONFIG_FILENAME} before v3.0.0."
-                )
+        start = repo_root if repo_root is not None else env.get("AGENT_FILES_REPO_ROOT")
+        init_root = Path(start).expanduser().resolve() if start else find_project_root()
+        candidate, legacy = init_root / DEFAULT_CONFIG_FILENAME, init_root / LEGACY_CONFIG_FILENAME
+        if candidate.is_file() and legacy.is_file():
+            logger.warn(
+                f"Legacy config {legacy} is ignored because {candidate} exists; remove {LEGACY_CONFIG_FILENAME} before v3.0.0."
+            )
         elif legacy.is_file():
-            from support_python.logging import CliLogger
-
-            (logger or CliLogger()).warn(
+            logger.warn(
                 f"Reading legacy config {legacy}; rename it to {DEFAULT_CONFIG_FILENAME}. The legacy filename is removed in v3.0.0."
             )
-            cfg_dir, raw = legacy.parent, _read_and_validate_json(legacy, logger)
+            project_file = LEGACY_CONFIG_FILENAME
+    schema = build_schema(project_dir=init_root, project_file=project_file, system_path=system_config_path(), environ=environ)
+    cli = {
+        "repo-root": str(repo_root) if repo_root is not None else None,
+        "digest-path": str(digest_path) if digest_path is not None else None,
+        "skills-dir": str(skills_dir) if skills_dir is not None else None,
+        "marker": marker,
+        "marker-begin": marker_begin,
+        "marker-end": marker_end,
+        "manifest-source": manifest_source,
+        "manifest-name": manifest_name,
+        "legacy-skill-names": list(legacy_skill_names) if legacy_skill_names is not None else None,
+    }
+    resolved = resolve_settings(schema, cli=cli, config_path=cfg_file, logger=logger)
+    project_path = cfg_file if cfg_file is not None else schema.path("project")
 
-    if repo_root is not None:
-        resolved_root = Path(repo_root).expanduser().resolve()
-    elif "repo_root" in raw:
-        if not isinstance(raw["repo_root"], str) or not raw["repo_root"].strip():
-            raise ValueError("'repo_root' must be a non-empty string")
-        resolved_root = _resolve_path(cfg_dir or Path.cwd(), raw["repo_root"])
+    def value(name: str) -> Any:
+        return resolved[name].value
+
+    def base_dir(name: str) -> Path:
+        source = resolved[name].source
+        if source == "project":
+            return project_path.parent
+        return schema.path(source).parent if source in ("user", "system") else Path.cwd()
+
+    if value("repo-root") is not None:
+        raw_root = _non_empty("repo-root", value("repo-root"))
+        resolved_root = (base_dir("repo-root") / Path(raw_root).expanduser()).resolve()
     else:
-        resolved_root = cfg_dir.resolve() if cfg_dir is not None else find_project_root()
+        resolved_root = project_path.parent.resolve() if project_path.is_file() else init_root.resolve()
 
-    raw_digest = digest_path if digest_path is not None else raw.get("digest_path", raw.get("digest"))
-    if raw_digest is not None and (not isinstance(raw_digest, (str, Path)) or not str(raw_digest).strip()):
-        raise ValueError("'digest_path' must be a non-empty path string")
-    resolved_digest = _resolve_path(resolved_root, raw_digest) if raw_digest is not None else resolved_root / DEFAULT_DIGEST_RELPATH
-
-    raw_skills = skills_dir if skills_dir is not None else raw.get("skills_dir", raw.get("skills"))
-    if raw_skills is not None and (not isinstance(raw_skills, (str, Path)) or not str(raw_skills).strip()):
-        raise ValueError("'skills_dir' must be a non-empty path string")
-    resolved_skills = _resolve_path(resolved_root, raw_skills) if raw_skills is not None else resolved_root / DEFAULT_SKILLS_RELPATH
-
-    raw_begin = marker_begin if marker_begin is not None else raw.get("marker_begin")
-    resolved_marker, resolved_begin, resolved_end = resolve_markers(
-        marker=marker if marker is not None else raw.get("marker", DEFAULT_MARKER),
-        marker_begin=raw_begin,
-        marker_end=marker_end if marker_end is not None else raw.get("marker_end"),
+    raw_digest = value("digest-path")
+    resolved_digest = (
+        _resolve_path(resolved_root, _non_empty("digest-path", raw_digest))
+        if raw_digest is not None
+        else resolved_root / DEFAULT_DIGEST_RELPATH
     )
-    raw_source = manifest_source if manifest_source is not None else raw.get("manifest_source", DEFAULT_MANIFEST_SOURCE)
-    if not isinstance(raw_source, str) or not raw_source.strip():
-        raise ValueError("'manifest_source' must be a non-empty string")
-    resolved_source = raw_source.strip()
+    raw_skills = value("skills-dir")
+    resolved_skills = (
+        _resolve_path(resolved_root, _non_empty("skills-dir", raw_skills))
+        if raw_skills is not None
+        else resolved_root / DEFAULT_SKILLS_RELPATH
+    )
 
-    raw_mname = manifest_name if manifest_name is not None else raw.get("manifest_name")
-    if raw_mname is not None and (not isinstance(raw_mname, str) or not raw_mname.strip()):
-        raise ValueError("'manifest_name' must be a non-empty string")
+    raw_begin = value("marker-begin")
+    resolved_marker, resolved_begin, resolved_end = resolve_markers(
+        marker=value("marker"), marker_begin=raw_begin, marker_end=value("marker-end")
+    )
+    resolved_source = _non_empty("manifest-source", value("manifest-source")).strip()
+    raw_mname = value("manifest-name")
+    if raw_mname is not None:
+        _non_empty("manifest-name", raw_mname)
     resolved_mname = (
         raw_mname.strip()
         if raw_mname is not None
         else (DEFAULT_MANIFEST_NAME if resolved_source == DEFAULT_MANIFEST_SOURCE else f".{resolved_source}-skills.json")
     )
-    if legacy_skill_names is not None:
-        resolved_legacy = tuple(legacy_skill_names)
-    elif "legacy_skill_names" in raw:
-        resolved_legacy = _validate_str_list(raw["legacy_skill_names"], "legacy_skill_names")
+    if value("legacy-skill-names") is not None:
+        resolved_legacy = _validate_str_list(value("legacy-skill-names"), "legacy-skill-names")
     else:
         resolved_legacy = DEFAULT_LEGACY_SKILL_NAMES if resolved_source == DEFAULT_MANIFEST_SOURCE else ()
 
-    replace_tools = raw.get("replace_tools", False)
-    if not isinstance(replace_tools, bool):
-        raise ValueError("'replace_tools' must be a boolean")
-    registry = ToolRegistry([] if replace_tools else (base_tools if base_tools is not None else default_tools))
-    if "tools" in raw:
-        raw_tools = raw["tools"]
-        if isinstance(raw_tools, dict):
-            entries = [{"name": k, **v} if isinstance(v, dict) else v for k, v in raw_tools.items()]
-        elif isinstance(raw_tools, list):
-            entries = raw_tools
-        else:
-            raise ValueError("'tools' must be a list or object of tool definitions")
-        for entry in entries:
-            registry.register(build_tool_from_dict(entry, default_legacy_skills=resolved_legacy, logger=logger))
+    registry = ToolRegistry([] if value("replace-tools") else (base_tools if base_tools is not None else default_tools))
+    for name, entry in value("tools").items():
+        definition = {"name": name, **entry} if isinstance(entry, dict) else entry
+        registry.register(build_tool_from_dict(definition, default_legacy_skills=resolved_legacy, logger=logger))
 
     return AgentFilesConfig(
         repo_root=resolved_root,

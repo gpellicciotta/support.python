@@ -13,10 +13,11 @@ agent-files list [--format text|json] [--config PATH]
 agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
 agent-files check [TOOL ...] [--format text|json] [--config PATH]
 agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
+agent-files config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|--system] [--format text|json]
 ```
 
-Supported configuration flags override JSON settings and built-in defaults:
-- `--config PATH` loads explicit JSON settings from `PATH`.
+Supported configuration flags override environment variables, files, and built-in defaults:
+- `--config PATH` loads settings from `PATH` only, instead of the discovered files.
 - `--format text|json` selects text or JSON output on `list` and `check` (default: `text`; `check` JSON reports `up-to-date`, `changes-pending`, or `unavailable` when a target file cannot be read or has invalid guarded-block markers).
 - In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--repo-root PATH` overrides the source repository root directory.
@@ -38,10 +39,22 @@ agent-files sync
 
 ---
 
-## JSON Configuration Schema
-Configuration keys accept dashes or underscores interchangeably; this document shows the preferred kebab-case spelling.
-When `--config` is omitted, the loader checks `.agent-files.json` in the resolved repository root, falling back to `agent-files.json` with a deprecation warning (removed in `v3.0.0`).
-All relative paths in `.agent-files.json` resolve against `repo-root`.
+## Configuration
+Settings resolve in this order, and the first valid value wins:
+1. Command-line option.
+2. Environment variable `AGENT_FILES_{{SETTING}}`, such as `AGENT_FILES_MARKER`.
+3. Project file `.agent-files.json` in the repository root, falling back to `agent-files.json` with a deprecation warning (removed in `v3.0.0`).
+4. User file `agent-files/config.json` in the user configuration folder (`%APPDATA%` on Windows, `$XDG_CONFIG_HOME` or `~/.config` elsewhere).
+5. System file `%PROGRAMDATA%/agent-files/config.json` on Windows, `/etc/agent-files/config.json` elsewhere.
+6. Built-in default.
+
+`tools` is the exception: its entries merge across all sources by tool name, and the highest source wins for each name.
+Unknown keys are ignored and listed in `--debug` output.
+A malformed file or a wrongly typed value logs one warning and falls through to the next source.
+`--config PATH` replaces the three files; a missing `PATH` exits `2`.
+Keys accept dashes or underscores interchangeably; this document shows the preferred kebab-case spelling.
+A relative `repo-root` resolves against the folder of the file that sets it; other relative paths resolve against `repo-root`.
+List values in the environment are comma-separated or a JSON array; `tools` is a JSON object.
 ```json
 {
   "repo-root": ".",
@@ -54,32 +67,45 @@ All relative paths in `.agent-files.json` resolve against `repo-root`.
     "ui-verification"
   ],
   "replace-tools": false,
-  "tools": [
-    {
-      "name": "cursor-agent",
+  "tools": {
+    "cursor-agent": {
       "command": "cursor",
       "target-file": "~/.cursor/rules.md",
       "skills-dir": "~/.cursor/skills",
       "native-skill-discovery": true,
       "aliases": ["cursor"]
     }
-  ]
+  }
 }
 ```
 
-| Field                | Type            | Default                         | Purpose                                                |
-| :------------------- | :-------------- | :------------------------------ | :----------------------------------------------------- |
-| `repo-root`          | `string`        | Config directory or Git root    | Base directory for relative paths and review runs      |
-| `digest-path`        | `string`        | `{{repo-root}}/agent-digest.md` | Existing Markdown digest synced into target files      |
-| `skills-dir`         | `string`        | `{{repo-root}}/agent-skills`    | Source directory containing `{{skill}}/SKILL.md` trees |
-| `marker`             | `string`        | `dev-guidelines`                | Identifier for guarded block comments                  |
-| `marker-begin`       | `string`        | Derived from `marker`           | Explicit opening guarded block line                    |
-| `marker-end`         | `string`        | Derived from `marker`           | Explicit closing guarded block line                    |
-| `manifest-source`    | `string`        | `dev-guidelines`                | Ownership tag written into the skills manifest         |
-| `manifest-name`      | `string`        | `.dev-guidelines-skills.json`   | Manifest filename inside each target skills folder     |
-| `legacy-skill-names` | `array<string>` | Built-in legacy list or `[]`    | Bootstrap skill names owned before manifest creation   |
-| `replace-tools`      | `boolean`       | `false`                         | Replace default tools instead of merging `tools`       |
-| `tools`              | `array<object>` | Built-in tool registry          | Additional or overridden tool registry entries         |
+| Setting              | Type            | Default                         | Environment variable                | Purpose                                                |
+| :------------------- | :-------------- | :------------------------------ | :---------------------------------- | :----------------------------------------------------- |
+| `repo-root`          | `string`        | Project file folder or Git root | `AGENT_FILES_REPO_ROOT`             | Base directory for relative paths and review runs      |
+| `digest-path`        | `string`        | `{{repo-root}}/agent-digest.md` | `AGENT_FILES_DIGEST_PATH`           | Existing Markdown digest synced into target files      |
+| `skills-dir`         | `string`        | `{{repo-root}}/agent-skills`    | `AGENT_FILES_SKILLS_DIR`            | Source directory containing `{{skill}}/SKILL.md` trees |
+| `marker`             | `string`        | `dev-guidelines`                | `AGENT_FILES_MARKER`                | Identifier for guarded block comments                  |
+| `marker-begin`       | `string`        | Derived from `marker`           | `AGENT_FILES_MARKER_BEGIN`          | Explicit opening guarded block line                    |
+| `marker-end`         | `string`        | Derived from `marker`           | `AGENT_FILES_MARKER_END`            | Explicit closing guarded block line                    |
+| `manifest-source`    | `string`        | `dev-guidelines`                | `AGENT_FILES_MANIFEST_SOURCE`       | Ownership tag written into the skills manifest         |
+| `manifest-name`      | `string`        | `.dev-guidelines-skills.json`   | `AGENT_FILES_MANIFEST_NAME`         | Manifest filename inside each target skills folder     |
+| `legacy-skill-names` | `array<string>` | Built-in legacy list or `[]`    | `AGENT_FILES_LEGACY_SKILL_NAMES`    | Bootstrap skill names owned before manifest creation   |
+| `replace-tools`      | `boolean`       | `false`                         | `AGENT_FILES_REPLACE_TOOLS`         | Replace default tools instead of merging `tools`       |
+| `tools`              | `object`        | Built-in tool registry          | `AGENT_FILES_TOOLS`                 | Tool definitions by name, merged across sources        |
+
+The file keys `digest` and `skills` are accepted for `digest-path` and `skills-dir`.
+A file may also give `tools` as an array of objects that each carry a `name`.
+An invalid tool definition, an empty string setting, or an unknown tool key exits `2`.
+
+### Config Command
+`agent-files config` inspects and changes the settings; see the [configuration tutorial](../tutorials/configuration.md) for the shared actions.
+It targets the project file `.agent-files.json` in the Git root of the current directory; pass `--user` or `--system` for the other files.
+```bash
+agent-files config list --format json
+agent-files config set marker my-rules
+agent-files config set replace-tools true --user
+agent-files config path --all
+```
 
 ### Guarded Block Markers
 The default `dev-guidelines` marker wraps the synced block in these lines:

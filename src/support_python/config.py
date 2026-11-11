@@ -90,6 +90,8 @@ class Setting:
         description: One-sentence description shown by ``config list --verbose`` and ``config names --verbose``.
         secret: Print the value as ``***`` in ``config list`` and ``config get``.
         aliases: Other file keys that mean this setting; the setting's own key wins when a file has both.
+        normalize: Converts a raw file, environment, or command-line value before it is parsed; raises ``ValueError``
+            for a value it rejects. ``config set`` does not apply it.
     """
 
     name: str
@@ -98,6 +100,7 @@ class Setting:
     description: str = ""
     secret: bool = False
     aliases: tuple[str, ...] = ()
+    normalize: Optional[Callable[[Any], Any]] = None
 
     def __post_init__(self) -> None:
         name = self.name.replace("_", "-")
@@ -329,7 +332,7 @@ def resolve_settings(
         valid: list[tuple[str, Any]] = []
         for source, label, raw in sources:
             try:
-                valid.append((source, parse_setting_value(setting, raw)))
+                valid.append((source, parse_setting_value(setting, raw if setting.normalize is None else setting.normalize(raw))))
             except ValueError as exc:
                 warn(f"Invalid value for setting '{name}' from {label}: {_reason(setting, exc)}; using the next source.")
             if valid and setting.type != "dict":

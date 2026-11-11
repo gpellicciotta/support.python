@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from support_python.cli import PROJECT_VERSION, ToolHarness  # noqa: E402
+from support_python.config import SettingsSchema, add_config_actions  # noqa: E402
 from support_python.logging import (  # noqa: E402
     CliLogger,
     format_severity_indicator as format_severity_indicator,
@@ -42,6 +43,7 @@ from support_python.tools.agent_files_config import (
     DEFAULT_MARKER_END,
     DEFAULT_SKILLS_RELPATH,
     begin_marker_pattern,
+    build_schema,
 )
 
 
@@ -959,7 +961,7 @@ class SyncHarness(ToolHarness):
         """Emit the standard startup banner including the selected tools and action options."""
         config: dict = {}
         args = self.args
-        if args is not None and action != "list":
+        if args is not None and action in ("sync", "check", "review"):
             config["Tools selected"] = ", ".join(args.tool_names or [tool.name for tool in TOOLS])
             if action == "review":
                 config["Timeout per tool"] = f"{args.timeout}s"
@@ -1008,7 +1010,7 @@ class SyncHarness(ToolHarness):
 
         is_meta = (
             not raw_args
-            or raw_args[0] in ("help", "version", "-h", "--help", "--version")
+            or raw_args[0] in ("help", "version", "config", "-h", "--help", "--version")
             or any(flag in raw_args for flag in ("-h", "--help", "--version"))
         )
         saved = (
@@ -1085,6 +1087,16 @@ class SyncHarness(ToolHarness):
             ) = saved
 
 
+def system_config_path() -> Path:
+    """Return the system config file location: ``%PROGRAMDATA%/agent-files/config.json`` or ``/etc/...``."""
+    return SettingsSchema(TOOL_NAME, [], tiers=("system",)).path("system")
+
+
+def build_settings_schema() -> SettingsSchema:
+    """Return the declared settings, with the project file in the Git root of the current directory."""
+    return build_schema(project_dir=find_project_root(), system_path=system_config_path())
+
+
 def build_harness() -> SyncHarness:
     """Construct the CLI harness with the list, sync, check, and review actions."""
     harness = SyncHarness(
@@ -1106,7 +1118,7 @@ def build_harness() -> SyncHarness:
         detailed_help="Configured tools:\n" + "\n".join(f"  {tool.name:<23}{tool.target_file}" for tool in TOOLS),
     )
     for flag, meta, desc in (
-        ("--config", "PATH", "path to .agent-files.json configuration file"),
+        ("--config", "PATH", "path to a .agent-files.json file that replaces the discovered files"),
         ("--repo-root", "PATH", "repository root directory override"),
         ("--digest", "PATH", f"digest file to install (default: ./{DEFAULT_DIGEST_RELPATH})"),
         ("--skills-dir", "PATH", f"skills directory to install (default: ./{DEFAULT_SKILLS_RELPATH})"),
@@ -1184,6 +1196,7 @@ def build_harness() -> SyncHarness:
         usage_suffix="[TOOL ...] [options]",
         configure_parser=configure_tool_names,
     )
+    add_config_actions(harness, build_settings_schema())
     return harness
 
 

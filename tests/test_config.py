@@ -211,3 +211,19 @@ class ResolveSettingsTests(_SettingsFixture):
         schema = self.schema(tiers=("user",))
         self.write(schema.path("project"), {"retries": 4})
         self.assertEqual(resolve_settings(schema)["retries"].source, "default")
+
+    def test_normalize_hook_converts_file_values_before_parsing(self) -> None:
+        from support_python.config import Setting, SettingsSchema, resolve_settings
+
+        def listed(raw: object) -> object:
+            return {name: {} for name in raw} if isinstance(raw, list) else raw
+
+        schema = SettingsSchema(
+            "demo",
+            [Setting("tools", "dict", {}, "Tools.", normalize=listed)],
+            project_dir=self.project_dir,
+            environ=self.environ,
+            system_path=self.system_file,
+        )
+        self.write(schema.path("project"), {"tools": ["a", "b"]})
+        self.assertEqual(resolve_settings(schema)["tools"].value, {"a": {}, "b": {}})
