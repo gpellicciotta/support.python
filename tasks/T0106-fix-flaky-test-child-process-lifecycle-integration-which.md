@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 116.4, input: 44, output: 5950, cache_read: 866652, cache_write: 58038}
+  worker: {turns: 4, duration_s: 177.6, input: 76, output: 8960, cache_read: 1582594, cache_write: 73834}
 work_duration: 71.3
+review_status: pending
+review_round: 1
 ---
 # T0106: Fix flaky test_child_process_lifecycle_integration, which failed once in the fast suite under xdist load
 
@@ -43,4 +45,7 @@ Fix flaky test_child_process_lifecycle_integration, which failed once in the fas
 
 - [2026-11-11] **[Doc]**
   Added the CHANGELOG.md entry and the validation proof.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
