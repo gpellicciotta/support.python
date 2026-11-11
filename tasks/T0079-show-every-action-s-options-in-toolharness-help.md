@@ -5,17 +5,20 @@ session: claude-20261111-8a0e75
 needs: []
 branch: task/T0079-show-every-action-s-options-in-toolharness-help
 worktree: .plan/work/T0079-show-every-action-s-options-in-toolharness-help
-status: active
+status: completed
 started_at: "2026-11-11T00:39:49Z"
-ended_at: —
+ended_at: "2026-11-11T00:45:34Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 473.4, input: 136, output: 26384, cache_read: 4684086, cache_write: 152458}
-work_duration: 227.9
-review_status: pending
+  review: {turns: 2, duration_s: 128.6, input: 28, output: 5262, cache_read: 557014, cache_write: 66236}
+work_duration: 345.0
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: ee614a70420f6d90d33be379cf4686cece277ccf
 ---
 # T0079: Show every action's options in ToolHarness help --verbose, with metavars and consistent help text
 
@@ -34,7 +37,7 @@ List positional arguments with their help text too; template.python's T0015 had 
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Verify]**    Run `help --verbose` for all five tools and `devops.py`, recording the output.
 - [x] **[Doc]**       Update cli-harness-and-logging.md and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -67,4 +70,11 @@ List positional arguments with their help text too; template.python's T0015 had 
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: Work meets all goals.
+  - Findings: [review-findings-1.md](T0079-show-every-action-s-options-in-toolharness-help/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
