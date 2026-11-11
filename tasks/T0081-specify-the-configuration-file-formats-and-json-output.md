@@ -1,11 +1,12 @@
 ---
 id: T0081
-owner: ~
-needs: [T0068, T0069, T0070, T0074, T0075, T0076, T0077, T0078]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@claude"
+session: claude-20261111-d032f1
+needs: []
+branch: task/T0081-specify-the-configuration-file-formats-and-json-output
+worktree: .plan/work/T0081-specify-the-configuration-file-formats-and-json-output
+status: active
+started_at: "2026-11-11T01:45:13Z"
 ended_at: —
 review: agent
 preview: none
@@ -20,12 +21,16 @@ Cover every `--format json` document of the five tools, field by field, with typ
 Link the specs from docs/index.md, the tool pages, and the AGENTS.md architecture lines.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read every tool's `--format json` code path and configuration loader.
-- [ ] **[Doc]**       Write one spec per configuration format under docs/specs/.
-- [ ] **[Doc]**       Write the JSON output document spec under docs/specs/.
-- [ ] **[Doc]**       Link the specs from docs/index.md, the tool pages, and AGENTS.md.
+- [x] **[Read]**      Read every tool's `--format json` code path and configuration loader.
+- [x] **[Doc]**       Write one spec per configuration format under docs/specs/.
+- [x] **[Doc]**       Write the JSON output document spec under docs/specs/.
+- [x] **[Doc]**       Link the specs from docs/index.md, the tool pages, and AGENTS.md.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Doc]**
+  Added docs/specs/ with five specs and linked them from the index, tool pages, and AGENTS.md; 1200 tests passed using the main checkout venv.
+
