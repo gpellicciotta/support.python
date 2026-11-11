@@ -40,3 +40,4 @@ safe_kill([pid])  # Skips the current process and its ancestors with a warning.
 - `terminate_process(pid, force=False)` signals one positive PID directly; callers must enforce ancestor protection first.
 - `terminate_process_tree(pid)` terminates a process and its child tree, returning `False` on invalid PIDs or failures.
 - `safe_kill(pids, logger=None, force=False)` skips the current process and ancestors with a warning and returns `bool`.
+- `safe_kill_report(pids, logger=None, force=False)` behaves like `safe_kill` and returns `(succeeded, results)` with one `{"pid", "outcome"}` mapping per PID.

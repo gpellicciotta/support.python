@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 from datetime import datetime
 import sys
-from typing import Sequence
+from typing import Optional, Sequence
 
 from ..cli import PROJECT_VERSION, ToolHarness
 from ..durations import parse_date_or_datetime
 from ..logging import CliLogger
 from .. import processes
-from ..processes import list_processes, safe_kill
+from ..processes import list_processes, safe_kill_report
 from ..tables import render_output
 from support_python.tools import TOOLS_COPYRIGHT
 
@@ -76,6 +77,7 @@ def configure_kill_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("-f", "--force", action="store_true", help="force termination (SIGKILL or taskkill /F)")
     parser.add_argument("--dry-run", action="store_true", help="report the PIDs that would be killed; terminate nothing")
     parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
+    ToolHarness.add_format_option(parser)
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
@@ -89,8 +91,11 @@ def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     ToolHarness.add_format_option(parser)
 
 
-def report_kill_plan(pids: Sequence[int], logger: CliLogger) -> bool:
-    """Report whether each PID would be killed or skipped as protected, without terminating anything."""
+def report_kill_plan(pids: Sequence[int], logger: CliLogger, results: Optional[list] = None) -> bool:
+    """Report whether each PID would be killed or skipped as protected, without terminating anything.
+
+    Appends one ``{"pid", "outcome"}`` mapping per PID to ``results`` when given.
+    """
     try:
         protected_pids = processes.get_process_hierarchy(processes.os.getpid())
     except Exception as exc:
@@ -99,15 +104,23 @@ def report_kill_plan(pids: Sequence[int], logger: CliLogger) -> bool:
     for pid in pids:
         if pid in protected_pids:
             logger.warning(f"Would skip protected PID {pid} (current script or ancestor process).")
+            outcome = "would-skip-protected"
         else:
             logger.info(f"Would kill PID {pid}")
+            outcome = "would-kill"
+        if results is not None:
+            results.append({"pid": pid, "outcome": outcome})
     return True
 
 
 def run_kill(args: argparse.Namespace, logger: CliLogger) -> int:
     """Execute the ``kill`` subcommand."""
+    results: list = []
     if args.dry_run:
-        return 0 if report_kill_plan(args.pids, logger) else 1
+        ok = report_kill_plan(args.pids, logger, results)
+        if args.format == "json":
+            logger.emit_json(results)
+        return 0 if ok else 1
     if not args.yes:
         if not sys.stdin.isatty():
             logger.error("Refusing to kill without confirmation: stdin is not a terminal; pass --yes to proceed.")
@@ -115,10 +128,16 @@ def run_kill(args: argparse.Namespace, logger: CliLogger) -> int:
         from ..devops.release import confirm_typed
 
         summary = [f"Will kill PID {pid}{' (forced)' if args.force else ''}" for pid in args.pids]
-        if not confirm_typed(summary, "kill", input_fn=input):
+        # In json mode stdout is reserved for the JSON document, so the summary and prompt go to stderr.
+        with contextlib.redirect_stdout(sys.stderr) if args.format == "json" else contextlib.nullcontext():
+            confirmed = confirm_typed(summary, "kill", input_fn=input)
+        if not confirmed:
             logger.error("Aborted: confirmation not given.")
             return 1
-    return 0 if safe_kill(args.pids, logger=logger, force=args.force) else 1
+    ok, results = safe_kill_report(args.pids, logger=logger, force=args.force)
+    if args.format == "json":
+        logger.emit_json(results)
+    return 0 if ok else 1
 
 
 def run_list(args: argparse.Namespace, logger: CliLogger) -> int:

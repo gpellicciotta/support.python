@@ -7,7 +7,7 @@ Cross-platform process listing and ancestor-protected termination, implemented i
 ## Command-Line Interface
 Run actions through the `processes` console script, built on the helpers in [processes.py](../../src/support_python/processes.py):
 ```bash
-processes kill PID... [--force] [--dry-run] [--yes]
+processes kill PID... [--force] [--dry-run] [--yes] [--format text|json]
 processes list [--cwd PATH] [--open-path PATH] [--started-before TIMESTAMP] [--started-after TIMESTAMP] [--ancestors-of PID] [--descendants-of PID] [--format text|json]
 ```
 
@@ -17,6 +17,9 @@ processes list [--cwd PATH] [--open-path PATH] [--started-before TIMESTAMP] [--s
 - `--yes` skips the confirmation. Without `--yes` and without a terminal on `stdin`, `kill` terminates nothing and exits `2`.
 - `--force` terminates with `SIGKILL` on POSIX or `taskkill /F` on Windows.
 - `--dry-run` prints `Would kill PID {{pid}}` or `Would skip protected PID {{pid}}` per PID, terminates nothing, never asks for confirmation, and exits `0`.
+- `kill --format json` prints one JSON array on `stdout` with an object `{"pid", "outcome"}` per PID, and log messages, the confirmation summary, and the confirmation prompt go to `stderr`.
+- The `outcome` is `killed`, `skipped-protected`, `not-found`, or `failed` (with a `detail` message); `--dry-run` reports `would-kill` or `would-skip-protected`.
+- The array is empty when the protected process hierarchy cannot be inspected. Exit codes match `--format text`.
 - `list` prints running processes that match every given filter.
 - `--cwd PATH` keeps processes whose working directory is `PATH` or below it.
 - `--open-path PATH` keeps processes holding `PATH` open.

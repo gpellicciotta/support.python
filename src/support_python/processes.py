@@ -404,6 +404,67 @@ def _emit_log(logger: Any, level: str, message: str) -> None:
             logger.log(message, level="INFO")
 
 
+def safe_kill_report(
+    pids: Sequence[int],
+    logger: Any = None,
+    force: bool = False,
+) -> tuple[bool, list[dict[str, Any]]]:
+    """Terminate process IDs like :func:`safe_kill` and report the outcome of each one.
+
+    Returns:
+        ``(succeeded, results)`` where ``results`` holds one ``{"pid", "outcome"}`` mapping per PID with outcome
+        ``killed``, ``skipped-protected``, ``not-found``, or ``failed`` (failures add a ``detail`` message).
+        ``results`` is empty when the protected process hierarchy cannot be inspected.
+    """
+    active_logger = logger if logger is not None else CliLogger()
+    try:
+        protected_pids = get_process_hierarchy(os.getpid())
+    except Exception as exc:
+        _emit_log(active_logger, "ERROR", f"Cannot inspect protected process hierarchy: {exc}")
+        return False, []
+
+    _emit_log(active_logger, "DEBUG", f"Protected process hierarchy: {sorted(protected_pids)}")
+    all_succeeded = True
+    results: list[dict[str, Any]] = []
+
+    def failed(pid: int, message: str) -> None:
+        nonlocal all_succeeded
+        _emit_log(active_logger, "ERROR", message)
+        results.append({"pid": pid, "outcome": "failed", "detail": message})
+        all_succeeded = False
+
+    for pid in pids:
+        if pid in protected_pids:
+            _emit_log(
+                active_logger,
+                "WARN",
+                f"Skipping protected PID {pid} (current script or ancestor process).",
+            )
+            results.append({"pid": pid, "outcome": "skipped-protected"})
+            continue
+
+        try:
+            terminate_process(pid, force=force)
+            _emit_log(active_logger, "INFO", f"Killed PID {pid}")
+            results.append({"pid": pid, "outcome": "killed"})
+        except ProcessLookupError:
+            _emit_log(active_logger, "WARN", f"PID {pid} not found.")
+            results.append({"pid": pid, "outcome": "not-found"})
+        except subprocess.CalledProcessError as exc:
+            detail = exc.stderr or exc.stdout or ""
+            if isinstance(detail, bytes):
+                detail = detail.decode(errors="replace")
+            detail_str = str(detail).strip()
+            suffix = f": {detail_str}" if detail_str else "."
+            failed(pid, f"Failed to kill PID {pid}{suffix}")
+        except PermissionError:
+            failed(pid, f"Permission denied to kill PID {pid}.")
+        except Exception as exc:
+            failed(pid, f"Error killing PID {pid}: {exc}")
+
+    return all_succeeded, results
+
+
 def safe_kill(
     pids: Sequence[int],
     logger: Any = None,
@@ -421,46 +482,7 @@ def safe_kill(
         ``True`` if all target processes were terminated or safely skipped (protected or
         already absent), ``False`` if ancestor resolution or any target termination failed.
     """
-    active_logger = logger if logger is not None else CliLogger()
-    try:
-        protected_pids = get_process_hierarchy(os.getpid())
-    except Exception as exc:
-        _emit_log(active_logger, "ERROR", f"Cannot inspect protected process hierarchy: {exc}")
-        return False
-
-    _emit_log(active_logger, "DEBUG", f"Protected process hierarchy: {sorted(protected_pids)}")
-    all_succeeded = True
-
-    for pid in pids:
-        if pid in protected_pids:
-            _emit_log(
-                active_logger,
-                "WARN",
-                f"Skipping protected PID {pid} (current script or ancestor process).",
-            )
-            continue
-
-        try:
-            terminate_process(pid, force=force)
-            _emit_log(active_logger, "INFO", f"Killed PID {pid}")
-        except ProcessLookupError:
-            _emit_log(active_logger, "WARN", f"PID {pid} not found.")
-        except subprocess.CalledProcessError as exc:
-            detail = exc.stderr or exc.stdout or ""
-            if isinstance(detail, bytes):
-                detail = detail.decode(errors="replace")
-            detail_str = str(detail).strip()
-            suffix = f": {detail_str}" if detail_str else "."
-            _emit_log(active_logger, "ERROR", f"Failed to kill PID {pid}{suffix}")
-            all_succeeded = False
-        except PermissionError:
-            _emit_log(active_logger, "ERROR", f"Permission denied to kill PID {pid}.")
-            all_succeeded = False
-        except Exception as exc:
-            _emit_log(active_logger, "ERROR", f"Error killing PID {pid}: {exc}")
-            all_succeeded = False
-
-    return all_succeeded
+    return safe_kill_report(pids, logger=logger, force=force)[0]
 
 
 def _resolve_parent_and_name_map() -> dict[int, tuple[int, str]]:
@@ -785,6 +807,7 @@ __all__ = [
     "is_process_alive",
     "list_processes",
     "safe_kill",
+    "safe_kill_report",
     "terminate_process",
     "terminate_process_tree",
     "windows_parent_map",

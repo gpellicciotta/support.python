@@ -14,7 +14,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.27-pre
+## v2.0.28-pre
+- CLI: Added `--format text|json` to `processes kill`, reporting each killed, skipped, not-found, and failed PID as one JSON document ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md)).
+- Library: Added `safe_kill_report` returning the per-PID outcomes of `safe_kill` ([processes.py](src/support_python/processes.py), [process-management.md](docs/tutorials/process-management.md)).
 - CLI: **[breaking]** Made `processes kill` ask for a typed confirmation, skippable with `--yes`, and exit `2` without `--yes` when `stdin` is not a terminal ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md), [migration-v2.md](docs/migration-v2.md)).
 - CLI: Made `ToolHarness` `help --verbose` list each action's positional arguments and options with metavars, and lowercased option help text ([cli.py](src/support_python/cli.py), [cli-harness-and-logging.md](docs/tutorials/cli-harness-and-logging.md)).
 - Library: Added constructor parameters for the support.java flags, commands, health endpoint, running status, assets, and snapshot env-file names to the devops service managers ([services.py](src/support_python/devops/services.py), [devops-scripts.md](docs/tutorials/devops-scripts.md)).

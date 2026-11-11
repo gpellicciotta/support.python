@@ -172,6 +172,47 @@ def test_processes_kill_dry_run_reports_targets_without_terminating() -> None:
         assert run_cli(["kill", "200", "--dry-run"])[0] == 1
 
 
+def test_processes_kill_format_json_reports_each_pid_outcome() -> None:
+    assert build_harness()._build_parser("kill").parse_args(["123"]).format == "text"
+    with (
+        mock.patch.object(processes, "get_process_hierarchy", return_value={100}),
+        mock.patch.object(
+            processes,
+            "terminate_process",
+            side_effect=[None, ProcessLookupError(), PermissionError("denied"), None],
+        ),
+    ):
+        code, out, err = run_cli(["kill", "100", "200", "300", "400", "--yes", "--format", "json"])
+    assert code == 1
+    outcomes = {item["pid"]: item["outcome"] for item in json.loads(out)}
+    assert outcomes == {100: "skipped-protected", 200: "killed", 300: "not-found", 400: "failed"}
+    assert "Killed PID 200" in err and "Killed PID" not in out
+
+
+def test_processes_kill_format_json_dry_run_reports_would_outcomes() -> None:
+    with (
+        mock.patch.object(processes, "get_process_hierarchy", return_value={100}),
+        mock.patch.object(processes, "terminate_process") as mock_term,
+    ):
+        code, out, err = run_cli(["kill", "100", "200", "--dry-run", "--format", "json"])
+    assert code == 0 and mock_term.call_count == 0
+    assert json.loads(out) == [{"pid": 100, "outcome": "would-skip-protected"}, {"pid": 200, "outcome": "would-kill"}]
+    assert "Would kill PID 200" in err
+
+
+def test_processes_kill_format_json_failure_detail_and_inspection_error() -> None:
+    with (
+        mock.patch.object(processes, "get_process_hierarchy", return_value={100}),
+        mock.patch.object(processes, "terminate_process", side_effect=PermissionError("denied")),
+    ):
+        code, out, _ = run_cli(["kill", "200", "--yes", "--format", "json"])
+    assert code == 1
+    assert json.loads(out) == [{"pid": 200, "outcome": "failed", "detail": "Permission denied to kill PID 200."}]
+    with mock.patch.object(processes, "get_process_hierarchy", side_effect=OSError("denied")):
+        code, out, _ = run_cli(["kill", "200", "--dry-run", "--format", "json"])
+    assert code == 1 and json.loads(out) == []
+
+
 def run_kill_confirmation(argv: list[str], *, tty: bool, typed: str = "") -> tuple[int, str, str, mock.Mock]:
     """Run ``kill`` with a faked stdin terminal state and typed answer; return the result and the terminate mock."""
     fake_stdin = mock.Mock()
@@ -203,6 +244,15 @@ def test_processes_kill_typed_confirmation_on_a_terminal() -> None:
     assert code == 0 and mock_term.call_count == 2 and "200" in out and "300" in out
     code, _, err, mock_term = run_kill_confirmation(["kill", "200"], tty=True, typed="no")
     assert code == 1 and mock_term.call_count == 0 and "Aborted" in err
+
+
+def test_processes_kill_format_json_keeps_confirmation_off_stdout() -> None:
+    code, out, err, mock_term = run_kill_confirmation(["kill", "200", "--format", "json"], tty=True, typed="kill")
+    assert code == 0 and mock_term.call_count == 1
+    assert json.loads(out) == [{"pid": 200, "outcome": "killed"}]
+    assert "Will kill PID 200" in err
+    code, out, err, mock_term = run_kill_confirmation(["kill", "200", "--format", "json"], tty=True, typed="no")
+    assert code == 1 and out == "" and mock_term.call_count == 0 and "Will kill PID 200" in err
 
 
 def test_processes_kill_dry_run_never_asks() -> None:
