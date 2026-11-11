@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 449.8, input: 142164, output: 14244, cache_read: 1872896, cache_write: 0}
+  worker: {turns: 4, duration_s: 518.4, input: 154770, output: 15802, cache_read: 2596096, cache_write: 0}
 work_duration: 235.3
+review_status: pending
+review_round: 1
 ---
 # T0109: Let a release skip the GitHub release and gh checks, and honor --skip-checks for project-owned releases
 
@@ -53,4 +55,7 @@ Let a release skip the GitHub release and gh checks, and honor --skip-checks for
 
 - [2026-11-12] **[Doc]**
   Updated release usage, adapter contracts, and CHANGELOG.md. Completion validation now checks execution-log coverage before review.
+
+- [2026-11-12] **[Review]**
+  Round 1 requested (mode: agent).
 
