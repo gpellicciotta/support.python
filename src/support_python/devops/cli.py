@@ -299,7 +299,7 @@ class DevopsCli:
 
 def _configure_test(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--slow", action="store_true", help="run the slow test suite")
-    parser.add_argument("selection", nargs="*")
+    parser.add_argument("selection", nargs="*", help="test paths or names to run")
 
 
 def _configure_release(parser: argparse.ArgumentParser) -> None:

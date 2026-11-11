@@ -868,7 +868,13 @@ def tool_name_argument(value: str) -> str:
 
 def configure_tool_names(parser: argparse.ArgumentParser) -> None:
     """Add the optional TOOL positional arguments selecting which tools an action targets."""
-    parser.add_argument("tool_names", nargs="*", metavar="TOOL", type=tool_name_argument)
+    parser.add_argument(
+        "tool_names",
+        nargs="*",
+        metavar="TOOL",
+        type=tool_name_argument,
+        help="tool names to process (default: all configured tools)",
+    )
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:

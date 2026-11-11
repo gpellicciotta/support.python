@@ -71,19 +71,19 @@ def parse_timestamp(value: str) -> datetime:
 
 def configure_kill_parser(parser: argparse.ArgumentParser) -> None:
     """Register positional process IDs and termination flags for the ``kill`` subcommand."""
-    parser.add_argument("pids", nargs="+", type=parse_pid, metavar="pid", help="One or more process IDs to terminate.")
-    parser.add_argument("-f", "--force", action="store_true", help="Force termination (SIGKILL or taskkill /F).")
-    parser.add_argument("--dry-run", action="store_true", help="Report the PIDs that would be killed; terminate nothing.")
+    parser.add_argument("pids", nargs="+", type=parse_pid, metavar="pid", help="one or more process IDs to terminate")
+    parser.add_argument("-f", "--force", action="store_true", help="force termination (SIGKILL or taskkill /F)")
+    parser.add_argument("--dry-run", action="store_true", help="report the PIDs that would be killed; terminate nothing")
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
     """Register filter and output flags for the ``list`` subcommand."""
-    parser.add_argument("--cwd", type=str, default=None, metavar="PATH", help="Filter processes by working directory.")
-    parser.add_argument("--open-path", type=str, default=None, metavar="PATH", help="Filter processes holding an open path.")
-    parser.add_argument("--started-before", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="Upper start-time bound.")
-    parser.add_argument("--started-after", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="Lower start-time bound.")
-    parser.add_argument("--ancestors-of", type=parse_pid, default=None, metavar="PID", help="Filter ancestors of PID.")
-    parser.add_argument("--descendants-of", type=parse_pid, default=None, metavar="PID", help="Filter descendants of PID.")
+    parser.add_argument("--cwd", type=str, default=None, metavar="PATH", help="filter processes by working directory")
+    parser.add_argument("--open-path", type=str, default=None, metavar="PATH", help="filter processes holding an open path")
+    parser.add_argument("--started-before", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="upper start-time bound")
+    parser.add_argument("--started-after", type=parse_timestamp, default=None, metavar="TIMESTAMP", help="lower start-time bound")
+    parser.add_argument("--ancestors-of", type=parse_pid, default=None, metavar="PID", help="filter ancestors of PID")
+    parser.add_argument("--descendants-of", type=parse_pid, default=None, metavar="PID", help="filter descendants of PID")
     ToolHarness.add_format_option(parser)
 
 

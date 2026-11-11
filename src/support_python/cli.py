@@ -283,6 +283,44 @@ class ToolHarness:
         col = max(max(len(label) for label, _ in rows) + 2, 23)
         return ["", "Options:", *(f"  {label:<{col}}{text}".rstrip() for label, text in rows)]
 
+    @staticmethod
+    def _argument_label(arg: argparse.Action) -> str:
+        """Return the help label of a parser argument: flags plus metavar, or the positional's usage form."""
+        if arg.choices is not None and arg.metavar is None:
+            metavar = "{" + ",".join(str(c) for c in arg.choices) + "}"
+        else:
+            metavar = arg.metavar if isinstance(arg.metavar, str) else arg.dest.upper()
+        if not arg.option_strings:
+            name = arg.metavar if isinstance(arg.metavar, str) else arg.dest
+            if arg.nargs == "?":
+                return f"[{name}]"
+            if arg.nargs == "*":
+                return f"[{name} ...]"
+            if arg.nargs in ("+", argparse.REMAINDER):
+                return f"{name} [{name} ...]"
+            return name
+        flags = ", ".join(arg.option_strings)
+        return flags if arg.nargs == 0 else f"{flags} {metavar}"
+
+    def _action_argument_rows(
+        self, action_name: str, own_only: bool = False
+    ) -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
+        """Return ``(option rows, positional rows)`` of an action's non-standard arguments."""
+        standard_dest = {"help", "version", "verbose", "debug", "log_file", "log_level"}
+        if own_only:
+            parser = argparse.ArgumentParser(add_help=False)
+            configure = self._actions[action_name].configure_parser
+            if configure:
+                configure(parser)
+        else:
+            parser = self._build_parser(action_name)
+        options, positionals = [], []
+        for arg in parser._actions:
+            if arg.dest in standard_dest or arg.help == argparse.SUPPRESS:
+                continue
+            (options if arg.option_strings else positionals).append((self._argument_label(arg), arg.help or ""))
+        return options, positionals
+
     def format_help(self, verbose: bool = False) -> str:
         """Return standardized help screen per CLI guidelines."""
         lines = [self.format_version(), "", self.description, "", "Usage:"]
@@ -312,6 +350,11 @@ class ToolHarness:
         lines.append("\nDetailed Action Descriptions:")
         for name, action in self._actions.items():
             lines.extend([f"  {name}", *(f"      {d_line}" for d_line in (action.detail or action.description).splitlines())])
+            options, positionals = self._action_argument_rows(name, own_only=True)
+            for title, rows in (("Arguments:", positionals), ("Options:", options)):
+                if rows:
+                    col = max(max(len(label) for label, _ in rows) + 2, 23)
+                    lines.extend(["", f"      {title}", *(f"        {label:<{col}}{text}".rstrip() for label, text in rows)])
         if self.detailed_help:
             lines.append(f"\n{self.detailed_help.strip()}")
         if self.examples:
@@ -332,12 +375,11 @@ class ToolHarness:
             lines.extend(["", "Examples:", *(f"  {ex}" for ex in relevant)])
 
         lines.extend(["", "Usage:", f"  {self.name} {action_name}{suffix}"])
-        standard_dest = {"help", "version", "verbose", "debug", "log_file", "log_level"}
-        rows = self._standard_option_rows()
-        for action_obj in self._build_parser(action_name)._actions:
-            if action_obj.dest not in standard_dest and action_obj.option_strings:
-                rows.append((", ".join(action_obj.option_strings), action_obj.help or ""))
-        lines.extend(self._format_option_lines(rows))
+        options, positionals = self._action_argument_rows(action_name)
+        if positionals:
+            col = max(max(len(label) for label, _ in positionals) + 2, 23)
+            lines.extend(["", "Arguments:", *(f"  {label:<{col}}{text}".rstrip() for label, text in positionals)])
+        lines.extend(self._format_option_lines([*self._standard_option_rows(), *options]))
 
         lines.extend(["", "Exit codes:", *(f"  {code:<4}{self.exit_codes[code]}" for code in sorted(self.exit_codes))])
         return "\n".join(lines) + "\n"

@@ -152,8 +152,8 @@ class ToolHarnessUnitTests(unittest.TestCase):
         )
 
         def configure_run(parser) -> None:
-            parser.add_argument("--target", default="dev", help="Target environment")
-            parser.add_argument("--fail", action="store_true", help="Simulate failure")
+            parser.add_argument("--target", default="dev", help="target environment")
+            parser.add_argument("--fail", action="store_true", help="simulate failure")
 
         def handle_run(args, logger) -> int:
             logger.info(f"Running on {args.target}")
@@ -323,7 +323,7 @@ class ToolHarnessUnitTests(unittest.TestCase):
             parser.add_argument("--extremely-long-action-option-name", help="action help text")
 
         harness.add_action("long", "long option action", handler=lambda a, logger: 0, configure_parser=configure)
-        label = "--extremely-long-action-option-name"
+        label = "--extremely-long-action-option-name EXTREMELY_LONG_ACTION_OPTION_NAME"
         help_text = harness.format_action_help("long")
         self.assertIn(f"{label}  action help text", help_text)
         columns = self._option_columns(help_text, [label, "--log-level LEVEL", "-h, --help"])
@@ -333,9 +333,56 @@ class ToolHarnessUnitTests(unittest.TestCase):
     def test_short_option_labels_keep_column_twenty_five(self) -> None:
         harness = self._make_harness()
         for help_text in (harness.format_help(), harness.format_action_help("run")):
-            columns = self._option_columns(help_text, ["-h, --help", "--log-level LEVEL", "--target"])
+            columns = self._option_columns(help_text, ["-h, --help", "--log-level LEVEL", "--target TARGET"])
             self.assertTrue(set(columns.values()) <= {25}, columns)
             self.assertIn("-h, --help", columns)
+
+    def _make_option_harness(self):
+        from support_python.cli import ToolHarness
+
+        harness = ToolHarness(name="opt-tool", description="Option harness.", version="1.0.0")
+
+        def configure(parser) -> None:
+            parser.add_argument("pids", nargs="+", metavar="pid", help="process IDs to act on")
+            parser.add_argument("target", nargs="?", help="optional target name")
+            parser.add_argument("--cwd", metavar="PATH", help="filter by working directory")
+            parser.add_argument("--mode", choices=["fast", "slow"], help="speed mode")
+            parser.add_argument("--count", type=int, help="number of items")
+            parser.add_argument("-f", "--force", action="store_true", help="force the action")
+
+        harness.add_action("kill", "kill things", handler=lambda a, logger: 0, detail="Kills things.", configure_parser=configure)
+        harness.add_action("plain", "plain action", handler=lambda a, logger: 0)
+        return harness
+
+    def test_verbose_help_lists_action_options_with_metavars(self) -> None:
+        text = self._make_option_harness().format_help(verbose=True)
+        section = text.split("Detailed Action Descriptions:", 1)[1]
+        for expected in (
+            "--cwd PATH",
+            "--mode {fast,slow}",
+            "--count COUNT",
+            "-f, --force",
+            "filter by working directory",
+            "force the action",
+        ):
+            self.assertIn(expected, section)
+        self.assertNotIn("--log-level", section)
+        self.assertNotIn("Options:", section.split("\n  plain", 1)[1])
+
+    def test_verbose_help_lists_positional_arguments(self) -> None:
+        section = self._make_option_harness().format_help(verbose=True).split("Detailed Action Descriptions:", 1)[1]
+        self.assertIn("pid [pid ...]", section)
+        self.assertIn("process IDs to act on", section)
+        self.assertIn("[target]", section)
+        self.assertIn("optional target name", section)
+
+    def test_non_verbose_help_omits_action_options(self) -> None:
+        self.assertNotIn("--cwd PATH", self._make_option_harness().format_help())
+
+    def test_action_help_shows_metavars_and_positionals(self) -> None:
+        text = self._make_option_harness().format_action_help("kill")
+        for expected in ("--cwd PATH", "--mode {fast,slow}", "--count COUNT", "pid [pid ...]", "process IDs to act on"):
+            self.assertIn(expected, text)
 
     def test_no_tool_module_calls_stream_reconfigure(self) -> None:
         from pathlib import Path

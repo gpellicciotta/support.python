@@ -15,6 +15,8 @@ All symbols are re-exported from `support_python`.
   Leading options keep a named action: `tool --verbose list` runs `list`.
   `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.
   Its log messages then go to `stderr`, and only `emit`/`emit_json` write to `stdout`.
+  `help --verbose` lists each action's positional arguments and options under its description, with metavars such as `PATH`, `{text,json}`, and `[PATH ...]`.
+  Write argument `help=` text in lowercase, so it matches the standard option rows.
   `get_full_version`/`resolve_build_metadata` add build-metadata version suffixes.
   Installed tools derive metadata from install records, never enclosing repositories.
   Use `get_package_version` for consumer `__version__` values to preserve the `-pre` suffix.

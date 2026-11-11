@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.25-pre
+## v2.0.26-pre
+- CLI: Made `ToolHarness` `help --verbose` list each action's positional arguments and options with metavars, and lowercased option help text ([cli.py](src/support_python/cli.py), [cli-harness-and-logging.md](docs/tutorials/cli-harness-and-logging.md)).
 - Library: Added constructor parameters for the support.java flags, commands, health endpoint, running status, assets, and snapshot env-file names to the devops service managers ([services.py](src/support_python/devops/services.py), [devops-scripts.md](docs/tutorials/devops-scripts.md)).
 - Library: **[breaking]** Made `decrypt_property_value` raise `ImportError` when `cryptography` is missing and `ValueError` when an `aes:` value fails to decrypt, instead of returning the ciphertext ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Removed `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX`, making the salt of `get_standard_password_hash` (keyword-only) and the key of `decrypt_property_value` required and validated ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).

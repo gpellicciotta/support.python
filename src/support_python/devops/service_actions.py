@@ -234,23 +234,23 @@ class ServiceActions:
         if self.mysql is not None:
             targets = list(self.db_targets)
             parser.add_argument(
-                "--source", choices=["cloudsql", "local", "file"], default="cloudsql", help="Snapshot source (default: cloudsql)"
+                "--source", choices=["cloudsql", "local", "file"], default="cloudsql", help="snapshot source (default: cloudsql)"
             )
-            parser.add_argument("--input-file", type=Path, help="Path to an existing SQL file to anonymize instead of live DB")
-            parser.add_argument("--output-file", type=Path, help="Path to write the anonymized SQL snapshot file")
+            parser.add_argument("--input-file", type=Path, help="path to an existing SQL file to anonymize instead of live DB")
+            parser.add_argument("--output-file", type=Path, help="path to write the anonymized SQL snapshot file")
             parser.add_argument(
-                "--load-target", choices=targets, help=f"Automatically load anonymized snapshot into {' or '.join(targets)}"
+                "--load-target", choices=targets, help=f"automatically load anonymized snapshot into {' or '.join(targets)}"
             )
             parser.add_argument(
                 "--confirm-production-access",
                 action="store_true",
-                help="Confirm authorization to snapshot production Cloud SQL",
+                help="confirm authorization to snapshot production Cloud SQL",
             )
-            parser.add_argument("snapshot_path", nargs="?", type=Path, help="Path to the SQL snapshot file to load")
+            parser.add_argument("snapshot_path", nargs="?", type=Path, help="path to the SQL snapshot file to load")
             parser.add_argument(
-                "--snapshot-path", dest="snapshot_path_option", type=Path, help="Path to the SQL snapshot file to load"
+                "--snapshot-path", dest="snapshot_path_option", type=Path, help="path to the SQL snapshot file to load"
             )
-            parser.add_argument("--target", choices=targets, default="local", help="Target database (default: local)")
+            parser.add_argument("--target", choices=targets, default="local", help="target database (default: local)")
         if self.proxy is not None:
             proxy = self.proxy
             credentials = (
@@ -258,11 +258,11 @@ class ServiceActions:
                 if proxy.credentials_file
                 else "user Application Default Credentials from gcloud auth application-default login"
             )
-            parser.add_argument("--address", help=f"Local bind address (default: {proxy.address})")
-            parser.add_argument("--port", type=int, help=f"Local proxy port (default: {proxy.port})")
-            parser.add_argument("--instance", help=f"Cloud SQL instance connection name (default: {proxy.instance})")
+            parser.add_argument("--address", help=f"local bind address (default: {proxy.address})")
+            parser.add_argument("--port", type=int, help=f"local proxy port (default: {proxy.port})")
+            parser.add_argument("--instance", help=f"cloud SQL instance connection name (default: {proxy.instance})")
             parser.add_argument(
-                "--credentials-file", type=Path, help=f"Optional credentials file override (default: {credentials})"
+                "--credentials-file", type=Path, help=f"optional credentials file override (default: {credentials})"
             )
 
     def _db_status(self, args: argparse.Namespace, logger: CliLogger) -> int:
@@ -305,22 +305,22 @@ class ServiceActions:
     # server
 
     def _configure_server(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("--background", "-d", action="store_true", help="Run server in the background and exit immediately")
+        parser.add_argument("--background", "-d", action="store_true", help="run server in the background and exit immediately")
         parser.add_argument(
             "--build",
             "--force-build",
             dest="build",
             action="store_true",
-            help="Force rebuild of server distribution package before starting",
+            help="force rebuild of server distribution package before starting",
         )
-        parser.add_argument("--memory-db", action="store_true", help="Use in-memory database instead of MySQL")
+        parser.add_argument("--memory-db", action="store_true", help="use in-memory database instead of MySQL")
         if self.verifier is not None:
-            parser.add_argument("--verify", action="store_true", help="Run automated verification checks after starting server")
+            parser.add_argument("--verify", action="store_true", help="run automated verification checks after starting server")
         if self.testdb_env_file is not None:
             parser.add_argument(
                 "--testdb",
                 action="store_true",
-                help=f"Run server against the Cloud SQL test database via {self.testdb_env_file.name}",
+                help=f"run server against the Cloud SQL test database via {self.testdb_env_file.name}",
             )
 
     def _server_status(self, args: argparse.Namespace, logger: CliLogger) -> int:
@@ -378,11 +378,11 @@ class ServiceActions:
 
     def _configure_client(self, parser: argparse.ArgumentParser) -> None:
         url_help = f"(default: {self.service_url})" if self.service_url else "(required for verify-deployment)"
-        parser.add_argument("--url", default=self.service_url, help=f"Base service URL to check {url_help}")
-        parser.add_argument("--expected-version", help="If given, fail unless live version matches exactly")
-        parser.add_argument("--attempts", type=int, default=5, help="Retry attempts before failing (default: 5)")
-        parser.add_argument("--retry-delay", type=float, default=3.0, help="Seconds between retries (default: 3.0)")
-        parser.add_argument("--timeout", type=float, default=10.0, help="Per-request timeout in seconds (default: 10.0)")
+        parser.add_argument("--url", default=self.service_url, help=f"base service URL to check {url_help}")
+        parser.add_argument("--expected-version", help="if given, fail unless live version matches exactly")
+        parser.add_argument("--attempts", type=int, default=5, help="retry attempts before failing (default: 5)")
+        parser.add_argument("--retry-delay", type=float, default=3.0, help="seconds between retries (default: 3.0)")
+        parser.add_argument("--timeout", type=float, default=10.0, help="per-request timeout in seconds (default: 10.0)")
 
     def _client_verify(self, args: argparse.Namespace, logger: CliLogger) -> int:
         return 0 if _require(self.verifier).run_all_checks() else 1
@@ -402,16 +402,16 @@ class ServiceActions:
 
 
 def _configure_mail(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("recipient", nargs="?", help="Destination email address to send test emails to")
-    parser.add_argument("--to", help="Destination email address to send test emails to")
-    parser.add_argument("--app-name", help="Application name for mail formats test (default: the server's app name)")
-    parser.add_argument("--env-file", type=Path, help="Application environment file (default: the server's env file)")
+    parser.add_argument("recipient", nargs="?", help="destination email address to send test emails to")
+    parser.add_argument("--to", help="destination email address to send test emails to")
+    parser.add_argument("--app-name", help="application name for mail formats test (default: the server's app name)")
+    parser.add_argument("--env-file", type=Path, help="application environment file (default: the server's env file)")
     parser.add_argument(
         "--build",
         "--force-build",
         dest="build",
         action="store_true",
-        help="Force rebuild of server distribution package before sending",
+        help="force rebuild of server distribution package before sending",
     )
 
 

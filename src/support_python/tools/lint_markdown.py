@@ -38,7 +38,7 @@ def report_argument_error(message: str) -> NoReturn:
 
 def configure_lint_parser(parser: argparse.ArgumentParser) -> None:
     """Add the path arguments and standard error reporting to the 'check' and 'fix' parsers."""
-    parser.add_argument("paths", nargs="*", type=Path)
+    parser.add_argument("paths", nargs="*", type=Path, help="markdown files or directories to process (default: current directory)")
     parser.parse_args = parser.parse_intermixed_args  # type: ignore[method-assign]
     parser.error = report_argument_error  # type: ignore[method-assign]
 

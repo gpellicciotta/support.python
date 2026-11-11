@@ -1396,7 +1396,7 @@ def build_harness() -> DigestHarness:
         type=Path,
         default=None,
         metavar="FILE",
-        help="Markdown file that must link every skill source file (checked by 'check')",
+        help="markdown file that must link every skill source file (checked by 'check')",
     )
     harness.add_action(
         "generate",
