@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 649.2, input: 120, output: 52292, cache_read: 5585792, cache_write: 224264}
+  worker: {turns: 4, duration_s: 697.6, input: 140, output: 54548, cache_read: 6927598, cache_write: 239112}
 work_duration: 337.1
+review_status: pending
+review_round: 1
 ---
 # T0068: Move git-repository-backup settings onto the shared resolver, adding environment variables, a system file, and the config group.
 
@@ -58,4 +60,7 @@ Add the `config` group through `add_config_actions`, targeting the user file by 
 
 - [2026-11-11] **[Doc]**
   Documented every setting in git-repository-backup.md and added CHANGELOG.md and migration entries.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
