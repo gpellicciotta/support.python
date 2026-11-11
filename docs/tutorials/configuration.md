@@ -22,6 +22,7 @@ SCHEMA = SettingsSchema(
 
 - Types: `string`, `integer`, `float`, `boolean`, `duration` (resolves to seconds), `list` (of strings), and `dict`.
 - Names are kebab-case; underscores are accepted.
+- `aliases=("old-name",)` makes other file keys mean the setting; the setting's own key wins when a file has both.
 - `env_prefix` defaults to the upper-cased tool name, so `retries` reads `MY_TOOL_RETRIES`.
 - `tiers` limits the supported files; `project_dir`, `project_file`, `system_path`, `environ`, and `platform` override discovery.
 

@@ -9,12 +9,13 @@ import sys
 from typing import Dict, List, NoReturn, Optional, Tuple
 
 from support_python.cli import PROJECT_VERSION, ToolHarness
+from support_python.config import SettingsSchema, add_config_actions, resolve_settings
 from support_python.logging import CliLogger
 from support_python.markdown.lint import DEFAULT_EXCLUDES, LintIssue, MarkdownLinter
 from support_python.markdown.lint import discover_markdown_files, find_project_root, parse_rule_codes
 from support_python.markdown.plugins import load_plugins
-from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME, LintProfile, load_profile
-from support_python.markdown.profiles import read_plugin_entries, resolve_config_file
+from support_python.markdown.profiles import DEFAULT_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME, LintProfile
+from support_python.markdown.profiles import build_schema, profile_from_settings, resolve_config_file
 from support_python.markdown.registry import RuleRegistry
 from support_python.tables import format_table
 from support_python.tools import TOOLS_COPYRIGHT
@@ -23,7 +24,7 @@ TOOL_NAME = "lint-markdown"
 TOOL_VERSION: str = PROJECT_VERSION
 DESCRIPTION = """Automated markdown linter enforcing repository markdown styling guidelines.
 Directory walks skip Git-ignored files; files named explicitly are always linted."""
-SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|help|version}} [{{{{path}}}}...] [options]"
+SHORT_USAGE = f"{TOOL_NAME} {{check|fix|rules|config|help|version}} [{{{{path}}}}...] [options]"
 
 
 def report_argument_error(message: str) -> NoReturn:
@@ -97,12 +98,35 @@ def _emit_json_check(logger: CliLogger, files_checked: int, issues: List[LintIss
     logger.emit_json(payload)
 
 
+def system_config_path() -> Path:
+    """Return the system config file location: ``%PROGRAMDATA%/lint-markdown/config.json`` or ``/etc/...``."""
+    return SettingsSchema(TOOL_NAME, [], tiers=("system",)).path("system")
+
+
+def build_settings_schema(project_file: Optional[Path] = None) -> SettingsSchema:
+    """Return the declared settings; ``project_file`` is the discovered project file, else ``.lint-markdown.json`` in the cwd."""
+    if project_file is None:
+        return build_schema(system_path=system_config_path())
+    return build_schema(system_path=system_config_path(), project_dir=project_file.parent, project_file=project_file.name)
+
+
+def plugin_base_dir(schema: SettingsSchema, source: str, project_file: Optional[Path]) -> Path:
+    """Return the folder that relative plugin paths resolve against: the folder of the file that listed them."""
+    if source == "project" and project_file is not None:
+        return project_file.parent
+    if source in ("user", "system"):
+        return schema.path(source).parent
+    return Path.cwd()
+
+
 def build_linter(
     args: argparse.Namespace, logger: CliLogger, input_paths: List[Path], repo_root: Path
 ) -> Optional[Tuple[LintProfile, MarkdownLinter, Dict[str, str]]]:
-    """Load the config, plugins, and profile, returning the profile, linter, and plugin rule sources, or None on error."""
+    """Resolve the settings, load plugins, and build the profile and linter, returning None on error.
+
+    The result holds the profile, the linter, and the plugin rule sources.
+    """
     cfg_arg = getattr(args, "config", None)
-    prof_arg = getattr(args, "profile", None)
     if cfg_arg is not None and not Path(cfg_arg).resolve().exists():
         logger.error(f"Configuration file does not exist: {cfg_arg}")
         return None
@@ -110,13 +134,24 @@ def build_linter(
         resolved_cfg: Optional[Path] = resolve_config_file(Path(cfg_arg).resolve())
     else:
         resolved_cfg = _discover_config_path(input_paths, repo_root, logger=logger)
+    schema = build_settings_schema(resolved_cfg)
     try:
+        resolved = resolve_settings(
+            schema,
+            cli={"profile": getattr(args, "profile", None)},
+            config_path=resolved_cfg if cfg_arg is not None else None,
+            logger=logger,
+        )
+        values = {name: item.value for name, item in resolved.items() if item.source != "default"}
         registry = RuleRegistry()
-        cfg_dir = resolved_cfg.parent if resolved_cfg is not None else None
         loaded: set[str] = set()
-        sources = load_plugins(read_plugin_entries(resolved_cfg), registry, base_dir=cfg_dir, loaded=loaded)
+        plugins = resolved["plugins"]
+        if not all(entry.strip() for entry in plugins.value):
+            raise ValueError(f"'plugins' must be a list of non-empty strings, set by the {plugins.source} source")
+        base_dir = plugin_base_dir(schema, plugins.source, resolved_cfg)
+        sources = load_plugins([entry.strip() for entry in plugins.value], registry, base_dir=base_dir, loaded=loaded)
         sources.update(load_plugins(getattr(args, "plugin", None) or [], registry, base_dir=repo_root, loaded=loaded))
-        profile = load_profile(resolved_cfg, profile=prof_arg, registry=registry, logger=logger)
+        profile = profile_from_settings(values, registry)
         linter = MarkdownLinter(
             enabled_rules=parse_rule_codes(args.rules),
             offline=args.offline,
@@ -290,6 +325,7 @@ def build_harness() -> ToolHarness:
             f"{TOOL_NAME} fix --dry-run docs",
             f"{TOOL_NAME} check --plugin rules/no_todo.py docs",
             f"{TOOL_NAME} rules --format json",
+            f"{TOOL_NAME} config set disable MD018",
         ],
         detailed_help=get_rules_help(),
     )
@@ -298,7 +334,9 @@ def build_harness() -> ToolHarness:
     )
     harness.add_global_argument("--rules", metavar="RULES", help="comma-separated rule codes to check (default: all)")
     harness.add_global_argument("--profile", metavar="PROFILE", help="named lint profile (default or dev-guidelines)")
-    harness.add_global_argument("--config", type=Path, metavar="PATH", help=f"path to {DEFAULT_CONFIG_FILENAME} config file")
+    harness.add_global_argument(
+        "--config", type=Path, metavar="PATH", help=f"{DEFAULT_CONFIG_FILENAME} config file that replaces the discovered files"
+    )
     harness.add_global_argument(
         "--plugin",
         action="append",
@@ -350,6 +388,7 @@ def build_harness() -> ToolHarness:
         usage_suffix="[options]",
         configure_parser=configure_rules_parser,
     )
+    add_config_actions(harness, build_settings_schema())
     return harness
 
 

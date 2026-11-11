@@ -30,7 +30,8 @@ issues = check_table_alignment(table)
 - `check_table_alignment(content)` returns `TableAlignmentIssue` entries for any table rows with misaligned delimiter pipes.
 
 ## Linter
-`load_profile` returns a built-in profile by name (`default` or `dev-guidelines`), or loads a `.lint-markdown.json` file.
+`load_profile` returns a built-in profile by name (`default` or `dev-guidelines`), or loads a `.lint-markdown.json` file, raising `ValueError` for invalid content.
+The `lint-markdown` tool instead resolves `profiles.PROFILE_SETTINGS` through `build_schema()` and `resolve_settings`, then calls `profile_from_settings`; see [lint-markdown.md](../tools/lint-markdown.md#settings-sources).
 `MarkdownLinter` lints and fixes content in memory; `lint_content` returns `LintIssue` records with line, column, rule, and message:
 
 ```python

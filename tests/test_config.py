@@ -117,6 +117,21 @@ class ResolveSettingsTests(_SettingsFixture):
         got = resolve_settings(schema)["verbose-mode"]
         self.assertEqual((got.value, got.source), (True, "project"))
 
+    def test_alias_keys_map_to_the_setting_and_the_setting_key_wins(self) -> None:
+        from support_python.config import Setting, SettingsSchema, resolve_settings
+
+        schema = SettingsSchema(
+            "demo",
+            [Setting("exclude", "list", [], "Excluded.", aliases=("excludes",))],
+            project_dir=self.project_dir,
+            environ=self.environ,
+            system_path=self.system_file,
+        )
+        self.write(schema.path("project"), {"excludes": ["a"]})
+        self.assertEqual(resolve_settings(schema)["exclude"].value, ["a"])
+        self.write(schema.path("project"), {"excludes": ["a"], "exclude": ["b"]})
+        self.assertEqual(resolve_settings(schema)["exclude"].value, ["b"])
+
     def test_env_name_derivation_and_empty_is_unset(self) -> None:
         from support_python.config import resolve_settings
 

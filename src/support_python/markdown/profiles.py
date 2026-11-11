@@ -5,9 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 import json
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
-from support_python.config import kebab_keys, normalize_config_keys
+from support_python.config import Setting, SettingsSchema, kebab_keys, normalize_config_keys
 from support_python.markdown.registry import RuleRegistry
 from support_python.markdown.rules import DEFAULT_REGISTRY
 
@@ -36,6 +36,30 @@ _ALLOWED_PROFILE_KEYS = frozenset(
         "github_owners",
     }
 )
+
+
+#: The settings of the lint-markdown tool, in the order ``config list`` shows them.
+PROFILE_SETTINGS = (
+    Setting("profile", "string", None, "Base profile, default or dev-guidelines; the default profile when unset."),
+    Setting("rules", "list", None, "Explicit list of rule IDs to enable, replacing the profile rules.", aliases=("enabled-rules",)),
+    Setting("enable", "list", [], "Rule IDs enabled on top of the profile.", aliases=("enable-rules",)),
+    Setting("disable", "list", [], "Rule IDs removed from the profile.", aliases=("disable-rules", "disabled-rules")),
+    Setting(
+        "historical-task-exemptions",
+        "boolean",
+        None,
+        "Exempt completed or pre-cutoff .plan/tasks/ files; the profile decides when unset.",
+        aliases=("historical-tasks",),
+    ),
+    Setting("exclude", "list", [], "Glob patterns excluded during file discovery.", aliases=("excludes",)),
+    Setting("plugins", "list", [], "Rule plugin files or dotted module names loaded before the rules."),
+    Setting("github-owners", "list", [], "GitHub owners whose repository links resolve to sibling checkouts."),
+)
+
+
+def build_schema(**options: Any) -> SettingsSchema:
+    """Return the lint-markdown settings schema; ``options`` are passed to :class:`SettingsSchema`."""
+    return SettingsSchema("lint-markdown", PROFILE_SETTINGS, **options)
 
 
 @dataclass(frozen=True)
@@ -177,11 +201,39 @@ def load_profile(
             raise ValueError("'profile' must be a string")
         base = get_profile(raw["profile"], reg)
 
+    values: dict[str, Any] = {}
+    for name, keys in _VALUE_KEYS.items():
+        for key in keys:
+            if key in raw:
+                values[name] = raw[key]
+                break
+    return apply_profile_settings(base, values, reg, where=f" in {target}")
+
+
+#: File keys, in lookup order, of each setting that :func:`apply_profile_settings` reads.
+_VALUE_KEYS = {
+    "rules": ("rules", "enabled_rules"),
+    "enable": ("enable", "enable_rules"),
+    "disable": ("disable", "disable_rules", "disabled_rules"),
+    "historical-task-exemptions": ("historical_task_exemptions", "historical_tasks"),
+    "exclude": ("exclude", "excludes"),
+    "github-owners": ("github_owners",),
+}
+
+
+def apply_profile_settings(
+    base: LintProfile, values: Mapping[str, Any], registry: RuleRegistry | None = None, *, where: str = ""
+) -> LintProfile:
+    """Return ``base`` adjusted by the settings that are present in ``values``, validating them against the registry.
+
+    ``values`` is keyed by setting name (see :data:`PROFILE_SETTINGS`); a missing key leaves the profile value alone.
+    ``where`` ends error messages, such as `` in .lint-markdown.json``.
+    """
+    reg = registry if registry is not None else DEFAULT_REGISTRY
     enabled = set(base.enabled_rules)
-    rules_raw = raw.get("rules", raw.get("enabled_rules"))
+    rules_raw = values.get("rules")
     if rules_raw is not None:
         if isinstance(rules_raw, dict):
-            enabled = set(base.enabled_rules)
             for k, v in rules_raw.items():
                 rid = next(iter(_validate_rule_ids([k], reg)))
                 if not isinstance(v, bool):
@@ -192,29 +244,29 @@ def load_profile(
         else:
             raise ValueError("'rules' must be a list of rule IDs or a boolean mapping")
 
-    enable_raw = raw.get("enable", raw.get("enable_rules"))
+    enable_raw = values.get("enable")
     if enable_raw is not None:
         if not isinstance(enable_raw, list):
             raise ValueError("'enable' must be a list of rule IDs")
         enabled |= _validate_rule_ids(enable_raw, reg)
 
-    disable_raw = raw.get("disable", raw.get("disable_rules", raw.get("disabled_rules")))
+    disable_raw = values.get("disable")
     if disable_raw is not None:
         if not isinstance(disable_raw, list):
             raise ValueError("'disable' must be a list of rule IDs")
         enabled -= _validate_rule_ids(disable_raw, reg)
 
-    hist = raw.get("historical_task_exemptions", raw.get("historical_tasks", base.historical_task_exemptions))
+    hist = values.get("historical-task-exemptions", base.historical_task_exemptions)
     if not isinstance(hist, bool):
         raise ValueError("'historical_task_exemptions' must be a boolean")
 
-    excl_raw = raw.get("exclude", raw.get("excludes", list(base.excludes)))
+    excl_raw = values.get("exclude", list(base.excludes))
     if not isinstance(excl_raw, list) or not all(isinstance(x, str) and x.strip() for x in excl_raw):
         raise ValueError("'excludes' must be a list of non-empty strings")
 
-    owners_raw = raw.get("github_owners", list(base.github_owners))
+    owners_raw = values.get("github-owners", list(base.github_owners))
     if not isinstance(owners_raw, list) or not all(isinstance(x, str) and x.strip() for x in owners_raw):
-        raise ValueError(f"'github-owners' must be a list of non-empty strings in {target}")
+        raise ValueError(f"'github-owners' must be a list of non-empty strings{where}")
 
     return LintProfile(
         name=base.name,
@@ -223,6 +275,22 @@ def load_profile(
         excludes=tuple(x.strip() for x in excl_raw),
         github_owners=tuple(x.strip() for x in owners_raw),
     )
+
+
+def profile_from_settings(
+    values: Mapping[str, Any], registry: RuleRegistry | None = None, *, base: LintProfile | None = None
+) -> LintProfile:
+    """Build a LintProfile from resolved settings, such as those of ``resolve_settings`` with :func:`build_schema`.
+
+    The base is the built-in profile named by the ``profile`` value, or ``base`` or the default profile when it is absent.
+    """
+    reg = registry if registry is not None else DEFAULT_REGISTRY
+    name = values.get("profile")
+    if name is not None:
+        chosen = get_profile(name, reg)
+    else:
+        chosen = base if base is not None else get_profile(DEFAULT_PROFILE.name, reg)
+    return apply_profile_settings(chosen, values, reg)
 
 
 __all__ = [
@@ -234,8 +302,12 @@ __all__ = [
     "LEGACY_CONFIG_FILENAME",
     "LintProfile",
     "PROFILES",
+    "PROFILE_SETTINGS",
+    "apply_profile_settings",
+    "build_schema",
     "get_profile",
     "load_profile",
+    "profile_from_settings",
     "read_plugin_entries",
     "resolve_config_file",
 ]

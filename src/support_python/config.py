@@ -89,6 +89,7 @@ class Setting:
         default: Value used when no source provides one.
         description: One-sentence description shown by ``config list --verbose`` and ``config names --verbose``.
         secret: Print the value as ``***`` in ``config list`` and ``config get``.
+        aliases: Other file keys that mean this setting; the setting's own key wins when a file has both.
     """
 
     name: str
@@ -96,6 +97,7 @@ class Setting:
     default: Any = None
     description: str = ""
     secret: bool = False
+    aliases: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         name = self.name.replace("_", "-")
@@ -104,6 +106,7 @@ class Setting:
         if self.type not in SETTING_TYPES:
             raise ValueError(f"Invalid type {self.type!r} for setting {name!r}: use one of {', '.join(SETTING_TYPES)}.")
         object.__setattr__(self, "name", name)
+        object.__setattr__(self, "aliases", tuple(alias.replace("_", "-") for alias in self.aliases))
 
 
 class SettingsSchema:
@@ -356,6 +359,11 @@ def _load_config_file(path: Path, schema: SettingsSchema, logger: Any, warn: Cal
         warn(f"Ignoring configuration file {path}: expected a JSON object.")
         return None
     data = normalize_config_keys(data, style="kebab", source=path, logger=logger)
+    for setting in schema.settings.values():
+        for alias in setting.aliases:
+            if alias in data:
+                value = data.pop(alias)
+                data.setdefault(setting.name, value)
     unknown = sorted(key for key in data if schema.get(key) is None)
     if unknown:
         logger.debug(f"Ignoring unknown keys in {path}: {', '.join(unknown)}")

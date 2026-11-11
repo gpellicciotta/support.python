@@ -494,5 +494,146 @@ class TestEndToEnd(unittest.TestCase):
             self.assertIn("v3.0.0", res_leg.stderr)
 
 
+class TestSharedSettings(unittest.TestCase):
+    """Settings resolve through the shared resolver: environment, project, user, and system files, and the config group."""
+
+    def setUp(self) -> None:
+        import json
+
+        self.json = json
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.tmp = Path(self._tmp.name).resolve()
+        self.doc = self.tmp / "docs" / "doc.md"
+        self.doc.parent.mkdir()
+        self.doc.write_bytes(b"# Title\n\n### Skipped H3\n")
+        self.xdg = self.tmp / "xdg"
+        self.system_cfg = self.tmp / "system" / "config.json"
+        self.user_cfg = self.xdg / "lint-markdown" / "config.json"
+        for patcher in (
+            patch.object(lint_markdown, "system_config_path", return_value=self.system_cfg, create=True),
+            patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.xdg)}),
+        ):
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def write_json(self, path: Path, data: object) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(self.json.dumps(data), encoding="utf-8")
+
+    def check(self, *args: str, env: dict[str, str] | None = None) -> tuple[int, str, str]:
+        with patch.dict(os.environ, env or {}):
+            return run_main(["check", "--offline", *args, str(self.doc)])
+
+    def run_in_docs(self, *argv: str, env: dict[str, str] | None = None) -> tuple[int, str, str]:
+        previous = os.getcwd()
+        os.chdir(self.doc.parent)
+        try:
+            with patch.dict(os.environ, env or {}):
+                return run_main(list(argv))
+        finally:
+            os.chdir(previous)
+
+    def test_environment_variable_disables_a_rule(self) -> None:
+        self.assertEqual(self.check()[0], 1)
+        code, _, err = self.check(env={"LINT_MARKDOWN_DISABLE": "MD001"})
+        self.assertEqual((code, err), (0, ""))
+
+    def test_environment_variable_selects_profile_and_option_wins(self) -> None:
+        self.assertEqual(self.check(env={"LINT_MARKDOWN_PROFILE": "bogus"})[0], 2)
+        code, _, err = self.check("--profile", "default", env={"LINT_MARKDOWN_PROFILE": "bogus"})
+        self.assertEqual(code, 1)
+        self.assertNotIn("bogus", err)
+
+    def test_environment_list_replaces_the_project_list_as_a_whole(self) -> None:
+        self.write_json(self.doc.parent / ".lint-markdown.json", {"disable": ["MD001"]})
+        self.assertEqual(self.check()[0], 0)
+        self.assertEqual(self.check(env={"LINT_MARKDOWN_DISABLE": "MD005"})[0], 1)
+
+    def test_project_file_beats_user_file_and_user_file_beats_system_file(self) -> None:
+        self.write_json(self.system_cfg, {"disable": ["MD001"]})
+        self.assertEqual(self.check()[0], 0)
+        self.write_json(self.user_cfg, {"disable": ["MD005"]})
+        self.assertEqual(self.check()[0], 1)
+        self.write_json(self.doc.parent / ".lint-markdown.json", {"disable": ["MD001", "MD005"]})
+        self.assertEqual(self.check()[0], 0)
+
+    def test_user_file_list_is_replaced_not_merged_by_project_file(self) -> None:
+        self.write_json(self.user_cfg, {"disable": ["MD001"]})
+        self.write_json(self.doc.parent / ".lint-markdown.json", {"disable": ["MD005"]})
+        self.assertEqual(self.check()[0], 1)
+
+    def test_legacy_project_file_still_read_with_warning_next_to_user_file(self) -> None:
+        self.write_json(self.user_cfg, {"profile": "dev-guidelines"})
+        self.write_json(self.doc.parent / ".markdown-lint.json", {"disable": ["MD001"]})
+        code, _, err = self.check()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(err.count("v3.0.0"), 1)
+
+    def test_malformed_user_file_warns_once_and_is_skipped(self) -> None:
+        self.user_cfg.parent.mkdir(parents=True)
+        self.user_cfg.write_text("{not json", encoding="utf-8")
+        code, _, err = self.check()
+        self.assertEqual(code, 1)
+        self.assertEqual(err.count(str(self.user_cfg)), 1)
+
+    def test_unknown_key_in_project_file_is_ignored(self) -> None:
+        self.write_json(self.doc.parent / ".lint-markdown.json", {"disable": ["MD001"], "future-setting": 1})
+        code, _, err = self.check()
+        self.assertEqual((code, err), (0, ""))
+
+    def test_alias_keys_resolve_to_their_setting(self) -> None:
+        self.write_json(self.doc.parent / ".lint-markdown.json", {"disable_rules": ["MD001"], "excludes": ["a/*"]})
+        self.assertEqual(self.check()[0], 0)
+        code, out, _ = self.run_in_docs("config", "list", "--format", "json")
+        by_name = {entry["name"]: entry for entry in self.json.loads(out)["settings"]}
+        self.assertEqual((by_name["exclude"]["value"], by_name["exclude"]["source"]), (["a/*"], "project"))
+
+    def test_config_list_names_every_setting(self) -> None:
+        code, out, _ = self.run_in_docs("config", "list", "--format", "json", env={"LINT_MARKDOWN_PLUGINS": "x.py,y.py"})
+        self.assertEqual(code, 0)
+        by_name = {entry["name"]: entry for entry in self.json.loads(out)["settings"]}
+        self.assertEqual(
+            list(by_name),
+            ["profile", "rules", "enable", "disable", "historical-task-exemptions", "exclude", "plugins", "github-owners"],
+        )
+        self.assertEqual((by_name["plugins"]["value"], by_name["plugins"]["source"]), (["x.py", "y.py"], "env"))
+
+    def test_config_targets_project_file_by_default(self) -> None:
+        project = self.doc.parent / ".lint-markdown.json"
+        code, out, _ = self.run_in_docs("config", "path")
+        self.assertEqual((code, out.strip()), (0, str(project)))
+        code, out, _ = self.run_in_docs("config", "path", "--all", "--format", "json")
+        self.assertEqual(
+            self.json.loads(out), {"project": str(project), "user": str(self.user_cfg), "system": str(self.system_cfg)}
+        )
+        self.assertEqual(self.run_in_docs("config", "set", "disable", "MD001,MD005")[0], 0)
+        self.assertEqual(self.json.loads(project.read_text(encoding="utf-8")), {"disable": ["MD001", "MD005"]})
+        code, out, _ = self.run_in_docs("config", "get", "disable", "--verbose")
+        self.assertIn("source: project", out)
+        self.assertEqual(self.check()[0], 0)
+        self.assertEqual(self.run_in_docs("config", "delete", "disable")[0], 0)
+        self.assertEqual(self.json.loads(project.read_text(encoding="utf-8")), {})
+
+    def test_config_set_user_and_system_files_and_rejects_bad_values(self) -> None:
+        self.assertEqual(self.run_in_docs("config", "set", "profile", "dev-guidelines", "--user")[0], 0)
+        self.assertEqual(self.json.loads(self.user_cfg.read_text(encoding="utf-8")), {"profile": "dev-guidelines"})
+        self.assertEqual(self.run_in_docs("config", "set", "historical-task-exemptions", "yes", "--system")[0], 0)
+        self.assertEqual(self.json.loads(self.system_cfg.read_text(encoding="utf-8")), {"historical-task-exemptions": True})
+        self.assertEqual(self.run_in_docs("config", "set", "historical-task-exemptions", "maybe")[0], 2)
+        self.assertEqual(self.run_in_docs("config", "get", "bogus")[0], 2)
+
+    def test_config_option_replaces_the_discovered_files(self) -> None:
+        self.write_json(self.user_cfg, {"disable": ["MD001"]})
+        other = self.tmp / "other.json"
+        self.write_json(other, {"disable": ["MD005"]})
+        self.assertEqual(self.check("--config", str(other))[0], 1)
+
+    def test_invalid_rule_id_from_environment_exits_two(self) -> None:
+        code, _, err = self.check(env={"LINT_MARKDOWN_DISABLE": "MD999"})
+        self.assertEqual(code, 2)
+        self.assertIn("MD999", err)
+
+
 if __name__ == "__main__":
     unittest.main()

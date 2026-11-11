@@ -10,6 +10,7 @@ Run Markdown linting through the `lint-markdown` console script in [lint_markdow
 lint-markdown check [PATH...] [--format text|json] [--rules IDS] [--profile NAME] [--config PATH] [--plugin ENTRY]... [--offline] [--exclude GLOB]
 lint-markdown fix [PATH...] [--dry-run] [--rules IDS] [--profile NAME] [--config PATH] [--plugin ENTRY]... [--offline] [--exclude GLOB]
 lint-markdown rules [--format text|json] [--profile NAME] [--config PATH] [--plugin ENTRY]...
+lint-markdown config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|--system] [--format text|json]
 lint-markdown help [--verbose]
 lint-markdown version
 ```
@@ -20,11 +21,12 @@ Supported actions, profile, and rule options:
 - `rules` lists every rule with `id`, `name`, `scope`, `fixable`, `enabled` (under the active profile), and `source` (`builtin` or the plugin entry); `--format json` prints `{"rules": [...]}`.
 - In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--profile PROFILE` selects a built-in profile (`default` or `dev-guidelines`).
-- `--config PATH` loads explicit JSON settings from a `.lint-markdown.json` file.
+- `--config PATH` loads explicit JSON settings from a `.lint-markdown.json` file, or from the one inside a directory; it replaces the project, user, and system files.
 - `--plugin ENTRY` loads extra rules from a plugin file or module (repeatable); see [Rule Plugins](#rule-plugins).
 - `--rules RULES` overrides active rules with a comma-separated list of `MD0xx` codes.
 - `--exclude GLOB` appends path exclusion globs to the profile and default excludes.
 - `--offline` disables external HTTP link checks (`MD018`).
+- `config` lists, gets, sets, deletes, and edits settings; it targets the project file `.lint-markdown.json` in the current directory by default, or the user or system file with `--user` or `--system`; see [Settings Sources](#settings-sources).
 
 ---
 
@@ -38,9 +40,36 @@ The profile loader in [profiles.py](../../src/support_python/markdown/profiles.p
 
 ---
 
+## Settings Sources
+Each setting comes from the first of these sources that gives a valid value:
+1. the command-line option (`--profile` only);
+2. the environment variable `LINT_MARKDOWN_{{NAME}}`, such as `LINT_MARKDOWN_DISABLE` or `LINT_MARKDOWN_HISTORICAL_TASK_EXEMPTIONS`;
+3. the project file `.lint-markdown.json`, found in the target path or project root (falling back to legacy `.markdown-lint.json` with a deprecation warning until `v3.0.0`);
+4. the user file: `$XDG_CONFIG_HOME/lint-markdown/config.json` when `XDG_CONFIG_HOME` is an absolute path, else `%APPDATA%/lint-markdown/config.json` on Windows or `~/.config/lint-markdown/config.json`;
+5. the system file: `%PROGRAMDATA%/lint-markdown/config.json` on Windows or `/etc/lint-markdown/config.json`;
+6. the built-in default.
+
+List settings (`rules`, `enable`, `disable`, `exclude`, `plugins`, `github-owners`) are replaced as a whole by the first source that sets them; sources never merge their lists.
+Environment variables take lists as comma-separated items or a JSON array.
+An invalid value, an unreadable or malformed file, or a wrong-typed key warns once and falls through to the next source; unknown keys are ignored and listed with `--debug`.
+`--exclude` and `--plugin` stay additive: they append to the resolved `exclude` and `plugins` values.
+`--config PATH` replaces files 3 to 5.
+Invalid rule IDs or an unknown profile name still exit `2`.
+
+The `config` action reads and writes one file at a time and uses the `.lint-markdown.json` of the current directory as its project file:
+```bash
+lint-markdown config list --verbose
+lint-markdown config set disable MD018
+lint-markdown config set profile dev-guidelines --user
+lint-markdown config get exclude --source
+lint-markdown config path --all
+```
+
+---
+
 ## JSON Configuration Schema
 Configuration keys accept dashes or underscores interchangeably; this document shows the preferred kebab-case spelling.
-When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the target path or project root (falling back to legacy `.markdown-lint.json` with a deprecation warning until `v3.0.0`), or falls back to `default` when absent.
+The same keys work in the project, user, and system files.
 ```json
 {
   "profile": "dev-guidelines",
@@ -53,16 +82,19 @@ When `--config` is omitted, the CLI discovers `.lint-markdown.json` in the targe
 }
 ```
 
-| Field                             | Type                      | Default         | Purpose                                                           |
-| :-------------------------------- | :------------------------ | :-------------- | :---------------------------------------------------------------- |
-| `profile`                         | `string`                  | `"default"`     | Base profile (`"default"` or `"dev-guidelines"`)                  |
-| `rules` / `enabled-rules`         | `array<string> \| object` | Profile rules   | Explicit rule ID list or `{ "MD0xx": bool }` map                  |
-| `enable` / `enable-rules`         | `array<string>`           | `[]`            | Additional `MD0xx` rule IDs enabled on the profile                |
-| `disable` / `disable-rules`       | `array<string>`           | `[]`            | `MD0xx` rule IDs removed from the profile                         |
-| `historical-task-exemptions`      | `boolean`                 | Profile setting | Exempt completed or pre-cutoff `.plan/tasks/` files               |
-| `excludes` / `exclude`            | `array<string>`           | `[]`            | Additional glob patterns excluded during discovery                |
-| `plugins`                         | `array<string>`           | `[]`            | Rule plugin files or modules loaded before the rules              |
-| `github-owners` / `github_owners` | `array<string>`           | `[]`            | GitHub owners whose repository links resolve to sibling checkouts |
+| Setting                      | Type            | Default         | Environment variable                       | Purpose                                                                              |
+| :--------------------------- | :-------------- | :-------------- | :----------------------------------------- | :----------------------------------------------------------------------------------- |
+| `profile`                    | `string`        | `"default"`     | `LINT_MARKDOWN_PROFILE`                    | Base profile (`"default"` or `"dev-guidelines"`)                                     |
+| `rules`                      | `array<string>` | Profile rules   | `LINT_MARKDOWN_RULES`                      | Explicit rule ID list replacing the profile rules; alias `enabled-rules`             |
+| `enable`                     | `array<string>` | `[]`            | `LINT_MARKDOWN_ENABLE`                     | Additional `MD0xx` rule IDs enabled on the profile; alias `enable-rules`             |
+| `disable`                    | `array<string>` | `[]`            | `LINT_MARKDOWN_DISABLE`                    | `MD0xx` rule IDs removed from the profile; aliases `disable-rules`, `disabled-rules` |
+| `historical-task-exemptions` | `boolean`       | Profile setting | `LINT_MARKDOWN_HISTORICAL_TASK_EXEMPTIONS` | Exempt completed or pre-cutoff `.plan/tasks/` files; alias `historical-tasks`        |
+| `exclude`                    | `array<string>` | `[]`            | `LINT_MARKDOWN_EXCLUDE`                    | Additional glob patterns excluded during discovery; alias `excludes`                 |
+| `plugins`                    | `array<string>` | `[]`            | `LINT_MARKDOWN_PLUGINS`                    | Rule plugin files or modules loaded before the rules                                 |
+| `github-owners`              | `array<string>` | `[]`            | `LINT_MARKDOWN_GITHUB_OWNERS`              | GitHub owners whose repository links resolve to sibling checkouts                    |
+
+The `{ "MD0xx": bool }` map form of `rules` is a library-only feature of `load_profile`; the tool treats it as an invalid value.
+Relative plugin paths resolve against the folder of the file that lists them, or the current directory for an environment variable.
 
 ---
 
