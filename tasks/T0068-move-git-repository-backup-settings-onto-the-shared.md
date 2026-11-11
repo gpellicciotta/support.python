@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 649.2, input: 120, output: 52292, cache_read: 5585792, cache_write: 224264}
+work_duration: 337.1
 ---
 # T0068: Move git-repository-backup settings onto the shared resolver, adding environment variables, a system file, and the config group.
 
@@ -33,3 +36,26 @@ Add the `config` group through `add_config_actions`, targeting the user file by 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the configuration guidelines, config.py, and the configuration tutorial.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for environment variables, system file, unknown keys, malformed files, and config actions.
+
+- [2026-11-11] **[Verify]**
+  Ran the new tests; 16 failed, recorded as red-phase proof in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Declared a SettingsSchema, resolved settings with resolve_settings, and added the config group.
+
+- [2026-11-11] **[Verify]**
+  Fast suite passed with 1156 tests and slow backup tests passed with 58; output recorded.
+
+- [2026-11-11] **[Doc]**
+  Documented every setting in git-repository-backup.md and added CHANGELOG.md and migration entries.
+
