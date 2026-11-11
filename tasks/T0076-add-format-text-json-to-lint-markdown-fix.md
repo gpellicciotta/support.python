@@ -1,11 +1,12 @@
 ---
 id: T0076
-owner: ~
-needs: [T0069]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@claude"
+session: claude-20261111-2bc682
+needs: []
+branch: task/T0076-add-format-text-json-to-lint-markdown-fix
+worktree: .plan/work/T0076-add-format-text-json-to-lint-markdown-fix
+status: active
+started_at: "2026-11-11T01:31:34Z"
 ended_at: —
 review: agent
 preview: none
@@ -20,12 +21,12 @@ Keep the exit codes and the `text` output unchanged.
 Reuse the issue objects of `check --format json`.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the CLI guidelines and the current `fix` handler of `lint-markdown`.
-- [ ] **[Implement]** Write failing tests for `lint-markdown fix --format json`, including `--dry-run` and failure cases.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document the JSON document in lint-markdown.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the CLI guidelines and the current `fix` handler of `lint-markdown`.
+- [x] **[Implement]** Write failing tests for `lint-markdown fix --format json`, including `--dry-run` and failure cases.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document the JSON document in lint-markdown.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
