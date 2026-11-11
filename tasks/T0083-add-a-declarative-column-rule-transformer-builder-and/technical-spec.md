@@ -35,6 +35,7 @@
 
 Completion check: `.venv/Scripts/python -m pytest tests/test_sql.py` plus `python scripts/devops.py check`.
 Size estimate: 5 files, 380 lines
+Size note: Comprehensive unit tests and fixture equivalence tests exceed the typical line.
 
 ### Notes
 - **[Decided]** Keep `get_anonymized_user_info` as a generic helper; it encodes no table schema.
