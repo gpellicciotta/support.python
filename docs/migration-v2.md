@@ -144,17 +144,26 @@ The `support_python.devops` split moves mock patch targets:
 ## Library API
 Removed names and their replacements:
 
-| v1.x API                                 | v2.0.0 replacement                                        |
-| :--------------------------------------- | :-------------------------------------------------------- |
-| `ToolLogger`, `TeeLogger`                | `CliLogger`                                               |
-| `build_action_parser`                    | `ToolHarness` with `add_action`                           |
-| `print_help`, `print_version`            | The harness `help` and `version` actions                  |
-| `format_version`                         | `ToolHarness.format_version()`                            |
-| `format_support_message`                 | Removed, with no replacement                              |
-| `build_capture_parser`                   | `build_capture_harness`                                   |
-| `configure_utf8_output()` in tool `main` | Drop the call; `ToolHarness.run` configures UTF-8 streams |
+| v1.x API                                                                                                     | v2.0.0 replacement                                        |
+| :----------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------- |
+| `ToolLogger`, `TeeLogger`                                                                                    | `CliLogger`                                               |
+| `build_action_parser`                                                                                        | `ToolHarness` with `add_action`                           |
+| `print_help`, `print_version`                                                                                | The harness `help` and `version` actions                  |
+| `format_version`                                                                                             | `ToolHarness.format_version()`                            |
+| `format_support_message`                                                                                     | Removed, with no replacement                              |
+| `build_capture_parser`                                                                                       | `build_capture_harness`                                   |
+| `configure_utf8_output()` in tool `main`                                                                     | Drop the call; `ToolHarness.run` configures UTF-8 streams |
+| `transform_auth_users`, `transform_auth_credentials`, `transform_auth_tokens`, `transform_auth_applications` | Define the rules locally with `column_rules_transformer`  |
+| `transform_counters_users`, `transform_counters_webhooks`                                                    | Define the rules locally with `column_rules_transformer`  |
 
 `run_capture_cli` log lines no longer carry a `cli_name` origin.
+
+The SQL anonymizer no longer knows the `auth` and `counters` schemas:
+- `anonymize_sql_stream(in, out, transformers)` and `anonymize_sql_string(sql, transformers)` require the `transformers` mapping.
+  The `app`, `custom_password`, and `custom_transformers` parameters are gone; a transformer closes over its own password.
+- `LocalMySqlManager(snapshot_transformers=...)` supplies the mapping; `snapshot_and_anonymize` logs an error and returns `None` without it.
+- `snapshot_and_anonymize` drops `custom_password`, and `db snapshot` drops `--custom-password`.
+- See [sql-anonymizer.md](tutorials/sql-anonymizer.md) for the rules the removed profiles applied.
 
 Kept names changed behavior; update tests that assert exact output:
 - `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.

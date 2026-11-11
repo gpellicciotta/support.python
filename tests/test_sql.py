@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import base64
+import inspect
 import io
+import json
 from pathlib import Path
+from typing import Optional
 import unittest
 
+from support_python import sql
 from support_python.crypto import DEFAULT_TEST_PASSWORD, get_standard_password_hash
 from support_python.sql import (
     KEEP,
     ColumnRule,
     RowView,
+    TableTransformer,
     anonymize_sql_stream,
     anonymize_sql_string,
     column_index,
@@ -22,17 +27,92 @@ from support_python.sql import (
     sql_int,
     sql_literal,
     sql_value,
-    transform_auth_applications,
-    transform_auth_credentials,
-    transform_auth_tokens,
-    transform_auth_users,
-    transform_counters_users,
-    transform_counters_webhooks,
 )
 
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
+SQL_FIXTURES_DIR = FIXTURES_DIR / "sql"
 AUTH_FIXTURE = FIXTURES_DIR / "realistic-auth-sample.sql"
 COUNTERS_FIXTURE = FIXTURES_DIR / "realistic-counters-sample.sql"
+
+
+def _auth_transformers(custom_password: Optional[str] = None) -> dict[str, TableTransformer]:
+    """Build the rules the removed ``app="auth"`` profile applied, as a local transformers map."""
+    std_hash = get_standard_password_hash(custom_password or DEFAULT_TEST_PASSWORD)
+    b64_password_hash = base64.b64encode(std_hash.encode("ascii")).decode("ascii")
+
+    def credential_data(row: RowView) -> object:
+        cred_type = (row.text("type") or "password").lower()
+        user_id = row.int("user-id") or 0
+        if cred_type == "password":
+            return b64_password_hash
+        if cred_type == "federated-id":
+            orig_data = row.text("data") or ""
+            try:
+                decoded = base64.b64decode(orig_data, validate=True).decode("utf-8", errors="replace")
+                if ":" in decoded:
+                    orig_data = decoded
+            except Exception:
+                pass
+            if ":" in orig_data:
+                prefix_part, _ = orig_data.rsplit(":", 1)
+                fed_val = f"{prefix_part}:anon-sub-{user_id}"
+            else:
+                fed_val = f"google:anon-sub-{user_id}"
+            return base64.b64encode(fed_val.encode("utf-8")).decode("ascii")
+        return KEEP
+
+    return {
+        "users": column_rules_transformer(
+            {
+                "name": lambda r: get_anonymized_user_info(r.int("id") or 0)[0],
+                "email": lambda r: get_anonymized_user_info(r.int("id") or 0)[1],
+            },
+            positions={"id": 0, "name": 1, "email": 2},
+        ),
+        "credentials": column_rules_transformer({"data": credential_data}, positions={"type": 1, "user-id": 2, "data": 3}),
+        "tokens": _tokens_transformer(),
+        "applications": column_rules_transformer({"app-secret": lambda r: None}, positions={"app-secret": 6}),
+    }
+
+
+def _tokens_transformer() -> TableTransformer:
+    return column_rules_transformer(
+        {"data": lambda r: base64.b64encode(f"anon-token-{r.int('id') or 0}".encode("utf-8")).decode("ascii")},
+        positions={"id": 0, "data": 3},
+    )
+
+
+def _counters_transformers() -> dict[str, TableTransformer]:
+    """Build the rules the removed ``app="counters"`` profile applied, as a local transformers map."""
+
+    def user_info(row: RowView) -> tuple[str, str]:
+        auth_id = row.int("auth-user-id")
+        if auth_id is None:
+            auth_id = row.int("id") or 0
+        return get_anonymized_user_info(auth_id)
+
+    return {
+        "users": column_rules_transformer(
+            {"name": lambda r: user_info(r)[0], "email": lambda r: user_info(r)[1]},
+            positions={"id": 0, "name": 1, "email": 2, "auth-user-id": 8},
+        ),
+        "tokens": _tokens_transformer(),
+        "webhooks": column_rules_transformer(
+            {
+                "target-url": lambda r: f"https://example.local/webhook/anon-{r.int('id') or 0}",
+                "secret": lambda r: f"anon-secret-{r.int('id') or 0}",
+            },
+            positions={"id": 0, "target-url": 3, "secret": 4},
+        ),
+    }
+
+
+def _read_fixture(name: str) -> str:
+    return (SQL_FIXTURES_DIR / name).read_text(encoding="utf-8")
+
+
+def _golden_stats(name: str) -> dict[str, int]:
+    return json.loads(_read_fixture(f"{name}-golden-stats.json"))
 
 
 class TestSqlAnonymizer(unittest.TestCase):
@@ -69,107 +149,6 @@ class TestSqlAnonymizer(unittest.TestCase):
         self.assertIn("(1, 'John Doe'", formatted)
         self.assertIn("(2, 'Jane \\'Cool\\' Doe'", formatted)
 
-    def test_transform_auth_users(self):
-        rows = [
-            ["0", "'Original Admin'", "'admin@company.com'", "'[\\\"admin\\\"]'", "'2026-01-01'", "'2026-01-02'", "NULL"],
-            ["15", "'Alice Wonderland'", "'alice@secret.org'", "NULL", "'2026-02-01'", "'2026-02-02'", "NULL"],
-        ]
-        modified = transform_auth_users(rows)
-        self.assertEqual(modified, 2)
-        # Admin check
-        self.assertEqual(rows[0][1], "'Admin User'")
-        self.assertEqual(rows[0][2], "'admin@anonymized.invalid'")
-        self.assertEqual(rows[0][3], "'[\\\"admin\\\"]'")
-        # User 15 check
-        self.assertEqual(rows[1][1], "'Anonymized User 15'")
-        self.assertEqual(rows[1][2], "'anon-user-15@anonymized.invalid'")
-
-    def test_transform_auth_credentials(self):
-        rows = [
-            ["1", "'password'", "15", "'secret_hash_value_12345'", "'2026-01-01'", "'2026-01-01'", "NULL"],
-            [
-                "2",
-                "'federated-id'",
-                "15",
-                "'google:https://accounts.google.com:real_sub_9999'",
-                "'2026-01-01'",
-                "'2026-01-01'",
-                "NULL",
-            ],
-        ]
-        modified = transform_auth_credentials(rows)
-        self.assertEqual(modified, 2)
-        # Password check
-        self.assertNotEqual(rows[0][3], "'secret_hash_value_12345'")
-        std_hash = get_standard_password_hash()
-        b64_hash = base64.b64encode(std_hash.encode("ascii")).decode("ascii")
-        self.assertEqual(rows[0][3], f"'{b64_hash}'")
-        # Federated ID check
-        self.assertNotIn("real_sub_9999", rows[1][3])
-        expected_fed = base64.b64encode("google:https://accounts.google.com:anon-sub-15".encode("utf-8")).decode("ascii")
-        self.assertEqual(rows[1][3], f"'{expected_fed}'")
-
-    def test_transform_auth_tokens(self):
-        rows = [
-            ["101", "'session'", "15", "'real_session_token_xyz'", "'2026-01-01'", "'2026-01-01'", "NULL"],
-        ]
-        modified = transform_auth_tokens(rows)
-        self.assertEqual(modified, 1)
-        expected_token = base64.b64encode("anon-token-101".encode("utf-8")).decode("ascii")
-        self.assertEqual(rows[0][3], f"'{expected_token}'")
-
-    def test_transform_auth_applications(self):
-        rows = [
-            [
-                "1",
-                "'counters'",
-                "'Counters App'",
-                "'http://localhost:8010'",
-                "'http://localhost:8010/logo.png'",
-                "NULL",
-                "'real_app_secret_hash'",
-                "'2026-01-01'",
-                "'2026-01-01'",
-            ],
-        ]
-        modified = transform_auth_applications(rows)
-        self.assertEqual(modified, 1)
-        self.assertEqual(rows[0][6], "NULL")
-
-    def test_counters_cross_repo_user_parity(self):
-        rows = [
-            ["1", "'Alice Local Name'", "'alice@old-email.com'", "NULL", "NULL", "'2026-01-01'", "'2026-01-01'", "NULL", "15"],
-            ["2", "'Legacy Standalone'", "'legacy@old-email.com'", "NULL", "NULL", "'2026-01-01'", "'2026-01-01'", "NULL", "NULL"],
-        ]
-        modified = transform_counters_users(rows)
-        self.assertEqual(modified, 2)
-        auth_name, auth_email = get_anonymized_user_info(15)
-        self.assertEqual(rows[0][1], f"'{auth_name}'")
-        self.assertEqual(rows[0][2], f"'{auth_email}'")
-        self.assertEqual(rows[0][8], "15")
-
-        local_name, local_email = get_anonymized_user_info(2)
-        self.assertEqual(rows[1][1], f"'{local_name}'")
-        self.assertEqual(rows[1][2], f"'{local_email}'")
-
-    def test_transform_counters_webhooks(self):
-        rows = [
-            [
-                "5",
-                "10",
-                "15",
-                "'https://my-private-site.com/webhook'",
-                "'super_secret_key_999'",
-                "1",
-                "'2026-01-01'",
-                "'2026-01-01'",
-            ],
-        ]
-        modified = transform_counters_webhooks(rows)
-        self.assertEqual(modified, 1)
-        self.assertEqual(rows[0][3], "'https://example.local/webhook/anon-5'")
-        self.assertEqual(rows[0][4], "'anon-secret-5'")
-
     def test_full_sql_dump_anonymization_auth(self):
         sample_sql = """-- Example Auth Sample Dump
 CREATE TABLE IF NOT EXISTS `users` (`id` BIGINT NOT NULL, `name` VARCHAR(250), `email` VARCHAR(250));
@@ -178,7 +157,7 @@ INSERT INTO `users` VALUES (0, 'Admin User Real', 'admin@real.com', '["admin"]',
 
 INSERT INTO `credentials` VALUES (1, 'password', 1, 'real_pass_hash', '2026-01-02', '2026-01-02', NULL);
 """
-        anon_sql, stats = anonymize_sql_string(sample_sql, app="auth")
+        anon_sql, stats = anonymize_sql_string(sample_sql, _auth_transformers())
         self.assertEqual(stats.get("users"), 2)
         self.assertEqual(stats.get("credentials"), 1)
         self.assertNotIn("Admin User Real", anon_sql)
@@ -193,7 +172,7 @@ INSERT INTO `credentials` VALUES (1, 'password', 1, 'real_pass_hash', '2026-01-0
         self.assertTrue(AUTH_FIXTURE.is_file(), f"Fixture file not found at {AUTH_FIXTURE}")
         with open(AUTH_FIXTURE, "r", encoding="utf-8") as in_f:
             out_buf = io.StringIO()
-            stats = anonymize_sql_stream(in_f, out_buf, app="auth")
+            stats = anonymize_sql_stream(in_f, out_buf, _auth_transformers())
             anon_sql = out_buf.getvalue()
 
         # Check expected table transformation counts
@@ -236,7 +215,7 @@ INSERT INTO `credentials` VALUES (1, 'password', 1, 'real_pass_hash', '2026-01-0
         self.assertTrue(COUNTERS_FIXTURE.exists(), f"Missing fixture file: {COUNTERS_FIXTURE}")
         out_buf = io.StringIO()
         with open(COUNTERS_FIXTURE, "r", encoding="utf-8") as f:
-            stats = anonymize_sql_stream(f, out_buf, app="counters")
+            stats = anonymize_sql_stream(f, out_buf, _counters_transformers())
             anon_sql = out_buf.getvalue()
 
         self.assertEqual(stats.get("users"), 3)
@@ -258,7 +237,7 @@ INSERT INTO `credentials` VALUES (1, 'password', 1, 'real_pass_hash', '2026-01-0
 INSERT IGNORE INTO `auth`.`users` (`email`, `id`, `name`) VALUES ('secret@corp.org', 10, 'Top Secret User');
 REPLACE INTO `credentials` (`data`, `type`, `user-id`) VALUES ('secret_pass_val', 'password', 10);
 """
-        anon_sql, stats = anonymize_sql_string(sql, app="auth")
+        anon_sql, stats = anonymize_sql_string(sql, _auth_transformers())
         self.assertEqual(stats.get("users"), 1)
         self.assertEqual(stats.get("credentials"), 1)
         self.assertNotIn("secret@corp.org", anon_sql)
@@ -275,17 +254,67 @@ REPLACE INTO `credentials` (`data`, `type`, `user-id`) VALUES ('secret_pass_val'
                 row[1] = "'masked-secret'"
             return len(rows)
 
-        anon_sql, stats = anonymize_sql_string(
-            sql,
-            custom_transformers={"custom_sensitive": custom_mask},
-        )
+        anon_sql, stats = anonymize_sql_string(sql, {"custom_sensitive": custom_mask})
         self.assertEqual(stats.get("custom_sensitive"), 1)
         self.assertNotIn("super-secret-key-1234", anon_sql)
         self.assertIn("'masked-secret'", anon_sql)
 
+    def test_golden_outputs_match_removed_schema_profiles(self):
+        cases = [
+            ("auth-sample", _read_fixture("../realistic-auth-sample.sql"), _auth_transformers()),
+            ("auth-inline", _read_fixture("auth-inline.sql"), _auth_transformers()),
+            ("counters-sample", _read_fixture("../realistic-counters-sample.sql"), _counters_transformers()),
+            ("counters-inline", _read_fixture("counters-inline.sql"), _counters_transformers()),
+        ]
+        for name, source, transformers in cases:
+            with self.subTest(name):
+                out, stats = anonymize_sql_string(source, transformers)
+                self.assertEqual(out, _read_fixture(f"{name}-golden.sql"))
+                self.assertEqual(stats, _golden_stats(name))
+
+    def test_custom_password_flows_through_local_credentials_rule(self):
+        sql_text = "INSERT INTO `credentials` VALUES (1, 'password', 1, 'old', '2026-01-02', '2026-01-02', NULL);\n"
+        out, _ = anonymize_sql_string(sql_text, _auth_transformers("pw-1"))
+        b64 = base64.b64encode(get_standard_password_hash("pw-1").encode("ascii")).decode("ascii")
+        self.assertIn(b64, out)
+
+    def test_transformers_argument_is_required(self):
+        with self.assertRaises(TypeError):
+            anonymize_sql_string("SELECT 1;\n")  # type: ignore[call-arg]
+        with self.assertRaises(TypeError):
+            anonymize_sql_stream(io.StringIO(""), io.StringIO())  # type: ignore[call-arg]
+
+    def test_removed_parameters_are_rejected(self):
+        for removed in ("app", "custom_password", "custom_transformers"):
+            with self.subTest(removed):
+                self.assertNotIn(removed, inspect.signature(anonymize_sql_stream).parameters)
+                self.assertNotIn(removed, inspect.signature(anonymize_sql_string).parameters)
+        with self.assertRaises(TypeError):
+            anonymize_sql_string("SELECT 1;\n", {}, app="auth")  # type: ignore[call-arg]
+
+    def test_empty_transformers_leave_tables_untouched(self):
+        sql_text = "INSERT INTO `users` VALUES (1, 'Real Person', 'real@person.com');\n"
+        out, stats = anonymize_sql_string(sql_text, {})
+        self.assertEqual(stats, {})
+        self.assertIn("real@person.com", out)
+
+    def test_schema_transformers_are_removed(self):
+        removed = [
+            "transform_auth_users",
+            "transform_auth_credentials",
+            "transform_auth_applications",
+            "transform_auth_tokens",
+            "transform_counters_users",
+            "transform_counters_webhooks",
+        ]
+        for name in removed:
+            with self.subTest(name):
+                self.assertFalse(hasattr(sql, name))
+                self.assertNotIn(name, sql.__all__)
+
     def test_skips_privileged_statements(self):
         sql = """SET @@SESSION.SQL_LOG_BIN= 0;\nSET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '';\nSELECT 1;\n"""
-        anon_sql, stats = anonymize_sql_string(sql, app="auth")
+        anon_sql, stats = anonymize_sql_string(sql, {})
         self.assertNotIn("SQL_LOG_BIN", anon_sql)
         self.assertNotIn("GTID_PURGED", anon_sql)
         self.assertIn("SELECT 1;", anon_sql)
@@ -424,144 +453,6 @@ REPLACE INTO `credentials` (`data`, `type`, `user-id`) VALUES ('secret_pass_val'
 
         rule_fn: ColumnRule = dummy_rule
         self.assertIs(rule_fn(RowView([])), KEEP)
-
-    def test_declarative_builder_auth_and_counters_equivalence(self):
-        auth_users_transformer = column_rules_transformer(
-            {
-                "name": lambda r: get_anonymized_user_info(r.int("id") or 0)[0],
-                "email": lambda r: get_anonymized_user_info(r.int("id") or 0)[1],
-            },
-            positions={"id": 0, "name": 1, "email": 2},
-        )
-
-        def make_credentials_transformer(custom_password=None):
-            std_hash = get_standard_password_hash(custom_password or DEFAULT_TEST_PASSWORD)
-            b64_password_hash = base64.b64encode(std_hash.encode("ascii")).decode("ascii")
-
-            def transform_data(row: RowView) -> object:
-                cred_type = (row.text("type") or "password").lower()
-                user_id = row.int("user-id") or 0
-                if cred_type == "password":
-                    return b64_password_hash
-                elif cred_type == "federated-id":
-                    orig_data = row.text("data") or ""
-                    try:
-                        decoded = base64.b64decode(orig_data, validate=True).decode("utf-8", errors="replace")
-                        if ":" in decoded:
-                            orig_data = decoded
-                    except Exception:
-                        pass
-                    if ":" in orig_data:
-                        prefix_part, _ = orig_data.rsplit(":", 1)
-                        fed_val = f"{prefix_part}:anon-sub-{user_id}"
-                    else:
-                        fed_val = f"google:anon-sub-{user_id}"
-                    return base64.b64encode(fed_val.encode("utf-8")).decode("ascii")
-                return KEEP
-
-            return column_rules_transformer(
-                {"data": transform_data},
-                positions={"type": 1, "user-id": 2, "data": 3},
-            )
-
-        auth_tokens_transformer = column_rules_transformer(
-            {
-                "data": lambda r: base64.b64encode(f"anon-token-{r.int('id') or 0}".encode("utf-8")).decode("ascii"),
-            },
-            positions={"id": 0, "data": 3},
-        )
-
-        auth_applications_transformer = column_rules_transformer(
-            {
-                "app-secret": lambda r: None,
-            },
-            positions={"app-secret": 6},
-        )
-
-        auth_custom = {
-            "users": auth_users_transformer,
-            "credentials": make_credentials_transformer(),
-            "tokens": auth_tokens_transformer,
-            "applications": auth_applications_transformer,
-        }
-
-        # Auth Fixture E2E equivalence test (multi-table with and without column lists)
-        with open(AUTH_FIXTURE, "r", encoding="utf-8") as in_f:
-            auth_fixture_sql = in_f.read()
-        expected_sql, expected_stats = anonymize_sql_string(auth_fixture_sql, app="auth")
-        built_sql, built_stats = anonymize_sql_string(auth_fixture_sql, app="", custom_transformers=auth_custom)
-        self.assertEqual(built_sql, expected_sql)
-        self.assertEqual(built_stats, expected_stats)
-
-        # Inline multi-table dump test with and without column lists for auth
-        inline_auth_sql = """
-INSERT INTO `users` VALUES (0, 'Admin User Real', 'admin@real.com', '["admin"]', '2026-01-01', '2026-01-01', NULL);
-INSERT INTO `users` (`email`, `id`, `name`) VALUES ('custom@corp.org', 10, 'Custom User');
-INSERT INTO `credentials` VALUES (1, 'password', 10, 'secret_pass_hash', '2026-01-02', '2026-01-02', NULL);
-REPLACE INTO `credentials` (`data`, `type`, `user_id`) VALUES ('secret_pass_val', 'password', 10);
-INSERT INTO `tokens` VALUES (101, 'session', 10, 'session_token_xyz', '2026-01-02', '2026-01-02', NULL);
-INSERT INTO `tokens` (`data`, `id`) VALUES ('token_val', 102);
-INSERT INTO `applications` VALUES (1, 'counters', 'Counters', 'http://localhost', NULL, NULL, 'app_secret_val', '2026-01-01', '2026-01-01');
-INSERT INTO `applications` (`app_secret`, `id`) VALUES ('secret_hash', 2);
-"""
-        exp_inline, exp_inline_stats = anonymize_sql_string(inline_auth_sql, app="auth")
-        built_inline, built_inline_stats = anonymize_sql_string(inline_auth_sql, app="", custom_transformers=auth_custom)
-        self.assertEqual(built_inline, exp_inline)
-        self.assertEqual(built_inline_stats, exp_inline_stats)
-
-        # Counters rules
-        def _counters_user_info(row: RowView) -> tuple[str, str]:
-            auth_id = row.int("auth-user-id")
-            if auth_id is None:
-                auth_id = row.int("id") or 0
-            return get_anonymized_user_info(auth_id)
-
-        counters_users_transformer = column_rules_transformer(
-            {
-                "name": lambda r: _counters_user_info(r)[0],
-                "email": lambda r: _counters_user_info(r)[1],
-            },
-            positions={"id": 0, "name": 1, "email": 2, "auth-user-id": 8},
-        )
-
-        counters_webhooks_transformer = column_rules_transformer(
-            {
-                "target-url": lambda r: f"https://example.local/webhook/anon-{r.int('id') or 0}",
-                "secret": lambda r: f"anon-secret-{r.int('id') or 0}",
-            },
-            positions={"id": 0, "target-url": 3, "secret": 4},
-        )
-
-        counters_custom = {
-            "users": counters_users_transformer,
-            "tokens": auth_tokens_transformer,
-            "webhooks": counters_webhooks_transformer,
-        }
-
-        # Counters Fixture E2E equivalence test
-        with open(COUNTERS_FIXTURE, "r", encoding="utf-8") as in_f:
-            counters_fixture_sql = in_f.read()
-        exp_counters_sql, exp_counters_stats = anonymize_sql_string(counters_fixture_sql, app="counters")
-        built_counters_sql, built_counters_stats = anonymize_sql_string(
-            counters_fixture_sql, app="", custom_transformers=counters_custom
-        )
-        self.assertEqual(built_counters_sql, exp_counters_sql)
-        self.assertEqual(built_counters_stats, exp_counters_stats)
-
-        # Inline multi-table dump test with and without column lists for counters
-        inline_counters_sql = """
-INSERT INTO `users` VALUES (1, 'Alice Real Name', 'alice@old-email.com', NULL, NULL, '2026-01-01', '2026-01-01', NULL, 15);
-INSERT INTO `users` (`auth_user_id`, `email`, `id`, `name`) VALUES (NULL, 'legacy@old-email.com', 2, 'Legacy Standalone');
-INSERT INTO `tokens` VALUES (101, 'session', 15, 'session_token_xyz', '2026-01-02', '2026-01-02', NULL);
-INSERT INTO `webhooks` VALUES (5, 10, 15, 'https://my-site.com/hook', 'super_secret', 1, '2026-01-01', '2026-01-01');
-INSERT INTO `webhooks` (`id`, `secret`, `target_url`) VALUES (6, 'webhook_sec', 'https://other-site.com/hook');
-"""
-        exp_inline_c, exp_inline_c_stats = anonymize_sql_string(inline_counters_sql, app="counters")
-        built_inline_c, built_inline_c_stats = anonymize_sql_string(
-            inline_counters_sql, app="", custom_transformers=counters_custom
-        )
-        self.assertEqual(built_inline_c, exp_inline_c)
-        self.assertEqual(built_inline_c_stats, exp_inline_c_stats)
 
 
 if __name__ == "__main__":

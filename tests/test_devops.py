@@ -511,6 +511,41 @@ class LocalMySqlManagerTests(unittest.TestCase):
             ):
                 self.assertTrue(mgr.load_snapshot(snap, target="local"))
 
+    def test_snapshot_refuses_without_transformers(self) -> None:
+        with TemporaryDirectory() as tmp_dir:
+            src = Path(tmp_dir) / "in.sql"
+            src.write_text("INSERT INTO `users` VALUES (1, 'Real', 'real@example.com');\n", encoding="utf-8")
+            out = Path(tmp_dir) / "out.sql"
+            logger = MagicMock()
+            mgr = LocalMySqlManager(logger=logger)
+            self.assertEqual(mgr.snapshot_transformers, {})
+            self.assertIsNone(mgr.snapshot_and_anonymize(input_file=src, output_file=out, snapshots_dir=tmp_dir))
+            self.assertFalse(out.exists())
+            logger.error.assert_called_once()
+            self.assertIn("snapshot_transformers", logger.error.call_args[0][0])
+
+    def test_snapshot_applies_constructor_transformers(self) -> None:
+        def mask(rows: list[list[str]], col_names: object) -> int:
+            for row in rows:
+                row[2] = "'masked'"
+            return len(rows)
+
+        with TemporaryDirectory() as tmp_dir:
+            src = Path(tmp_dir) / "in.sql"
+            src.write_text("INSERT INTO `users` VALUES (1, 'Real', 'real@example.com');\n", encoding="utf-8")
+            out = Path(tmp_dir) / "out.sql"
+            mgr = LocalMySqlManager(logger=MagicMock(), snapshot_transformers={"users": mask})
+            self.assertEqual(mgr.snapshot_and_anonymize(input_file=src, output_file=out), out)
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("'masked'", text)
+            self.assertNotIn("real@example.com", text)
+
+    def test_snapshot_and_anonymize_has_no_custom_password(self) -> None:
+        import inspect
+
+        params = inspect.signature(LocalMySqlManager.snapshot_and_anonymize).parameters
+        self.assertNotIn("custom_password", params)
+
 
 class LocalServerManagerTests(unittest.TestCase):
     def test_is_java_available(self) -> None:

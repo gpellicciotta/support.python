@@ -18,12 +18,12 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Sequence, Union
+from typing import Any, Mapping, Optional, Sequence, Union
 
 from ..env import read_env_file
 from ..logging import CliLogger
 from ..net import is_port_in_use
-from ..sql import anonymize_sql_stream
+from ..sql import TableTransformer, anonymize_sql_stream
 
 _PROXY_PATH_NAMES: tuple[str, ...] = (
     "cloud-sql-proxy",
@@ -367,6 +367,7 @@ class LocalMySqlManager:
         repo_root: Optional[Union[Path, str]] = None,
         env_dir: Optional[Union[Path, str]] = None,
         docker_mgr: Optional[LocalDockerManager] = None,
+        snapshot_transformers: Optional[Mapping[str, TableTransformer]] = None,
     ) -> None:
         """Initialize the local MySQL container manager.
 
@@ -384,9 +385,12 @@ class LocalMySqlManager:
             repo_root: Optional path to repository root.
             env_dir: Optional path to configuration environments directory.
             docker_mgr: Optional :class:`LocalDockerManager` instance.
+            snapshot_transformers: Mapping of lowercase table name to :data:`~support_python.sql.TableTransformer`.
+                :meth:`snapshot_and_anonymize` refuses to run without at least one entry.
         """
         self.logger = logger or CliLogger(origin="devops")
         self.docker_mgr = docker_mgr or LocalDockerManager(logger=self.logger)
+        self.snapshot_transformers: dict[str, TableTransformer] = dict(snapshot_transformers or {})
         self.container_name = container_name
         self.port = port
         self.mysql_env_file = Path(mysql_env_file) if mysql_env_file else None
@@ -795,7 +799,6 @@ class LocalMySqlManager:
         output_file: Optional[Union[Path, str]] = None,
         load_target: Optional[str] = None,
         confirm_production: bool = False,
-        custom_password: Optional[str] = None,
         app_name: Optional[str] = None,
         proddb_env_file: Optional[Union[Path, str]] = None,
         proxy_port: int = 3606,
@@ -809,15 +812,19 @@ class LocalMySqlManager:
             output_file: Optional destination path for the anonymized SQL snapshot file.
             load_target: Optional :meth:`load_snapshot` target to immediately import the snapshot into.
             confirm_production: If True, skips interactive confirmation prompt when dumping from production Cloud SQL.
-            custom_password: Optional plaintext password to hash into credentials table rows.
-            app_name: Application schema profile (e.g. ``"auth"``, ``"counters"``). Defaults to database name.
+            app_name: Database name to dump and snapshot file prefix. Defaults to the manager database name.
             proddb_env_file: Optional path to production database environment file.
             proxy_port: TCP port for Cloud SQL Auth Proxy. Defaults to 3606.
             snapshots_dir: Directory where default snapshot output files are placed.
 
         Returns:
-            Resolved :class:`pathlib.Path` of the created anonymized snapshot, or None on failure.
+            Resolved :class:`pathlib.Path` of the created anonymized snapshot, or None on failure, including when the
+            manager has no ``snapshot_transformers``.
         """
+        if not self.snapshot_transformers:
+            self.logger.error("Refusing to snapshot without anonymization rules: pass snapshot_transformers to LocalMySqlManager.")
+            return None
+
         app = app_name or self.db_name
         snap_dir = (
             Path(snapshots_dir)
@@ -839,7 +846,7 @@ class LocalMySqlManager:
             self.logger.info(f"Anonymizing existing SQL dump from {in_path.name}...")
             with open(in_path, "r", encoding="utf-8", errors="replace") as in_f:
                 with open(out_file, "w", encoding="utf-8") as out_f:
-                    stats = anonymize_sql_stream(in_f, out_f, app=app, custom_password=custom_password)
+                    stats = anonymize_sql_stream(in_f, out_f, self.snapshot_transformers)
         else:
             if source == "cloudsql":
                 if not confirm_production:
@@ -897,7 +904,7 @@ class LocalMySqlManager:
                     dump_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
                 )
                 with open(out_file, "w", encoding="utf-8") as out_f:
-                    stats = anonymize_sql_stream(proc.stdout, out_f, app=app, custom_password=custom_password)
+                    stats = anonymize_sql_stream(proc.stdout, out_f, self.snapshot_transformers)
                 proc.wait()
                 if proc.returncode != 0:
                     self.logger.error(f"mysqldump failed: {proc.stderr.read() if proc.stderr else ''}")
@@ -923,7 +930,7 @@ class LocalMySqlManager:
                     dump_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace"
                 )
                 with open(out_file, "w", encoding="utf-8") as out_f:
-                    stats = anonymize_sql_stream(proc.stdout, out_f, app=app, custom_password=custom_password)
+                    stats = anonymize_sql_stream(proc.stdout, out_f, self.snapshot_transformers)
                 proc.wait()
                 if proc.returncode != 0:
                     self.logger.error(f"mysqldump failed: {proc.stderr.read() if proc.stderr else ''}")

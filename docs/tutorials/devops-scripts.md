@@ -224,7 +224,7 @@ A group appears only when its manager is passed; its first argument selects the 
 | `client` | `verifier`       | `verify`, `verify-deployment`                                   |
 
 Options follow the auth, counters.server, and todos.server scripts they replace:
-- `db snapshot`: `--source`, `--input-file`, `--output-file`, `--load-target`, `--confirm-production-access`, `--custom-password`.
+- `db snapshot`: `--source`, `--input-file`, `--output-file`, `--load-target`, `--confirm-production-access`.
 - `db load-snapshot`: a `PATH` right after the sub-action or `--snapshot-path`, plus `--target`.
 - `db proxy`: `--address`, `--port`, `--instance`, and `--credentials-file`, overriding the manager's settings.
 - `server start`: `--background`/`-d`, `--build`/`--force-build`, `--memory-db`, `--verify`, and `--testdb`.

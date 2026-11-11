@@ -14,7 +14,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.21-pre
+## v2.0.22-pre
+- Library: **[breaking]** Removed the `auth` and `counters` schema transformers and the `app` and `custom_password` parameters from the SQL anonymizer, which now requires a `transformers` map ([sql.py](src/support_python/sql.py), [migration-v2.md](docs/migration-v2.md)).
+- Library: **[breaking]** Made `LocalMySqlManager` take `snapshot_transformers`, refuse to snapshot without them, and drop `custom_password` and `db snapshot --custom-password` ([services.py](src/support_python/devops/services.py)).
 - Library: Added declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer ([sql.py](src/support_python/sql.py)).
 - Library: Added `test --slow` to `DevopsCli` and made `check` run both fast and slow suites ([cli.py](src/support_python/devops/cli.py)).
 - Test: Split test suite into parallel fast suite and marked slow suite with timeouts ([pyproject.toml](pyproject.toml)).

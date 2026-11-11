@@ -55,4 +55,4 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 - [Configuration](tutorials/configuration.md): Declaring settings, resolving them by the guideline precedence, and adding the standard `config` command group.
 - [Durations and rate limiting](tutorials/durations-and-rate-limiting.md): Duration and ISO-8601 parsing, human-readable and relative epoch formatting, and `TaskRateLimiter`.
 - [View capture](tutorials/view-capture.md): Headless-Chrome view capture, UI tours, the capture CLI, and the embedded static server.
-- [SQL anonymizer](tutorials/sql-anonymizer.md): Streaming, deterministic anonymization of `auth` and `counters` SQL dumps.
+- [SQL anonymizer](tutorials/sql-anonymizer.md): Streaming SQL dump anonymization driven by a required transformers map and a declarative column-rule builder.

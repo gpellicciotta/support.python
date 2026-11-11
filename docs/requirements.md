@@ -86,8 +86,9 @@ Functional and technical requirements for the `support-python` project.
 - Provide streaming SQL tokenization and masking (`anonymize_sql_stream`, `anonymize_sql_string`) for database dumps in `support_python.sql`.
 - Provide deterministic password hash computation matching service authentication standards (`get_standard_password_hash`).
 - Provide cross-project user identity anonymization parity (`get_anonymized_user_info`).
-- Provide built-in table transformers for the `auth` profile (`users`, `credentials`, `tokens`, `applications`) and the `counters` profile (`users`, `tokens`, `webhooks`).
-- Support extensible custom table transformers and privilege statement filtering.
+- Require a `transformers` mapping of table name to transformer; the library ships no schema-specific transformers.
+- Provide a declarative column-rule transformer builder and privilege statement filtering.
+- Make `LocalMySqlManager.snapshot_and_anonymize` refuse to run without `snapshot_transformers`.
 
 ### Reusable DevOps Package and Service Managers
 - Provide `support_python.devops` with `steps`, `services`, `release`, `projects`, and `cli` modules so consuming

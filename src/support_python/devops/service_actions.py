@@ -246,7 +246,6 @@ class ServiceActions:
                 action="store_true",
                 help="Confirm authorization to snapshot production Cloud SQL",
             )
-            parser.add_argument("--custom-password", help="Custom password for anonymized accounts")
             parser.add_argument("snapshot_path", nargs="?", type=Path, help="Path to the SQL snapshot file to load")
             parser.add_argument(
                 "--snapshot-path", dest="snapshot_path_option", type=Path, help="Path to the SQL snapshot file to load"
@@ -285,7 +284,6 @@ class ServiceActions:
             output_file=args.output_file,
             load_target=args.load_target,
             confirm_production=args.confirm_production_access,
-            custom_password=args.custom_password,
         )
         return 0 if snapshot else 1
 

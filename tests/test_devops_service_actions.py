@@ -128,12 +128,11 @@ class DbGroupTests(ServiceActionsTestCase):
             output_file=None,
             load_target=None,
             confirm_production=False,
-            custom_password=None,
         )
 
     def test_snapshot_passes_every_option(self) -> None:
         argv = ["db", "snapshot", "--source", "file", "--input-file", "in.sql", "--output-file", "out.sql"]
-        argv += ["--load-target", "testdb", "--confirm-production-access", "--custom-password", "pw"]
+        argv += ["--load-target", "testdb", "--confirm-production-access"]
         self.assertEqual(run_cli(self.cli(), *argv)[0], 0)
         self.m["mysql"].snapshot_and_anonymize.assert_called_once_with(
             source="file",
@@ -141,7 +140,6 @@ class DbGroupTests(ServiceActionsTestCase):
             output_file=Path("out.sql"),
             load_target="testdb",
             confirm_production=True,
-            custom_password="pw",
         )
 
     def test_snapshot_failure_exits_1(self) -> None:

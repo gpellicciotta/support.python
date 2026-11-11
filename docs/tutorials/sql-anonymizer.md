@@ -1,10 +1,13 @@
 # SQL Snapshot Anonymizer
 
 [sql.py](../../src/support_python/sql.py) provides streaming SQL tokenization and deterministic masking for database dumps.
-It replaces raw PII, credentials, session tokens, and webhook secrets with deterministic synthetic data.
-The declarative builder creates custom table transformers from per-column rules.
+It carries no schema knowledge: callers pass a required `transformers` mapping of table name to transformer.
+Tables without an entry pass through unchanged.
+The declarative builder creates table transformers from per-column rules.
 
 ## Core API
+- `anonymize_sql_stream(input_stream, output_stream, transformers)`: rewrites `INSERT` and `REPLACE` statements and returns per-table counts.
+- `anonymize_sql_string(sql, transformers)`: the in-memory variant, returning `(sql, stats)`.
 - `column_rules_transformer(rules, *, positions=None)`: builds a `TableTransformer` from column rules.
 - `RowView`: read-only view of a parsed SQL row with `has`, `raw`, `text`, and `int` accessors.
 - `KEEP`: sentinel returned by a rule to leave a column untouched.
@@ -15,8 +18,8 @@ The declarative builder creates custom table transformers from per-column rules.
 
 ## Declarative Builder Examples
 
-### Auth Application Profile
-Rebuild the auth service rules using `column_rules_transformer`:
+### Auth Application Rules
+Define auth service rules using `column_rules_transformer`:
 
 ```python
 import base64
@@ -59,11 +62,11 @@ auth_transformers = {
 }
 
 with open("dump.sql", "r", encoding="utf-8") as in_f, open("clean.sql", "w", encoding="utf-8") as out_f:
-    stats = anonymize_sql_stream(in_f, out_f, app="", custom_transformers=auth_transformers)
+    stats = anonymize_sql_stream(in_f, out_f, auth_transformers)
 ```
 
-### Counters Application Profile
-Rebuild the counters service rules using `column_rules_transformer`:
+### Counters Application Rules
+Define counters service rules using `column_rules_transformer`:
 
 ```python
 import base64
@@ -105,5 +108,14 @@ counters_transformers = {
 }
 
 with open("dump.sql", "r", encoding="utf-8") as in_f, open("clean.sql", "w", encoding="utf-8") as out_f:
-    stats = anonymize_sql_stream(in_f, out_f, app="", custom_transformers=counters_transformers)
+    stats = anonymize_sql_stream(in_f, out_f, counters_transformers)
+```
+
+## Snapshots from `LocalMySqlManager`
+Pass the transformers map to the manager; `snapshot_and_anonymize` refuses to run without one:
+
+```python
+from support_python import LocalMySqlManager
+
+mysql = LocalMySqlManager(container_name="app-mysql", snapshot_transformers=auth_transformers)
 ```
