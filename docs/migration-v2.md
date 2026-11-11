@@ -76,22 +76,23 @@ Dry runs and JSON output are available on these actions in v2.0.0:
 - `json` mode prints one document on `stdout`.
 - `agent-digest` accepts neither option yet: `generate` always writes, and `check` prints text only.
 
-| Tool                    | v1.x                                            | v2.0.0                                                        |
-| :---------------------- | :---------------------------------------------- | :------------------------------------------------------------ |
-| `agent-files`           | `update`                                        | `sync`                                                        |
-| `agent-files`           | `diff`                                          | `check`                                                       |
-| `agent-files`           | `sync` regenerates `guidelines/agent-digest.md` | Run `agent-digest generate` first; a missing digest exits `1` |
-| `agent-files`           | Digest `guidelines/agent-digest.md`             | `./agent-digest.md`, or `--digest PATH` / `digest_path`       |
-| `agent-files`           | Skills directory `skills/`                      | `./agent-skills`, or `--skills-dir PATH` / `skills_dir`       |
-| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate {{path}}...` / `check {{path}}...`                  |
-| `agent-digest`          | `validate`                                      | `check {{path}}...`                                           |
-| `agent-digest`          | Output `guidelines/agent-digest.md`, `skills/`  | `--digest PATH` and `--skills-dir PATH`                       |
-| `lint-markdown`         | `check --fix`                                   | `fix`, with `fix --dry-run` to preview                        |
-| `processes`             | `list --format table`                           | `list --format text`; `table` now exits `2`                   |
-| `processes`             | No dry run                                      | `kill --dry-run`                                              |
-| `git-repository-backup` | Text-only `list`                                | `list --format text` or `list --format json`                  |
-| Capture CLIs            | `-v` shows the version                          | `-v` means `--verbose`; use `--version`                       |
-| Capture CLIs            | No arguments runs the default action            | No arguments shows help; invalid arguments exit `2`           |
+| Tool                    | v1.x                                            | v2.0.0                                                           |
+| :---------------------- | :---------------------------------------------- | :--------------------------------------------------------------- |
+| `agent-files`           | `update`                                        | `sync`                                                           |
+| `agent-files`           | `diff`                                          | `check`                                                          |
+| `agent-files`           | `sync` regenerates `guidelines/agent-digest.md` | Run `agent-digest generate` first; a missing digest exits `1`    |
+| `agent-files`           | Digest `guidelines/agent-digest.md`             | `./agent-digest.md`, or `--digest PATH` / `digest_path`          |
+| `agent-files`           | Skills directory `skills/`                      | `./agent-skills`, or `--skills-dir PATH` / `skills_dir`          |
+| `agent-digest`          | `generate` / `check` over fixed inputs          | `generate {{path}}...` / `check {{path}}...`                     |
+| `agent-digest`          | `validate`                                      | `check {{path}}...`                                              |
+| `agent-digest`          | Output `guidelines/agent-digest.md`, `skills/`  | `--digest PATH` and `--skills-dir PATH`                          |
+| `lint-markdown`         | `check --fix`                                   | `fix`, with `fix --dry-run` to preview                           |
+| `processes`             | `list --format table`                           | `list --format text`; `table` now exits `2`                      |
+| `processes`             | No dry run                                      | `kill --dry-run`                                                 |
+| `processes`             | `kill` never asks                               | `kill` asks to confirm; `--yes` skips it, or exit `2` unattended |
+| `git-repository-backup` | Text-only `list`                                | `list --format text` or `list --format json`                     |
+| Capture CLIs            | `-v` shows the version                          | `-v` means `--verbose`; use `--version`                          |
+| Capture CLIs            | No arguments runs the default action            | No arguments shows help; invalid arguments exit `2`              |
 
 `agent-digest` orders its inputs by integer `index` front-matter; see [agent-digest.md](tools/agent-digest.md).
 To keep the v1.x dev-guidelines layout, pass the old paths explicitly:

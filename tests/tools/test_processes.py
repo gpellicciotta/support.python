@@ -144,13 +144,13 @@ def test_processes_kill_protects_self_and_ancestors_and_reports_failures() -> No
         mock.patch.object(processes, "get_process_hierarchy", return_value={100, 50, 1}),
         mock.patch.object(processes, "terminate_process") as mock_term,
     ):
-        code, _, err = run_cli(["kill", "100", "50", "1", "--force"])
+        code, _, err = run_cli(["kill", "100", "50", "1", "--force", "--yes"])
     assert code == 0 and mock_term.call_count == 0 and err.count("Skipping protected PID") == 3
     with (
         mock.patch.object(processes, "get_process_hierarchy", return_value={100}),
         mock.patch.object(processes, "terminate_process", side_effect=PermissionError("denied")),
     ):
-        code, _, err = run_cli(["kill", "200"])
+        code, _, err = run_cli(["kill", "200", "--yes"])
     assert code == 1 and "Permission denied to kill PID 200" in err
 
 
@@ -170,6 +170,44 @@ def test_processes_kill_dry_run_reports_targets_without_terminating() -> None:
     assert "Would skip protected PID 100" in err and "PID 200" not in err
     with mock.patch.object(processes, "get_process_hierarchy", side_effect=OSError("denied")):
         assert run_cli(["kill", "200", "--dry-run"])[0] == 1
+
+
+def run_kill_confirmation(argv: list[str], *, tty: bool, typed: str = "") -> tuple[int, str, str, mock.Mock]:
+    """Run ``kill`` with a faked stdin terminal state and typed answer; return the result and the terminate mock."""
+    fake_stdin = mock.Mock()
+    fake_stdin.isatty.return_value = tty
+    with (
+        mock.patch.object(sys, "stdin", fake_stdin),
+        mock.patch("builtins.input", return_value=typed),
+        mock.patch.object(processes, "get_process_hierarchy", return_value={1}),
+        mock.patch.object(processes, "terminate_process") as mock_term,
+    ):
+        code, out, err = run_cli(argv)
+    return code, out, err, mock_term
+
+
+def test_processes_kill_yes_flag_skips_confirmation() -> None:
+    assert build_harness()._build_parser("kill").parse_args(["123"]).yes is False
+    assert build_harness()._build_parser("kill").parse_args(["123", "--yes"]).yes is True
+    code, _, _, mock_term = run_kill_confirmation(["kill", "200", "--yes"], tty=False)
+    assert code == 0 and mock_term.call_count == 1
+
+
+def test_processes_kill_without_yes_fails_when_stdin_is_not_a_terminal() -> None:
+    code, _, err, mock_term = run_kill_confirmation(["kill", "200"], tty=False)
+    assert code == 2 and mock_term.call_count == 0 and "--yes" in err
+
+
+def test_processes_kill_typed_confirmation_on_a_terminal() -> None:
+    code, out, _, mock_term = run_kill_confirmation(["kill", "200", "300"], tty=True, typed="kill")
+    assert code == 0 and mock_term.call_count == 2 and "200" in out and "300" in out
+    code, _, err, mock_term = run_kill_confirmation(["kill", "200"], tty=True, typed="no")
+    assert code == 1 and mock_term.call_count == 0 and "Aborted" in err
+
+
+def test_processes_kill_dry_run_never_asks() -> None:
+    code, out, _, mock_term = run_kill_confirmation(["kill", "200", "--dry-run"], tty=False)
+    assert code == 0 and mock_term.call_count == 0 and "Would kill PID 200" in out
 
 
 def test_processes_list_text_format_matches_former_table_output() -> None:
@@ -202,13 +240,15 @@ def test_processes_kill_dry_run_integration() -> None:
         time.sleep(0.5)
         assert child.poll() is None and processes.is_process_alive(child.pid) is True
         # Windows taskkill without /F cannot stop a windowless console process, so the real kill forces it.
-        kill_res = subprocess.run([processes_bin, "kill", str(child.pid), "--force"], capture_output=True, text=True, timeout=30)
+        kill_res = subprocess.run(
+            [processes_bin, "kill", str(child.pid), "--force", "--yes"], capture_output=True, text=True, timeout=30
+        )
         assert kill_res.returncode == 0 and f"Killed PID {child.pid}" in kill_res.stdout
         child.wait(timeout=10)
         assert processes.is_process_alive(child.pid) is False
     finally:
         if child.poll() is None:
-            subprocess.run([processes_bin, "kill", str(child.pid), "--force"], capture_output=True, text=True, timeout=30)
+            subprocess.run([processes_bin, "kill", str(child.pid), "--force", "--yes"], capture_output=True, text=True, timeout=30)
             child.wait(timeout=10)
 
 
@@ -239,7 +279,7 @@ def test_processes_list_and_kill_integration(tmp_path: Path) -> None:
         )
         assert list_res.returncode == 0 and str(child.pid) in list_res.stdout
         kill_res = subprocess.run(
-            [processes_bin, "kill", str(child.pid), "--force"],
+            [processes_bin, "kill", str(child.pid), "--force", "--yes"],
             capture_output=True,
             text=True,
             timeout=30,

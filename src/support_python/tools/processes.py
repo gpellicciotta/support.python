@@ -20,12 +20,13 @@ TOOL_VERSION: str = PROJECT_VERSION
 DESCRIPTION = "Safely terminate processes by PID and list running processes with hierarchy, path, and time filters."
 KILL_DETAIL = (
     "Terminates each listed process ID in turn while protecting the current process and all ancestor processes. "
-    "With --dry-run, reports each PID it would kill or skip as protected, and terminates nothing."
+    "Asks for a typed confirmation first; --yes skips it, and without a terminal --yes is required. "
+    "With --dry-run, reports each PID it would kill or skip as protected, and terminates nothing, without asking."
 )
 LIST_DETAIL = "Lists running processes with optional filters for cwd, open paths, start timestamps, and hierarchy trees."
 EXAMPLES = [
     "processes kill 1234 5678",
-    "processes kill 1234 --force",
+    "processes kill 1234 --force --yes",
     "processes kill 1234 5678 --dry-run",
     "processes list --cwd {{project-root}}",
     "processes list --open-path {{file}} --format json",
@@ -33,8 +34,8 @@ EXAMPLES = [
 ]
 EXIT_CODES = {
     0: "success (processes listed, killed, or protected PIDs safely skipped)",
-    1: "operational failure during process inspection or termination",
-    2: "invalid arguments or syntax errors",
+    1: "operational failure during process inspection or termination, or the confirmation was declined",
+    2: "invalid arguments or syntax errors, or kill without --yes when stdin is not a terminal",
 }
 TOP_LEVEL_TOKENS = {"help", "version", "-h", "--help", "--version"}
 VALUE_OPTIONS = {
@@ -74,6 +75,7 @@ def configure_kill_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("pids", nargs="+", type=parse_pid, metavar="pid", help="one or more process IDs to terminate")
     parser.add_argument("-f", "--force", action="store_true", help="force termination (SIGKILL or taskkill /F)")
     parser.add_argument("--dry-run", action="store_true", help="report the PIDs that would be killed; terminate nothing")
+    parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
@@ -106,6 +108,16 @@ def run_kill(args: argparse.Namespace, logger: CliLogger) -> int:
     """Execute the ``kill`` subcommand."""
     if args.dry_run:
         return 0 if report_kill_plan(args.pids, logger) else 1
+    if not args.yes:
+        if not sys.stdin.isatty():
+            logger.error("Refusing to kill without confirmation: stdin is not a terminal; pass --yes to proceed.")
+            return 2
+        from ..devops.release import confirm_typed
+
+        summary = [f"Will kill PID {pid}{' (forced)' if args.force else ''}" for pid in args.pids]
+        if not confirm_typed(summary, "kill", input_fn=input):
+            logger.error("Aborted: confirmation not given.")
+            return 1
     return 0 if safe_kill(args.pids, logger=logger, force=args.force) else 1
 
 

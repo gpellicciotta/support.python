@@ -7,14 +7,16 @@ Cross-platform process listing and ancestor-protected termination, implemented i
 ## Command-Line Interface
 Run actions through the `processes` console script, built on the helpers in [processes.py](../../src/support_python/processes.py):
 ```bash
-processes kill PID... [--force] [--dry-run]
+processes kill PID... [--force] [--dry-run] [--yes]
 processes list [--cwd PATH] [--open-path PATH] [--started-before TIMESTAMP] [--started-after TIMESTAMP] [--ancestors-of PID] [--descendants-of PID] [--format text|json]
 ```
 
 - `kill` is the default action, so `processes 1234` runs `processes kill 1234`.
 - `kill` terminates each PID in turn and skips the current process and its ancestors with a `WARN` message.
+- `kill` asks for a typed confirmation (`kill`) before terminating anything; a wrong answer or end of input exits `1`.
+- `--yes` skips the confirmation. Without `--yes` and without a terminal on `stdin`, `kill` terminates nothing and exits `2`.
 - `--force` terminates with `SIGKILL` on POSIX or `taskkill /F` on Windows.
-- `--dry-run` prints `Would kill PID {{pid}}` or `Would skip protected PID {{pid}}` per PID, terminates nothing, and exits `0`.
+- `--dry-run` prints `Would kill PID {{pid}}` or `Would skip protected PID {{pid}}` per PID, terminates nothing, never asks for confirmation, and exits `0`.
 - `list` prints running processes that match every given filter.
 - `--cwd PATH` keeps processes whose working directory is `PATH` or below it.
 - `--open-path PATH` keeps processes holding `PATH` open.
@@ -34,7 +36,7 @@ Exit codes:
 ## Examples
 ```bash
 processes kill 1234 5678 --dry-run
-processes kill 1234 --force
+processes kill 1234 --force --yes
 processes list --cwd /path/to/workdir
 processes list --open-path /path/to/file.txt --format json
 processes list --open-path locked.txt --started-after 2026-11-07T00:00:00
