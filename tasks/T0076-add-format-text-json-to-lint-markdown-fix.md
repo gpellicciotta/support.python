@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 347.4, input: 92, output: 27216, cache_read: 2847438, cache_write: 121692}
+  worker: {turns: 4, duration_s: 391.4, input: 116, output: 28898, cache_read: 3663912, cache_write: 132530}
 work_duration: 186.3
+review_status: pending
+review_round: 1
 ---
 # T0076: Add --format text|json to lint-markdown fix, reporting fixed files and remaining issues
 
@@ -58,4 +60,7 @@ Reuse the issue objects of `check --format json`.
 
 - [2026-11-11] **[Doc]**
   Documented the fix JSON document in lint-markdown.md and added a CHANGELOG entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
