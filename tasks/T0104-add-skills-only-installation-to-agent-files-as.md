@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 488.0, input: 100, output: 50638, cache_read: 4102148, cache_write: 201548}
+work_duration: 256.9
 ---
 # T0104: Add skills-only installation to agent-files, as a command mode and an importable function, matching plan's current skill installer
 
@@ -37,4 +40,25 @@ Specifications: [technical-spec.md](T0104-add-skills-only-installation-to-agent-
 - [2026-11-11] **[Implement]**
   Added --skills-only, install_skills_only, install_skills, retire_skills; SKILL.md-only copy matches plan's installer.
   - Files touched: 5.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read plan's skills.py installer and the existing agent-files skill sync.
+
+- [2026-11-11] **[Implement]**
+  Authored failing tests for the library functions and skills-only sync and check.
+
+- [2026-11-11] **[Verify]**
+  Failing tests recorded before implementation.
+  - 16 failed, 1 passed.
+
+- [2026-11-11] **[Verify]**
+  Affected tests and integration scenario pass.
+  - 1218 passed, 5 skipped.
+
+- [2026-11-11] **[Doc]**
+  Updated agent-files docs and CHANGELOG.md; size note: diff exceeds typical line due to tests and docs.
 
