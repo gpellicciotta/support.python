@@ -4,6 +4,9 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
+- [x] T0104 Add skills-only installation to agent-files, as a command mode and an importable function, matching plan's current skill installer.
+- [ ] T0105 Rewrite GitHub links ending in docs/guidelines/{{name}}.md to the skill reference, as links ending in skills/{{name}}/SKILL.md are today.
+- [ ] T0106 Fix flaky test_child_process_lifecycle_integration, which failed once in the fast suite under xdist load.
 - [x] T0073 Fail the test run when a test writes into the real home directory or the repository's own .plan directory.
 - [x] T0065 [owner: @gemini, session: antigravity-20261110-51d0ec] [protocol: adhoc] Make every tool's --version report the installed support-python version instead of the current directory's project version.
 - [x] T0066 [owner: @gemini, session: antigravity-20261110-14256a] [protocol: adhoc] Make agent-files sync --dry-run --no-prune report kept stale skills instead of removals.
@@ -36,5 +39,4 @@ An overview of all tasks and their planning.
 ---
 
 ## Backlog
-- [ ] T0105 Rewrite GitHub links ending in docs/guidelines/{{name}}.md to the skill reference, as links ending in skills/{{name}}/SKILL.md are today.
-- [ ] T0104 Add skills-only installation to agent-files, as a command mode and an importable function, matching plan's current skill installer.
+*(Currently no tasks)*
