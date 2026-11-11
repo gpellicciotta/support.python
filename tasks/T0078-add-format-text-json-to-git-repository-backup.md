@@ -5,17 +5,20 @@ session: claude-20261111-75fdd6
 needs: []
 branch: task/T0078-add-format-text-json-to-git-repository-backup
 worktree: .plan/work/T0078-add-format-text-json-to-git-repository-backup
-status: active
+status: completed
 started_at: "2026-11-11T01:39:30Z"
-ended_at: —
+ended_at: "2026-11-11T01:44:53Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 483.0, input: 112, output: 38578, cache_read: 3811432, cache_write: 152206}
-work_duration: 227.2
-review_status: pending
+  review: {turns: 2, duration_s: 74.4, input: 32, output: 4438, cache_read: 608552, cache_write: 56068}
+work_duration: 322.6
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: ecf80fdd1114e9b7961353d2f66288f2a3f2917e
 ---
 # T0078: Add --format text|json to git-repository-backup backup and restore, reporting per-repository results
 
@@ -33,7 +36,7 @@ Update the hand-written `BackupHarness` help, which lists `--format` for `list` 
 - [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Document the JSON document in git-repository-backup.md and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -64,4 +67,11 @@ Update the hand-written `BackupHarness` help, which lists `--format` for `list` 
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: Approved.
+  - Findings: [review-findings-1.md](T0078-add-format-text-json-to-git-repository-backup/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
