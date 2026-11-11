@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 675.2, input: 144, output: 80876, cache_read: 7487454, cache_write: 247710}
+work_duration: 350.2
 ---
 # T0070: Move agent-files settings onto the shared resolver, adding user and system files, environment variables, and the config group
 
@@ -33,3 +36,26 @@ Add the `config` group through `add_config_actions`, targeting the project file 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the configuration guidelines, config.py, and agent_files_config.py before changing the tool.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for environment variables, user and system files, tools merging, and config actions.
+
+- [2026-11-11] **[Verify]**
+  Recorded 14 expected red-phase failures in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Resolved AgentFilesConfig through SettingsSchema, added Setting.normalize, and kept load_agent_files_config working for library callers.
+
+- [2026-11-11] **[Verify]**
+  Fast suite passed with 1186 tests and affected slow tests passed; output recorded in validation-proof.md.
+
+- [2026-11-11] **[Doc]**
+  Documented every setting in agent-files.md and added CHANGELOG.md and migration entries.
+
