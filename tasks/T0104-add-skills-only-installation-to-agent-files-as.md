@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 488.0, input: 100, output: 50638, cache_read: 4102148, cache_write: 201548}
+  worker: {turns: 4, duration_s: 531.2, input: 120, output: 52334, cache_read: 5056802, cache_write: 211678}
 work_duration: 256.9
+review_status: pending
+review_round: 1
 ---
 # T0104: Add skills-only installation to agent-files, as a command mode and an importable function, matching plan's current skill installer
 
@@ -61,4 +63,7 @@ Specifications: [technical-spec.md](T0104-add-skills-only-installation-to-agent-
 
 - [2026-11-11] **[Doc]**
   Updated agent-files docs and CHANGELOG.md; size note: diff exceeds typical line due to tests and docs.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
