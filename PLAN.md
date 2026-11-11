@@ -27,11 +27,11 @@ An overview of all tasks and their planning.
 - [x] T0069 Move lint-markdown settings onto the shared resolver, adding user and system files, environment variables, and the config group.
 - [x] T0070 Move agent-files settings onto the shared resolver, adding user and system files, environment variables, and the config group.
 - [x] T0075 Add --format text|json to agent-files sync, reporting each tool's planned and applied changes.
-- [ ] T0076 Add --format text|json to lint-markdown fix, reporting fixed files and remaining issues.
+- [x] T0076 Add --format text|json to lint-markdown fix, reporting fixed files and remaining issues.
 - [ ] T0078 Add --format text|json to git-repository-backup backup and restore, reporting per-repository results.
-- [ ] T0081 [needs: T0076, T0078] Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
+- [ ] T0081 [needs: T0078] Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
 - [ ] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
-- [ ] T0103 [protocol: adhoc] [needs: T0076, T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
+- [ ] T0103 [protocol: adhoc] [needs: T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
 
 ---
 
