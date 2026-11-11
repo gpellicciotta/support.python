@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 429.0, input: 88, output: 35588, cache_read: 2902608, cache_write: 139586}
+  worker: {turns: 4, duration_s: 483.0, input: 112, output: 38578, cache_read: 3811432, cache_write: 152206}
 work_duration: 227.2
+review_status: pending
+review_round: 1
 ---
 # T0078: Add --format text|json to git-repository-backup backup and restore, reporting per-repository results
 
@@ -59,4 +61,7 @@ Update the hand-written `BackupHarness` help, which lists `--format` for `list` 
 
 - [2026-11-11] **[Doc]**
   Documented the JSON output in git-repository-backup.md and added a CHANGELOG.md entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
