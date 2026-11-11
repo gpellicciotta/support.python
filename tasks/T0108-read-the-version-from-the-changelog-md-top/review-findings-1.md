@@ -3,7 +3,7 @@ task: T0108
 round: 1
 verdict: approved
 reviewer: "@claude"
-reviewed_at: 2026-11-11T23:29:40Z
+reviewed_at: 2026-11-11T23:30:44Z
 reviewed_commit: "b400b05"
 base_commit: "3555c4d"
 branch: task/T0108-read-the-version-from-the-changelog-md-top
