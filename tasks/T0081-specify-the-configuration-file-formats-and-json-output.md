@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 484.0, input: 168, output: 47286, cache_read: 7468926, cache_write: 224350}
+  worker: {turns: 4, duration_s: 525.6, input: 184, output: 48624, cache_read: 8561418, cache_write: 245066}
 work_duration: 254.8
+review_status: pending
+review_round: 1
 ---
 # T0081: Specify the configuration file formats and JSON output documents of all five tools under docs/specs/
 
@@ -46,4 +48,7 @@ Link the specs from docs/index.md, the tool pages, and the AGENTS.md architectur
 
 - [2026-11-11] **[Doc]**
   Linked the specs from docs/index.md, the five tool pages, and AGENTS.md; added a CHANGELOG.md entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
