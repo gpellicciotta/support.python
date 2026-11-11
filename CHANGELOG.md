@@ -14,6 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
+## v3.1.1-pre
+
 ## v3.1.0 [released: 2026-11-11]
 - Library: `terminate_process_tree` allows `taskkill` 15 seconds on Windows, and its lifecycle test retries under load ([processes.py](src/support_python/processes.py)).
 - CLI: `agent-digest` rewrites GitHub links ending in `/docs/guidelines/{{name}}.md` to ``the `{{name}}` skill``, like `/skills/{{name}}/SKILL.md` links ([agent_digest.py](src/support_python/tools/agent_digest.py)).
