@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 430.6, input: 120, output: 24758, cache_read: 3954386, cache_write: 140086}
+work_duration: 227.9
 ---
 # T0079: Show every action's options in ToolHarness help --verbose, with metavars and consistent help text
 
@@ -34,3 +37,29 @@ List positional arguments with their help text too; template.python's T0015 had 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read CLI guidelines and help rendering in cli.py.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for action options, metavars, and positionals.
+
+- [2026-11-11] **[Verify]**
+  Recorded red-phase failures in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Rendered action options and arguments with metavars in format_help and format_action_help; lowercased option help.
+
+- [2026-11-11] **[Verify]**
+  Fast suite passed; two slow foreign-venv subtests fail on main too.
+
+- [2026-11-11] **[Verify]**
+  Ran help --verbose for all five tools and devops.py.
+
+- [2026-11-11] **[Doc]**
+  Updated cli-harness-and-logging.md and CHANGELOG.md.
+
