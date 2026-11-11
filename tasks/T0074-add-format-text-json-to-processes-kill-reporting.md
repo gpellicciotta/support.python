@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 2, duration_s: 206.4, input: 72, output: 16718, cache_read: 1727444, cache_write: 90246}
+  worker: {turns: 4, duration_s: 330.6, input: 108, output: 21872, cache_read: 2804814, cache_write: 105404}
 work_duration: 115.6
+review_status: pending
+review_round: 1
 ---
 # T0074: Add --format text|json to processes kill, reporting each killed, skipped, and failed PID
 
@@ -58,4 +60,7 @@ Report `would-kill` and `would-skip-protected` outcomes for `--dry-run`.
 
 - [2026-11-11] **[Doc]**
   Documented the JSON document in processes.md and added CHANGELOG entries.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
