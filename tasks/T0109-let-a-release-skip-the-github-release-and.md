@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 449.8, input: 142164, output: 14244, cache_read: 1872896, cache_write: 0}
+work_duration: 235.3
 ---
 # T0109: Let a release skip the GitHub release and gh checks, and honor --skip-checks for project-owned releases
 
@@ -37,4 +40,17 @@ Let a release skip the GitHub release and gh checks, and honor --skip-checks for
   - Files touched: 10.
   - Lines touched: 104.
   - Reopenings: 0.
+
+- [2026-11-12] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-12] **[Implement]**
+  Authored CLI forwarding, Gradle property, and temporary Git pipeline regression tests before changing production code.
+
+- [2026-11-12] **[Verify]**
+  Confirmed five regression failures before implementation: unsupported skip options, ignored project checks, and missing pipeline configuration.
+
+- [2026-11-12] **[Doc]**
+  Updated release usage, adapter contracts, and CHANGELOG.md. Completion validation now checks execution-log coverage before review.
 

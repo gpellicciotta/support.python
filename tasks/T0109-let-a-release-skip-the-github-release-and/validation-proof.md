@@ -1,6 +1,13 @@
 # Validation Proof
 
 ## Walkthrough & Validation
+Command: `plan tasks validate T0109 --completion`
+
+Exit code: 0
+```text
+All 1 task file passed validation.
+```
+
 Red phase command: `C:/Dev-Projects/support.python/.venv/Scripts/python.exe -m pytest tests/test_devops_cli.py tests/test_devops_projects_gradle.py tests/test_devops_release_pipeline.py -m 'slow or not slow' -n 0 -q --timeout=120`
 
 Exit code: 1. Verbatim final summary:
