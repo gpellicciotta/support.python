@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 787.8, input: 176, output: 51746, cache_read: 7794720, cache_write: 210788}
+  worker: {turns: 4, duration_s: 855.4, input: 204, output: 55946, cache_read: 9335840, cache_write: 230258}
 work_duration: 406.3
+review_status: pending
+review_round: 1
 ---
 # T0084: Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map
 
@@ -63,4 +65,7 @@ The auth and counters repositories define their rules locally when they upgrade,
 
 - [2026-11-11] **[Doc]**
   Updated tutorial, index, requirements, migration-v2.md, and CHANGELOG.md.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
