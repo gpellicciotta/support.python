@@ -6,6 +6,7 @@ and SaltedPasswordHash), alongside AES-CBC property decryption.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 from typing import Optional
 
@@ -42,7 +43,7 @@ def decrypt_property_value(val: Optional[str], key_hex: str) -> str:
     Supports three property formats:
     - ``plain:<text>``: Plaintext prefix stripped and remainder returned.
     - ``aes:<base64-ciphertext>``: Decrypted using AES-128-CBC with an all-zero IV and PKCS#7 unpadding.
-    - Raw string: Returned verbatim if no prefix matches or if decryption fails.
+    - Raw string: Returned verbatim if no prefix matches.
 
     Args:
         val: Property string value to decrypt, or None.
@@ -52,7 +53,8 @@ def decrypt_property_value(val: Optional[str], key_hex: str) -> str:
         Decrypted plaintext string, or empty string if input is None or empty.
 
     Raises:
-        ValueError: If ``key_hex`` is not a hexadecimal AES key of 16, 24, or 32 bytes.
+        ValueError: If ``key_hex`` is not a hexadecimal AES key of 16, 24, or 32 bytes, or an ``aes:`` value cannot be decrypted.
+        ImportError: If an ``aes:`` value is given and the ``cryptography`` package is not installed.
     """
     try:
         key = bytes.fromhex(key_hex)
@@ -67,10 +69,11 @@ def decrypt_property_value(val: Optional[str], key_hex: str) -> str:
     if val.startswith("aes:"):
         b64_cipher = val[len("aes:") :]
         try:
-            import base64
             from cryptography.hazmat.primitives import padding
             from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
+        except ImportError as exc:
+            raise ImportError("decrypting 'aes:' property values requires the 'cryptography' package") from exc
+        try:
             iv = b"\x00" * 16
             cipher_bytes = base64.b64decode(b64_cipher)
             cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
@@ -79,8 +82,8 @@ def decrypt_property_value(val: Optional[str], key_hex: str) -> str:
             unpadder = padding.PKCS7(128).unpadder()
             data = unpadder.update(padded_data) + unpadder.finalize()
             return data.decode("utf-8")
-        except Exception:
-            return val
+        except Exception as exc:
+            raise ValueError(f"failed to decrypt 'aes:' property value: {type(exc).__name__}") from exc
     return val
 
 

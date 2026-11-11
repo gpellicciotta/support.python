@@ -40,6 +40,7 @@ config_file = user_config_path("my-tool")
 # Compute standard password hash
 password_hash = get_standard_password_hash("my-password", salt=bytes.fromhex("{{64-hex-digit-salt}}"))
 
-# Decrypt an aes: property with your own key
+# Decrypt an aes: property with your own key; needs the cryptography package
+# (raises ImportError if it is missing and ValueError if the value is malformed)
 value = decrypt_property_value("aes:{{base64-ciphertext}}", "{{aes-key-hex}}")
 ```

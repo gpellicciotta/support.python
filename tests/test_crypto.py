@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sys
 import unittest
+from unittest import mock
 
 import support_python
 from support_python import crypto
@@ -73,6 +75,28 @@ class CryptoTests(unittest.TestCase):
         enc = Cipher(algorithms.AES(key), modes.CBC(b"\x00" * 16)).encryptor()
         b64 = base64.b64encode(enc.update(padded) + enc.finalize()).decode("utf-8")
         self.assertEqual(decrypt_property_value(f"aes:{b64}", KEY_HEX), "secret_value")
+
+    def test_decrypt_property_value_aes_missing_package_raises_import_error(self) -> None:
+        blocked = {
+            "cryptography": None,
+            "cryptography.hazmat": None,
+            "cryptography.hazmat.primitives": None,
+            "cryptography.hazmat.primitives.ciphers": None,
+        }
+        with mock.patch.dict(sys.modules, blocked):
+            with self.assertRaises(ImportError) as ctx:
+                decrypt_property_value("aes:AAAAAAAAAAAAAAAAAAAAAA==", KEY_HEX)
+        self.assertIn("cryptography", str(ctx.exception))
+
+    def test_decrypt_property_value_aes_malformed_ciphertext_raises_value_error(self) -> None:
+        try:
+            import cryptography  # noqa: F401
+        except ImportError:
+            self.skipTest("cryptography is not installed")
+        for bad in ("aes:!!!not-base64!!!", "aes:AAAA", "aes:AAAAAAAAAAAAAAAAAAAAAA=="):
+            with self.assertRaises(ValueError) as ctx:
+                decrypt_property_value(bad, KEY_HEX)
+            self.assertNotIn(bad, str(ctx.exception))
 
 
 if __name__ == "__main__":

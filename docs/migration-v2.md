@@ -169,6 +169,8 @@ The crypto helpers no longer ship a fixed salt or AES key:
 - `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX` are removed from `support_python` and `support_python.crypto`.
 - `get_standard_password_hash(password, *, salt)` requires a non-empty `salt` as `bytes`; invalid values raise `ValueError`.
 - `decrypt_property_value(val, key_hex)` requires a hex AES key of 16, 24, or 32 bytes; invalid values raise `ValueError`.
+- `decrypt_property_value` raises `ImportError` for `aes:` values when `cryptography` is not installed.
+- `decrypt_property_value` raises `ValueError` for malformed `aes:` values instead of returning the ciphertext.
 - Output for the same explicit salt and key is unchanged.
 
 Kept names changed behavior; update tests that assert exact output:

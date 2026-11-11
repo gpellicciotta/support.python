@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.23-pre
+## v2.0.24-pre
+- Library: **[breaking]** Made `decrypt_property_value` raise `ImportError` when `cryptography` is missing and `ValueError` when an `aes:` value fails to decrypt, instead of returning the ciphertext ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Removed `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX`, making the salt of `get_standard_password_hash` (keyword-only) and the key of `decrypt_property_value` required and validated ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Removed the `auth` and `counters` schema transformers and the `app` and `custom_password` parameters from the SQL anonymizer, which now requires a `transformers` map ([sql.py](src/support_python/sql.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Made `LocalMySqlManager` take `snapshot_transformers`, refuse to snapshot without them, and drop `custom_password` and `db snapshot --custom-password` ([services.py](src/support_python/devops/services.py)).
