@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 491.6, input: 107390, output: 13064, cache_read: 2090240, cache_write: 0}
+review_status: pending
+review_round: 1
 ---
 # T0110: Add a DocsProject adapter for documentation-only repositories, running lint-markdown, with the CHANGELOG-only release of support.webapp
 
@@ -35,4 +39,7 @@ Add a DocsProject adapter for documentation-only repositories, running lint-mark
   - Files touched: 7.
   - Lines touched: 171.
   - Reopenings: 0.
+
+- [2026-11-12] **[Review]**
+  Round 1 requested (mode: agent).
 
