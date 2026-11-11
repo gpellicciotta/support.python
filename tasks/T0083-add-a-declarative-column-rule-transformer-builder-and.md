@@ -1,7 +1,7 @@
 ---
 id: T0083
-owner: "@gemini"
-session: antigravity-20261111-5470b9
+owner: "@claude"
+session: claude-20261111-0b6ccd
 needs: []
 branch: task/T0083-add-a-declarative-column-rule-transformer-builder-and
 worktree: .plan/work/T0083-add-a-declarative-column-rule-transformer-builder-and
@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 1762.4, input: 1441224, output: 164746, cache_read: 46303810}
+work_duration: 894.4
+contributors: "@gemini"
 ---
 # T0083: Add a declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer
 
@@ -43,4 +47,17 @@ This task only adds API; T0084 removes the hardcoded schemas.
 
 - [2026-11-11] **[Size]**
   Size note: Comprehensive unit tests and fixture equivalence tests exceed the typical line.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read sql.py, test_sql.py, and sql-anonymizer.md to confirm transformer behavior.
+
+- [2026-11-11] **[Implement]**
+  Wrote unit and equivalence tests for helpers, RowView, and the builder.
+
+- [2026-11-11] **[Doc]**
+  Documented the builder in sql-anonymizer.md and updated CHANGELOG.md.
 
