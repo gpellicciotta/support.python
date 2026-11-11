@@ -31,6 +31,9 @@ from support_python import (
     get_standard_password_hash,
 )
 
+# Choose your own salt; never reuse a published one
+PASSWORD_SALT = bytes.fromhex("{{64-hex-digit-salt}}")
+
 auth_transformers = {
     "users": column_rules_transformer(
         {
@@ -42,7 +45,7 @@ auth_transformers = {
     "credentials": column_rules_transformer(
         {
             "data": lambda r: (
-                base64.b64encode(get_standard_password_hash().encode("ascii")).decode("ascii")
+                base64.b64encode(get_standard_password_hash(salt=PASSWORD_SALT).encode("ascii")).decode("ascii")
                 if (r.text("type") or "password").lower() == "password"
                 else KEEP
             ),

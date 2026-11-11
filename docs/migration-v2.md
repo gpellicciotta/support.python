@@ -165,6 +165,12 @@ The SQL anonymizer no longer knows the `auth` and `counters` schemas:
 - `snapshot_and_anonymize` drops `custom_password`, and `db snapshot` drops `--custom-password`.
 - See [sql-anonymizer.md](tutorials/sql-anonymizer.md) for the rules the removed profiles applied.
 
+The crypto helpers no longer ship a fixed salt or AES key:
+- `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX` are removed from `support_python` and `support_python.crypto`.
+- `get_standard_password_hash(password, *, salt)` requires a non-empty `salt` as `bytes`; invalid values raise `ValueError`.
+- `decrypt_property_value(val, key_hex)` requires a hex AES key of 16, 24, or 32 bytes; invalid values raise `ValueError`.
+- Output for the same explicit salt and key is unchanged.
+
 Kept names changed behavior; update tests that assert exact output:
 - `ToolHarness.format_version()` and the `version` action append Git build metadata, as in `v1.2.3+0a1b2c3`.
 - `APP_AUTHOR` and `COPYRIGHT` default to `""`, omitting the ` - {copyright}` banner suffix when empty.

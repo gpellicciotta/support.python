@@ -6,7 +6,7 @@ Focused modules for developing CLI tools and ops scripts, all re-exported from `
 - [net.py](../../src/support_python/net.py): `is_port_in_use` for checking TCP socket availability.
 - [env.py](../../src/support_python/env.py): `read_env_file` for parsing `.env` or properties files,
   and `user_config_dir`/`user_config_path` for locating user configuration files.
-- [crypto.py](../../src/support_python/crypto.py): `get_standard_password_hash` and `decrypt_property_value` for credentials and properties.
+- [crypto.py](../../src/support_python/crypto.py): `get_standard_password_hash` and `decrypt_property_value` for credentials and properties; the caller supplies the salt and AES key.
 
 ## Example
 ```python
@@ -38,5 +38,8 @@ env_vars = read_env_file(".env")
 config_file = user_config_path("my-tool")
 
 # Compute standard password hash
-password_hash = get_standard_password_hash("my-password")
+password_hash = get_standard_password_hash("my-password", salt=bytes.fromhex("{{64-hex-digit-salt}}"))
+
+# Decrypt an aes: property with your own key
+value = decrypt_property_value("aes:{{base64-ciphertext}}", "{{aes-key-hex}}")
 ```

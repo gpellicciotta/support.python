@@ -1,7 +1,7 @@
 """Cryptographic hashing and symmetric decryption utilities for REST services.
 
-Provides PBKDF2 password hashing with deterministic test salt matching Java PasswordUtils
-and SaltedPasswordHash, alongside AES-CBC property decryption.
+Provides PBKDF2 password hashing with a caller-supplied salt (compatible with Java PasswordUtils
+and SaltedPasswordHash), alongside AES-CBC property decryption.
 """
 
 from __future__ import annotations
@@ -12,14 +12,8 @@ from typing import Optional
 #: Default plain-text test password used for deterministic password hashing.
 DEFAULT_TEST_PASSWORD: str = "open sesame"
 
-#: Deterministic fixed salt (32 bytes) matching support.java PasswordUtils for repeatable hash generation.
-STANDARD_SALT: bytes = bytes.fromhex("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
 
-#: Standard 128-bit AES decryption key in hexadecimal representation.
-DEFAULT_AES_KEY_HEX: str = "60387abef63ab7033e6d2b4b234d2f58"
-
-
-def get_standard_password_hash(password: str = DEFAULT_TEST_PASSWORD, salt: bytes = STANDARD_SALT) -> str:
+def get_standard_password_hash(password: str = DEFAULT_TEST_PASSWORD, *, salt: bytes) -> str:
     """Compute a PBKDF2WithHmacSHA1 password hash matching Java PasswordUtils / SaltedPasswordHash.
 
     Generates a password hash formatted as ``<hex(salt)>:<hex(hash)>`` using 20,000 iterations
@@ -27,16 +21,22 @@ def get_standard_password_hash(password: str = DEFAULT_TEST_PASSWORD, salt: byte
 
     Args:
         password: Plain-text password to hash. Defaults to :const:`DEFAULT_TEST_PASSWORD`.
-        salt: Raw salt bytes to use for hashing. Defaults to :const:`STANDARD_SALT`.
+        salt: Raw salt bytes to use for hashing. Required, keyword-only, and must be non-empty.
 
     Returns:
         Formatted string containing the hex-encoded salt and hash separated by a colon.
+
+    Raises:
+        ValueError: If ``salt`` is not non-empty bytes.
     """
+    if not isinstance(salt, (bytes, bytearray)) or not salt:
+        raise ValueError("salt must be non-empty bytes")
+    salt = bytes(salt)
     key = hashlib.pbkdf2_hmac("sha1", password.encode("utf-8"), salt, 20000, 32)
     return f"{salt.hex()}:{key.hex()}"
 
 
-def decrypt_property_value(val: Optional[str], key_hex: str = DEFAULT_AES_KEY_HEX) -> str:
+def decrypt_property_value(val: Optional[str], key_hex: str) -> str:
     """Decrypt a configuration property value encoded as plain, AES ciphertext, or raw text.
 
     Supports three property formats:
@@ -46,12 +46,20 @@ def decrypt_property_value(val: Optional[str], key_hex: str = DEFAULT_AES_KEY_HE
 
     Args:
         val: Property string value to decrypt, or None.
-        key_hex: 128-bit AES encryption key in hexadecimal string format.
-            Defaults to :const:`DEFAULT_AES_KEY_HEX`.
+        key_hex: Required AES key in hexadecimal string format (128, 192, or 256 bits).
 
     Returns:
         Decrypted plaintext string, or empty string if input is None or empty.
+
+    Raises:
+        ValueError: If ``key_hex`` is not a hexadecimal AES key of 16, 24, or 32 bytes.
     """
+    try:
+        key = bytes.fromhex(key_hex)
+    except (TypeError, ValueError):
+        raise ValueError("key_hex must be a hexadecimal string") from None
+    if len(key) not in (16, 24, 32):
+        raise ValueError("key_hex must encode a 16, 24, or 32 byte AES key")
     if not val:
         return ""
     if val.startswith("plain:"):
@@ -63,7 +71,6 @@ def decrypt_property_value(val: Optional[str], key_hex: str = DEFAULT_AES_KEY_HE
             from cryptography.hazmat.primitives import padding
             from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
-            key = bytes.fromhex(key_hex)
             iv = b"\x00" * 16
             cipher_bytes = base64.b64decode(b64_cipher)
             cipher = Cipher(algorithms.AES(key), modes.CBC(iv))
@@ -78,9 +85,7 @@ def decrypt_property_value(val: Optional[str], key_hex: str = DEFAULT_AES_KEY_HE
 
 
 __all__ = [
-    "DEFAULT_AES_KEY_HEX",
     "DEFAULT_TEST_PASSWORD",
-    "STANDARD_SALT",
     "decrypt_property_value",
     "get_standard_password_hash",
 ]

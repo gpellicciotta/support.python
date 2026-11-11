@@ -35,9 +35,12 @@ AUTH_FIXTURE = FIXTURES_DIR / "realistic-auth-sample.sql"
 COUNTERS_FIXTURE = FIXTURES_DIR / "realistic-counters-sample.sql"
 
 
+_TEST_SALT = bytes(range(1, 33))
+
+
 def _auth_transformers(custom_password: Optional[str] = None) -> dict[str, TableTransformer]:
     """Build the rules the removed ``app="auth"`` profile applied, as a local transformers map."""
-    std_hash = get_standard_password_hash(custom_password or DEFAULT_TEST_PASSWORD)
+    std_hash = get_standard_password_hash(custom_password or DEFAULT_TEST_PASSWORD, salt=_TEST_SALT)
     b64_password_hash = base64.b64encode(std_hash.encode("ascii")).decode("ascii")
 
     def credential_data(row: RowView) -> object:
@@ -275,7 +278,7 @@ REPLACE INTO `credentials` (`data`, `type`, `user-id`) VALUES ('secret_pass_val'
     def test_custom_password_flows_through_local_credentials_rule(self):
         sql_text = "INSERT INTO `credentials` VALUES (1, 'password', 1, 'old', '2026-01-02', '2026-01-02', NULL);\n"
         out, _ = anonymize_sql_string(sql_text, _auth_transformers("pw-1"))
-        b64 = base64.b64encode(get_standard_password_hash("pw-1").encode("ascii")).decode("ascii")
+        b64 = base64.b64encode(get_standard_password_hash("pw-1", salt=_TEST_SALT).encode("ascii")).decode("ascii")
         self.assertIn(b64, out)
 
     def test_transformers_argument_is_required(self):
