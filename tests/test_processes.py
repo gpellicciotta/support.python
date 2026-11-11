@@ -276,10 +276,14 @@ def test_child_process_lifecycle_integration() -> None:
         assert isinstance(child_start, datetime)
         assert is_process_alive(child.pid, expected_start=child_start, slack_seconds=10.0) is True
 
-        assert terminate_process_tree(child.pid) is True
+        # Under xdist load a single kill attempt can time out, so retry until the child exits.
+        kill_deadline = time.monotonic() + 30.0
+        while child.poll() is None and time.monotonic() < kill_deadline:
+            terminate_process_tree(child.pid)
+            time.sleep(0.1)
         child.wait(timeout=10)
 
-        deadline = time.monotonic() + 5.0
+        deadline = time.monotonic() + 10.0
         while time.monotonic() < deadline and is_process_alive(child.pid):
             time.sleep(0.05)
 

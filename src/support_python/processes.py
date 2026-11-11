@@ -364,7 +364,7 @@ def terminate_process_tree(pid: int) -> bool:
                 ["taskkill", "/F", "/T", "/PID", str(pid)],
                 capture_output=True,
                 text=True,
-                timeout=5,
+                timeout=15,
             )
             return res.returncode == 0
         terminate_process(pid, force=True)

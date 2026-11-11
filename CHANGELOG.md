@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.41-pre
+## v2.0.42-pre
+- Library: `terminate_process_tree` allows `taskkill` 15 seconds on Windows, and its lifecycle test retries under load ([processes.py](src/support_python/processes.py)).
 - CLI: `agent-digest` rewrites GitHub links ending in `/docs/guidelines/{{name}}.md` to ``the `{{name}}` skill``, like `/skills/{{name}}/SKILL.md` links ([agent_digest.py](src/support_python/tools/agent_digest.py)).
 - CLI: Added `--skills-only` to `agent-files sync` and `check`, installing skills without a digest or instructions files ([agent_files.py](src/support_python/tools/agent_files.py)).
 - Library: Added `install_skills_only`, `install_skills`, `retire_skills`, and `SkillInstallResult` to `agent_files`, reporting installed, unchanged, skipped, and pruned skills per directory ([agent_files.py](src/support_python/tools/agent_files.py)).
