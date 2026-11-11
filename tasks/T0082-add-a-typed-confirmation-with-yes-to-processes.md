@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 325.8, input: 96, output: 18750, cache_read: 2532986, cache_write: 96122}
+work_duration: 175.7
 ---
 # T0082: Add a typed confirmation with --yes to processes kill, or document why it is exempt from that CLI rule
 
@@ -36,4 +39,23 @@ Document the behavior in processes.md.
 
 - [2026-11-10] **[Decided]**
   User decided kill requires typed confirmation or --yes, per CLI guidelines.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for --yes, non-terminal stdin, typed confirmation, and dry-run.
+
+- [2026-11-11] **[Verify]**
+  Red phase: 3 of 4 new tests failed as expected; recorded in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Added typed confirmation and --yes to the processes kill handler; non-terminal stdin without --yes exits 2.
+
+- [2026-11-11] **[Verify]**
+  Fast suite 1130 passed; slow processes tests passed with PYTHONPATH=src; ruff clean.
+
+- [2026-11-11] **[Doc]**
+  Updated processes.md, migration-v2.md, and CHANGELOG.md.
 
