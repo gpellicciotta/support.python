@@ -14,14 +14,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.42-pre
-- Library: `terminate_process_tree` allows `taskkill` 15 seconds on Windows, and its lifecycle test retries under load ([processes.py](src/support_python/processes.py)).
-- CLI: `agent-digest` rewrites GitHub links ending in `/docs/guidelines/{{name}}.md` to ``the `{{name}}` skill``, like `/skills/{{name}}/SKILL.md` links ([agent_digest.py](src/support_python/tools/agent_digest.py)).
-- CLI: Added `--skills-only` to `agent-files sync` and `check`, installing skills without a digest or instructions files ([agent_files.py](src/support_python/tools/agent_files.py)).
-- Library: Added `install_skills_only`, `install_skills`, `retire_skills`, and `SkillInstallResult` to `agent_files`, reporting installed, unchanged, skipped, and pruned skills per directory ([agent_files.py](src/support_python/tools/agent_files.py)).
-- CLI: `agent-files` now retires skills it installed in `~/.gemini/antigravity-cli/skills` ([agent_files.py](src/support_python/tools/agent_files.py)).
-
-## v2.0.38 [released: 2026-11-11]
+## v2.1.0-pre
 - Library: Documented every public module, class, function, method, and `__init__` in `src/`, and enabled ruff `D100`-`D107` for `src/` so missing docstrings fail the lint ([pyproject.toml](pyproject.toml)).
 - Docs: Added `docs/specs/` with the config file formats of `agent-files`, `lint-markdown`, and `git-repository-backup`, the `agent-digest` front-matter, and every `--format json` document ([specs](docs/specs/json-output.md), [index.md](docs/index.md)).
 - CLI: Added `--format text|json` to `git-repository-backup backup` and `restore`, reporting each repository and layer outcome, and the restore source, target, and branch ([git_repository_backup.py](src/support_python/tools/git_repository_backup.py), [git-repository-backup.md](docs/tools/git-repository-backup.md)).
