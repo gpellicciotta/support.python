@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 722.8, input: 160, output: 67534, cache_read: 7729264, cache_write: 217678}
+work_duration: 375.4
 ---
 # T0069: Move lint-markdown settings onto the shared resolver, adding user and system files, environment variables, and the config group
 
@@ -33,3 +36,26 @@ Add the `config` group through `add_config_actions`, targeting the project file 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read config.py, profiles.py, and the T0068 pattern before changing the tool.
+
+- [2026-11-11] **[Implement]**
+  Wrote 11 failing SharedSettings tests for environment variables, files, list replacement, and config actions.
+
+- [2026-11-11] **[Verify]**
+  Ran new tests: 11 failed, 3 passed; red-phase output recorded in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Resolved profile settings through SettingsSchema, added Setting.aliases and profile_from_settings, kept load_profile behavior.
+
+- [2026-11-11] **[Verify]**
+  Fast suite 1171 passed; affected slow tests pass with PYTHONPATH=src; proof recorded.
+
+- [2026-11-11] **[Doc]**
+  Documented every setting in lint-markdown.md and added CHANGELOG and migration entries.
+
