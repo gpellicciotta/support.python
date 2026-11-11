@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 800.6, input: 140, output: 64950, cache_read: 5587034, cache_write: 192594}
+work_duration: 412.5
 ---
 # T0086: Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers
 
@@ -38,4 +41,23 @@ Also cover the mail test command, the verifier's health endpoint, running status
   - Files touched: 4.
   - Lines touched: 320.
   - Reopenings: 0.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Listed hardcoded flags, commands, endpoints, and env-file names in services.py.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for defaults, overrides, and the custom-endpoint verifier scenario.
+
+- [2026-11-11] **[Verify]**
+  Recorded red-phase proof: 9 failed, 2 passed in validation-proof.md.
+
+- [2026-11-11] **[Verify]**
+  Ran devops check: exit 0, 1122 fast and 159 slow tests passed.
+
+- [2026-11-11] **[Doc]**
+  Documented parameters in devops-scripts.md and added a CHANGELOG.md entry.
 
