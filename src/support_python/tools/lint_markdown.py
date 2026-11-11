@@ -57,8 +57,9 @@ def configure_rules_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def configure_fix_parser(parser: argparse.ArgumentParser) -> None:
-    """Add the path arguments and '--dry-run' option to the 'fix' parser."""
+    """Add the path arguments, '--format' option, and '--dry-run' option to the 'fix' parser."""
     configure_lint_parser(parser)
+    ToolHarness.add_format_option(parser)
     parser.add_argument("--dry-run", action="store_true", help="report files and issues that would be fixed without writing")
 
 
@@ -96,6 +97,40 @@ def _emit_json_check(logger: CliLogger, files_checked: int, issues: List[LintIss
         "issues": [issue.to_dict(relative_to=repo_root) for issue in issues],
     }
     logger.emit_json(payload)
+
+
+def _emit_json_fix(
+    logger: CliLogger,
+    dry_run: bool,
+    files_checked: int,
+    fixed: List[Tuple[Path, List[LintIssue]]],
+    issues: List[LintIssue],
+    repo_root: Path,
+) -> None:
+    """Emit the JSON fix payload on stdout: fixed files with their fixes, and the remaining issues."""
+    payload = {
+        "dry_run": dry_run,
+        "files_checked": files_checked,
+        "fixed": [
+            {
+                "path": str(path.relative_to(repo_root) if path.is_relative_to(repo_root) else path),
+                "fixes": [issue.to_dict(relative_to=repo_root) for issue in fixes],
+            }
+            for path, fixes in fixed
+        ],
+        "issues": [issue.to_dict(relative_to=repo_root) for issue in issues],
+    }
+    logger.emit_json(payload)
+
+
+def _fixes_for_file(linter: MarkdownLinter, file_path: Path, raw_bytes: bytes, fixed_bytes: bytes) -> List[LintIssue]:
+    """Return the issues in the original content that the fixed content no longer reports."""
+    after_keys = {(i.line_number, i.column_number, i.rule_id, i.message) for i in linter.lint_content(file_path, fixed_bytes)}
+    return [
+        i
+        for i in linter.lint_content(file_path, raw_bytes)
+        if i.fixable or (i.line_number, i.column_number, i.rule_id, i.message) not in after_keys
+    ]
 
 
 def system_config_path() -> Path:
@@ -196,7 +231,7 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
     """Lint the markdown files under the requested paths, fixing safe issues first when asked."""
     repo_root = Path.cwd()
     dry_run = fix and bool(getattr(args, "dry_run", False))
-    is_json = not fix and getattr(args, "format", "text") == "json"
+    is_json = getattr(args, "format", "text") == "json"
 
     for p in args.paths:
         if not p.resolve().exists():
@@ -216,7 +251,9 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
         f"(rules: {','.join(sorted(linter.enabled_rules))}; offline: {str(args.offline).lower()}; timeout: {args.timeout}s)"
     )
     if not files:
-        if is_json:
+        if is_json and fix:
+            _emit_json_fix(logger, dry_run, 0, [], [], repo_root)
+        elif is_json:
             _emit_json_check(logger, 0, [], repo_root)
         else:
             logger.info("No markdown files found to lint.")
@@ -224,6 +261,7 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
 
     total_issues: List[LintIssue] = []
     planned_fixes: List[LintIssue] = []
+    fixed_files: List[Tuple[Path, List[LintIssue]]] = []
     files_fixed = 0
     for file_path in files:
         try:
@@ -231,27 +269,18 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
         except OSError as e:
             logger.error(f"Failed to read {file_path}: {e}")
             return 1
-        if dry_run:
-            fixed_bytes = linter.fix_content(file_path, raw_bytes)
-            if fixed_bytes != raw_bytes:
-                files_fixed += 1
-                before_issues = linter.lint_content(file_path, raw_bytes)
-                after_keys = {
-                    (i.line_number, i.column_number, i.rule_id, i.message) for i in linter.lint_content(file_path, fixed_bytes)
-                }
-                file_fixes = [
-                    i
-                    for i in before_issues
-                    if i.fixable or (i.line_number, i.column_number, i.rule_id, i.message) not in after_keys
-                ]
-                planned_fixes.extend(file_fixes)
-            continue
         if fix:
             fixed_bytes = linter.fix_content(file_path, raw_bytes)
             if fixed_bytes != raw_bytes:
-                file_path.write_bytes(fixed_bytes)
+                file_fixes = _fixes_for_file(linter, file_path, raw_bytes, fixed_bytes) if (dry_run or is_json) else []
                 files_fixed += 1
+                planned_fixes.extend(file_fixes)
+                fixed_files.append((file_path, file_fixes))
+                if not dry_run:
+                    file_path.write_bytes(fixed_bytes)
                 raw_bytes = fixed_bytes
+        if dry_run and not is_json:
+            continue
         issues = linter.lint_content(file_path, raw_bytes)
         total_issues.extend(issues)
         if args.verbose and not issues:
@@ -259,8 +288,11 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
             logger.info(f"OK: {rel}")
 
     if dry_run:
-        for issue in planned_fixes:
-            logger.emit(issue.format(relative_to=repo_root))
+        if is_json:
+            _emit_json_fix(logger, True, len(files), fixed_files, total_issues, repo_root)
+        else:
+            for issue in planned_fixes:
+                logger.emit(issue.format(relative_to=repo_root))
         if files_fixed > 0:
             logger.info(
                 f"Dry run: would auto-fix {plural(len(planned_fixes), 'formatting issue')} across {plural(files_fixed, 'file')}."
@@ -270,7 +302,12 @@ def run_lint(args: argparse.Namespace, logger: CliLogger, fix: bool) -> int:
         return 0
 
     if is_json:
-        _emit_json_check(logger, len(files), total_issues, repo_root)
+        if fix:
+            _emit_json_fix(logger, False, len(files), fixed_files, total_issues, repo_root)
+            if files_fixed > 0:
+                logger.info(f"Auto-fixed formatting issues in {plural(files_fixed, 'file')}.")
+        else:
+            _emit_json_check(logger, len(files), total_issues, repo_root)
         if total_issues:
             logger.warn(f"Found {plural(len(total_issues), 'lint issue')} across {len(files)} files.")
             return 1
@@ -323,6 +360,7 @@ def build_harness() -> ToolHarness:
             f"{TOOL_NAME} check --exclude 'archive/*' --log-file lint.log",
             f"{TOOL_NAME} fix docs",
             f"{TOOL_NAME} fix --dry-run docs",
+            f"{TOOL_NAME} fix --format json docs",
             f"{TOOL_NAME} check --plugin rules/no_todo.py docs",
             f"{TOOL_NAME} rules --format json",
             f"{TOOL_NAME} config set disable MD018",
@@ -357,6 +395,7 @@ def build_harness() -> ToolHarness:
         "whitespace, blank lines after subheadings and before lists, and table alignment,\n"
         "then lints the result like 'check'.\n"
         "With --dry-run, lists every file and issue it would fix, writes nothing, and exits 0.\n"
+        "With --format json, prints one JSON document with the fixed files, their fixes, and the remaining issues.\n"
         "Exits 1 if violations remain that cannot be fixed automatically."
     )
     harness.add_action(

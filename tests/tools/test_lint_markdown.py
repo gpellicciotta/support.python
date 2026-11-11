@@ -85,12 +85,11 @@ class TestCLIAndMain(unittest.TestCase):
                 self.assertIn(f"Usage:\n  lint-markdown {action}", out)
                 other_action = "fix" if action == "check" else "check"
                 self.assertNotIn(f"Detailed Action Description: {other_action}", out)
+                self.assertIn("--format", out)
                 if action == "check":
-                    self.assertIn("--format", out)
                     self.assertNotIn("--dry-run", out)
                 else:
                     self.assertIn("--dry-run", out)
-                    self.assertNotIn("--format", out)
 
     def test_help_subcommand_with_action_argument(self) -> None:
         code, out, err = run_main(["help", "check"])
@@ -220,6 +219,83 @@ class TestCLIAndMain(unittest.TestCase):
             self.assertEqual((code, out), (1, ""))
             self.assertIn(f"{ERROR_INDICATOR} Execution error during check: boom", err)
             self.assertRegex(err, r"\*\*\[ERROR\]\*\* Finished lint-markdown check in \d+\.\ds with status: failed")
+
+    def test_fix_format_json_lists_fixed_files_and_remaining_issues(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dirty = Path(tmp_dir) / "dirty.md"
+            dirty.write_bytes(b"# Title\n\n* Asterisk bullet   \n\n### Skipped H3\n")
+            clean = Path(tmp_dir) / "clean.md"
+            clean.write_bytes(b"# Clean\n\n- Item\n")
+            code, out, err = run_main(["fix", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual(code, 1, err)
+            self.assertEqual(dirty.read_bytes(), b"# Title\n\n- Asterisk bullet  \n\n### Skipped H3\n")
+            payload = json.loads(out)
+            self.assertEqual(set(payload), {"dry_run", "files_checked", "fixed", "issues"})
+            self.assertEqual((payload["dry_run"], payload["files_checked"]), (False, 2))
+            self.assertEqual(len(payload["fixed"]), 1)
+            entry = payload["fixed"][0]
+            self.assertEqual(set(entry), {"path", "fixes"})
+            self.assertTrue(entry["path"].endswith("dirty.md"))
+            expected_keys = {"path", "line", "column", "rule_id", "rule_name", "message", "fixable"}
+            self.assertEqual({f["rule_id"] for f in entry["fixes"]}, {"MD005", "MD011"})
+            for fix_issue in entry["fixes"]:
+                self.assertEqual(set(fix_issue), expected_keys)
+            self.assertEqual([i["rule_id"] for i in payload["issues"]], ["MD001"])
+            self.assertEqual(set(payload["issues"][0]), expected_keys)
+            self.assertIn("Auto-fixed formatting issues in 1 file.", err)
+            self.assertIn("Found 1 lint issue", err)
+
+    def test_fix_format_json_clean_directory_exits_zero_with_empty_lists(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            (Path(tmp_dir) / "clean.md").write_bytes(b"# Clean\n\n- Item\n")
+            code, out, err = run_main(["fix", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual(code, 0, err)
+            self.assertEqual(json.loads(out), {"dry_run": False, "files_checked": 1, "fixed": [], "issues": []})
+
+    def test_fix_format_json_without_markdown_files_emits_empty_document(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            code, out, err = run_main(["fix", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual(code, 0, err)
+            self.assertEqual(json.loads(out), {"dry_run": False, "files_checked": 0, "fixed": [], "issues": []})
+
+    def test_fix_dry_run_format_json_lists_planned_fixes_and_writes_nothing(self) -> None:
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            dirty = Path(tmp_dir) / "dirty.md"
+            original = b"# Title\n\n* Asterisk bullet   \n\n### Skipped H3\n"
+            dirty.write_bytes(original)
+            code, out, err = run_main(["fix", "--dry-run", "--format", "json", "--offline", tmp_dir])
+            self.assertEqual(code, 0, err)
+            self.assertEqual(dirty.read_bytes(), original)
+            payload = json.loads(out)
+            self.assertEqual((payload["dry_run"], payload["files_checked"]), (True, 1))
+            self.assertEqual({f["rule_id"] for f in payload["fixed"][0]["fixes"]}, {"MD005", "MD011"})
+            self.assertEqual([i["rule_id"] for i in payload["issues"]], ["MD001"])
+            self.assertIn("Dry run: would auto-fix", err)
+
+    def test_fix_format_json_failures_keep_stdout_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            missing = Path(tmp_dir) / "missing.md"
+            code, out, err = run_main(["fix", "--format", "json", str(missing)])
+            self.assertEqual((code, out), (2, ""))
+            self.assertIn("Path does not exist", err)
+
+            doc = Path(tmp_dir) / "doc.md"
+            doc.write_bytes(b"# Title\n")
+            with patch.object(MarkdownLinter, "lint_content", side_effect=RuntimeError("boom")):
+                code, out, err = run_main(["fix", "--format", "json", "--offline", str(doc)])
+            self.assertEqual((code, out), (1, ""))
+            self.assertIn("Execution error during fix: boom", err)
+
+            code, out, err = run_main(["fix", "--format", "yaml", str(doc)])
+            self.assertEqual((code, out), (2, ""))
 
     def test_cli_config_discovery_new_name_legacy_warning_and_both_present(self) -> None:
         import json

@@ -8,7 +8,7 @@ Automated Markdown style, structure, and link validation implemented in [lint.py
 Run Markdown linting through the `lint-markdown` console script in [lint_markdown.py](../../src/support_python/tools/lint_markdown.py):
 ```bash
 lint-markdown check [PATH...] [--format text|json] [--rules IDS] [--profile NAME] [--config PATH] [--plugin ENTRY]... [--offline] [--exclude GLOB]
-lint-markdown fix [PATH...] [--dry-run] [--rules IDS] [--profile NAME] [--config PATH] [--plugin ENTRY]... [--offline] [--exclude GLOB]
+lint-markdown fix [PATH...] [--format text|json] [--dry-run] [--rules IDS] [--profile NAME] [--config PATH] [--plugin ENTRY]... [--offline] [--exclude GLOB]
 lint-markdown rules [--format text|json] [--profile NAME] [--config PATH] [--plugin ENTRY]...
 lint-markdown config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|--system] [--format text|json]
 lint-markdown help [--verbose]
@@ -17,7 +17,7 @@ lint-markdown version
 
 Supported actions, profile, and rule options:
 - `check` lints Markdown files and exits `1` if violations are found; `--format text|json` selects text output or a single JSON object (`{"files_checked": N, "issues": [{"path", "line", "column", "rule_id", "rule_name", "message", "fixable"}]}`) on `stdout`.
-- `fix` rewrites files in-place (`MD005`, `MD010`, `MD011`, `MD012`, `MD015`, `MD016`, `MD017`) and then lints; `MD011` allows up to two trailing spaces (a hard line break) and flags longer runs and any trailing tab; `fix` trims longer runs to two spaces and removes trailing tabs; `--dry-run` lists planned fixes without writing and exits `0`.
+- `fix` rewrites files in-place (`MD005`, `MD010`, `MD011`, `MD012`, `MD015`, `MD016`, `MD017`) and then lints; `MD011` allows up to two trailing spaces (a hard line break) and flags longer runs and any trailing tab; `fix` trims longer runs to two spaces and removes trailing tabs; `--dry-run` lists planned fixes without writing and exits `0`; `--format text|json` selects text output or the JSON document in [JSON Output of `fix`](#json-output-of-fix).
 - `rules` lists every rule with `id`, `name`, `scope`, `fixable`, `enabled` (under the active profile), and `source` (`builtin` or the plugin entry); `--format json` prints `{"rules": [...]}`.
 - In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--profile PROFILE` selects a built-in profile (`default` or `dev-guidelines`).
@@ -95,6 +95,34 @@ The same keys work in the project, user, and system files.
 
 The `{ "MD0xx": bool }` map form of `rules` is a library-only feature of `load_profile`; the tool treats it as an invalid value.
 Relative plugin paths resolve against the folder of the file that lists them, or the current directory for an environment variable.
+
+---
+
+## JSON Output of `fix`
+`fix --format json` prints one JSON object on `stdout`:
+```json
+{
+  "dry_run": false,
+  "files_checked": 2,
+  "fixed": [
+    {
+      "path": "docs/dirty.md",
+      "fixes": [
+        {"path": "docs/dirty.md", "line": 3, "column": 1, "rule_id": "MD005", "rule_name": "dash-bullets", "message": "...", "fixable": true}
+      ]
+    }
+  ],
+  "issues": [
+    {"path": "docs/dirty.md", "line": 5, "column": 1, "rule_id": "MD001", "rule_name": "heading-increment", "message": "...", "fixable": false}
+  ]
+}
+```
+
+- `fixed` lists each rewritten file, or each file `--dry-run` would rewrite, with the issues the fix resolves.
+- `issues` lists every issue that remains after fixing, in the shape of `check --format json`.
+- `dry_run` is `true` when `--dry-run` is set; nothing is written and `issues` shows what would remain.
+- Exit codes match `text` mode: `1` when issues remain, `0` after `--dry-run`, and `2` for invalid arguments or missing paths with nothing on `stdout`.
+- Log messages go to `stderr`.
 
 ---
 
