@@ -3,7 +3,7 @@ task: T0074
 round: 1
 verdict: rejected
 reviewer: "@claude-2"
-reviewed_at: 2026-11-11T00:54:00Z
+reviewed_at: 2026-11-11T00:54:34Z
 reviewed_commit: "86a5811"
 base_commit: "110e892"
 branch: task/T0074-add-format-text-json-to-processes-kill-reporting
