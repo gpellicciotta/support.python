@@ -1,11 +1,12 @@
 ---
 id: T0079
-owner: ~
+owner: "@claude"
+session: claude-20261111-8a0e75
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0079-show-every-action-s-options-in-toolharness-help
+worktree: .plan/work/T0079-show-every-action-s-options-in-toolharness-help
+status: active
+started_at: "2026-11-11T00:39:49Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,13 +22,13 @@ Apply the change to every tool built on `ToolHarness`, including `DevopsCli`.
 List positional arguments with their help text too; template.python's T0015 had to describe them in `detail=`.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the CLI guidelines and the help rendering in cli.py.
-- [ ] **[Implement]** Write failing tests for action options and metavars in `help --verbose` and per-action help.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Render action options from each action parser, with metavars, in `ToolHarness.format_help`.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Verify]**    Run `help --verbose` for all five tools and `devops.py`, recording the output.
-- [ ] **[Doc]**       Update cli-harness-and-logging.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the CLI guidelines and the help rendering in cli.py.
+- [x] **[Implement]** Write failing tests for action options and metavars in `help --verbose` and per-action help.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Render action options from each action parser, with metavars, in `ToolHarness.format_help`.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Verify]**    Run `help --verbose` for all five tools and `devops.py`, recording the output.
+- [x] **[Doc]**       Update cli-harness-and-logging.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
