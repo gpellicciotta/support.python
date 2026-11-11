@@ -13,9 +13,11 @@ preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 391.4, input: 116, output: 28898, cache_read: 3663912, cache_write: 132530}
-work_duration: 186.3
-review_status: pending
+  review: {turns: 2, duration_s: 74.6, input: 28, output: 5310, cache_read: 528966, cache_write: 60040}
+work_duration: 277.0
+review_status: rejected
 review_round: 1
+reviewed_by: "@claude-2"
 ---
 # T0076: Add --format text|json to lint-markdown fix, reporting fixed files and remaining issues
 
@@ -63,4 +65,11 @@ Reuse the issue objects of `check --format json`.
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 rejected by @claude-2: The implementation is correct and meets the goals.
+  - Findings: [review-findings-1.md](T0076-add-format-text-json-to-lint-markdown-fix/review-findings-1.md).
+
+- [2026-11-11] **[Implement]**
+  Addressed review round 1: snake_case JSON keys matching check, removed duplicate separator.
 

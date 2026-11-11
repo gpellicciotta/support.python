@@ -3,7 +3,7 @@ task: T0076
 round: 1
 verdict: rejected
 reviewer: "@claude-2"
-reviewed_at: 2026-11-11T01:35:28Z
+reviewed_at: 2026-11-11T01:36:10Z
 reviewed_commit: "5267d23"
 base_commit: "607f998"
 branch: task/T0076-add-format-text-json-to-lint-markdown-fix
