@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 675.2, input: 144, output: 80876, cache_read: 7487454, cache_write: 247710}
+  worker: {turns: 4, duration_s: 724.0, input: 168, output: 82778, cache_read: 8935516, cache_write: 259304}
 work_duration: 350.2
+review_status: pending
+review_round: 1
 ---
 # T0070: Move agent-files settings onto the shared resolver, adding user and system files, environment variables, and the config group
 
@@ -58,4 +60,7 @@ Add the `config` group through `add_config_actions`, targeting the project file 
 
 - [2026-11-11] **[Doc]**
   Documented every setting in agent-files.md and added CHANGELOG.md and migration entries.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
