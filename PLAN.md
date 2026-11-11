@@ -30,8 +30,8 @@ An overview of all tasks and their planning.
 - [x] T0076 Add --format text|json to lint-markdown fix, reporting fixed files and remaining issues.
 - [x] T0078 Add --format text|json to git-repository-backup backup and restore, reporting per-repository results.
 - [x] T0081 Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
-- [ ] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
-- [ ] T0103 [protocol: adhoc] [needs: T0080] Release all changes with devops release after running its dry run, once every other task is done.
+- [x] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
+- [ ] T0103 [protocol: adhoc] Release all changes with devops release after running its dry run, once every other task is done.
 
 ---
 
