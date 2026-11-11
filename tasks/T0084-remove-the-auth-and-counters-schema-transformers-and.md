@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 787.8, input: 176, output: 51746, cache_read: 7794720, cache_write: 210788}
+work_duration: 406.3
 ---
 # T0084: Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map
 
@@ -34,3 +37,30 @@ The auth and counters repositories define their rules locally when they upgrade,
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 2 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the SQL builder, services snapshot path, and migration table format.
+
+- [2026-11-11] **[Implement]**
+  Captured golden outputs of auth and counters sample dumps into tests/fixtures/sql.
+
+- [2026-11-11] **[Implement]**
+  Wrote failing tests for required transformers, removed names, and snapshot refusal.
+
+- [2026-11-11] **[Verify]**
+  Recorded 25 expected red-phase failures in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Removed schema transformers and app parameters; added snapshot_transformers to LocalMySqlManager.
+
+- [2026-11-11] **[Verify]**
+  devops check passed with 1106 fast and 159 slow tests; evidence recorded.
+
+- [2026-11-11] **[Doc]**
+  Updated tutorial, index, requirements, migration-v2.md, and CHANGELOG.md.
+
