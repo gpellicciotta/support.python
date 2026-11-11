@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 651.0, input: 125762, output: 17266, cache_read: 3435520, cache_write: 0}
+review_status: pending
+review_round: 1
 ---
 # T0108: Read the version from the CHANGELOG.md top heading when no manifest exists, for the version, versions, and release actions
 
@@ -35,4 +39,7 @@ Read the version from the CHANGELOG.md top heading when no manifest exists, for 
 
 - [2026-11-12] **[Doc]**
   Updated the DevOps tutorial and changelog. Committed implementation as b400b05; working tree clean. Review remains pending for the orchestrator.
+
+- [2026-11-12] **[Review]**
+  Round 1 requested (mode: agent).
 
