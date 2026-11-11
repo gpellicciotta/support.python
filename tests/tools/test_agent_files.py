@@ -1670,6 +1670,111 @@ class SupportPythonAgentFilesCliTests(unittest.TestCase):
                 self.assertEqual(err_entry["status"], "unavailable")
                 self.assertTrue(any("invalid target" in c for c in err_entry["changes"]))
 
+    def _json_sync_fixture(self, root: Path) -> tuple[Path, Path, "sync_mod.Tool"]:
+        digest_path = root / "agent-digest.md"
+        digest_path.write_text("JSON sync digest.", encoding="utf-8")
+        skill_dir = root / "skills" / "sample-skill"
+        skill_dir.mkdir(parents=True)
+        (skill_dir / "SKILL.md").write_text("---\nname: sample-skill\n---\nSkill body\n", encoding="utf-8")
+        fake_target, fake_skills = root / "FAKE_AGENTS.md", root / "fake_skills"
+        fake_tool = sync_mod.Tool(
+            "fake-tool",
+            "nonexistent-fake-cmd-xyz",
+            fake_target,
+            lambda p, t, to: [],
+            skills_dir=fake_skills,
+            native_skill_discovery=True,
+        )
+        return digest_path, fake_target, fake_tool
+
+    def test_sync_json_output_reports_applied_and_up_to_date(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            digest_path, fake_target, fake_tool = self._json_sync_fixture(root)
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+            ):
+                code, out, err = _run_main(["sync", "--format", "json"])
+                self.assertEqual(code, 0, err)
+                self.assertTrue(fake_target.is_file())
+                entry = json.loads(out)[0]
+                self.assertEqual((entry["tool"], entry["status"]), ("fake-tool", "synced"))
+                self.assertIn(f"instructions file updated: {fake_target}", entry["changes"])
+                self.assertTrue(any(c.startswith("skill 'sample-skill' updated:") for c in entry["changes"]))
+                self.assertIn("guarded dev-guidelines block synced", err)
+
+                code, out, err = _run_main(["sync", "--format", "json"])
+                self.assertEqual(code, 0, err)
+                self.assertEqual(json.loads(out), [{"tool": "fake-tool", "status": "up-to-date", "changes": []}])
+
+    def test_sync_json_dry_run_reports_planned_changes_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            digest_path, fake_target, fake_tool = self._json_sync_fixture(root)
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+            ):
+                code, out, err = _run_main(["sync", "--dry-run", "--format", "json"])
+                self.assertEqual(code, 1, err)
+                self.assertFalse(fake_target.exists())
+                entry = json.loads(out)[0]
+                self.assertEqual((entry["tool"], entry["status"]), ("fake-tool", "changes-pending"))
+                self.assertIn(f"instructions file out of date: {fake_target}", entry["changes"])
+
+    def test_sync_json_reports_pruned_skills_and_failures(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            digest_path, fake_target, fake_tool = self._json_sync_fixture(root)
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+            ):
+                self.assertEqual(_run_main(["sync"])[0], 0)
+                (fake_tool.skills_dir / "sample-skill" / "extra.md").write_text("stale", encoding="utf-8")
+                code, out, _ = _run_main(["sync", "--format", "json"])
+                self.assertEqual(code, 0)
+                entry = json.loads(out)[0]
+                self.assertEqual(entry["status"], "synced")
+                self.assertTrue(any("stale file in target: extra.md" in c for c in entry["changes"]))
+
+                # Invalid guarded-block markers report status: unavailable and exit 1.
+                fake_target.write_text(f"{sync_mod.MARKER_BEGIN}\nbroken markers without end\n", encoding="utf-8")
+                code, out, _ = _run_main(["sync", "--format", "json"])
+                self.assertEqual(code, 1)
+                entry = json.loads(out)[0]
+                self.assertEqual(entry["status"], "unavailable")
+                self.assertTrue(any("invalid target" in c for c in entry["changes"]))
+
+                # A failing skill copy reports status: failed and exit 1.
+                fake_target.write_text("", encoding="utf-8")
+                with mock.patch.object(sync_mod.shutil, "copytree", side_effect=OSError("disk full")):
+                    (fake_tool.skills_dir / "sample-skill" / "SKILL.md").write_text("changed", encoding="utf-8")
+                    code, out, err = _run_main(["sync", "--format", "json"])
+                self.assertEqual(code, 1)
+                entry = json.loads(out)[0]
+                self.assertEqual(entry["status"], "failed")
+                self.assertTrue(any("failed to sync skill 'sample-skill': disk full" in c for c in entry["changes"]))
+                self.assertIn("FAILED to sync skill", err)
+
+    def test_sync_text_output_has_no_json_document(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            root = Path(tmp_dir).resolve()
+            digest_path, _, fake_tool = self._json_sync_fixture(root)
+            with (
+                mock.patch.object(sync_mod, "DIGEST_PATH", digest_path),
+                mock.patch.object(sync_mod, "SKILLS_DIR", root / "skills"),
+                mock.patch.object(sync_mod, "TOOLS", [fake_tool]),
+            ):
+                code, out, _ = _run_main(["sync"])
+            self.assertEqual(code, 0)
+            self.assertIn("guarded dev-guidelines block synced", out)
+            self.assertNotIn('"status"', out)
+
 
 class AgentFilesConfigTests(unittest.TestCase):
     def test_load_config_defaults_when_no_file_present(self) -> None:

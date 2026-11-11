@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.32-pre
+## v2.0.33-pre
+- CLI: Added `--format text|json` to `agent-files sync`, reporting each tool's planned or applied instruction-file and skill changes as `synced`, `changes-pending`, `failed`, `unavailable`, or `up-to-date` ([agent_files.py](src/support_python/tools/agent_files.py), [agent-files.md](docs/tools/agent-files.md)).
 - CLI: **[breaking]** Moved `agent-files` settings onto the shared resolver, adding `AGENT_FILES_*` variables, user and system config files, and the `config` action; `tools` merge across sources by name, and unknown keys, malformed files, and invalid values now warn instead of exiting `2` ([agent_files.py](src/support_python/tools/agent_files.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py), [agent-files.md](docs/tools/agent-files.md), [migration-v2.md](docs/migration-v2.md)).
 - Library: Added `Setting.normalize` for converting raw values before parsing, and `AGENT_FILES_SETTINGS`, `build_schema`, and an `environ` parameter to `agent_files_config` ([config.py](src/support_python/config.py), [agent_files_config.py](src/support_python/tools/agent_files_config.py), [configuration.md](docs/tutorials/configuration.md)).
 - CLI: **[breaking]** Moved `lint-markdown` settings onto the shared resolver, adding `LINT_MARKDOWN_*` variables, user and system config files, and the `config` action; list settings now replace across sources, malformed files and invalid values warn instead of exiting `2`, and the `rules` map form is library-only ([lint_markdown.py](src/support_python/tools/lint_markdown.py), [profiles.py](src/support_python/markdown/profiles.py), [lint-markdown.md](docs/tools/lint-markdown.md), [migration-v2.md](docs/migration-v2.md)).

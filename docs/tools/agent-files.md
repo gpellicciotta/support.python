@@ -10,7 +10,7 @@ Implemented in [agent_files.py](../../src/support_python/tools/agent_files.py) a
 Run actions through the `agent-files` console script in [agent_files.py](../../src/support_python/tools/agent_files.py):
 ```bash
 agent-files list [--format text|json] [--config PATH]
-agent-files sync [TOOL ...] [--config PATH] [--dry-run] [--no-prune]
+agent-files sync [TOOL ...] [--format text|json] [--config PATH] [--dry-run] [--no-prune]
 agent-files check [TOOL ...] [--format text|json] [--config PATH]
 agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
 agent-files config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|--system] [--format text|json]
@@ -18,7 +18,7 @@ agent-files config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|
 
 Supported configuration flags override environment variables, files, and built-in defaults:
 - `--config PATH` loads settings from `PATH` only, instead of the discovered files.
-- `--format text|json` selects text or JSON output on `list` and `check` (default: `text`; `check` JSON reports `up-to-date`, `changes-pending`, or `unavailable` when a target file cannot be read or has invalid guarded-block markers).
+- `--format text|json` selects text or JSON output on `list`, `sync`, and `check` (default: `text`); see [JSON Output](#json-output-in-sync-and-check).
 - In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--repo-root PATH` overrides the source repository root directory.
 - `--digest PATH` overrides the digest file to install (default: `{{repo-root}}/agent-digest.md`).
@@ -118,6 +118,30 @@ Any other `marker` gets `<!-- BEGIN {{marker}} -->` and `<!-- END {{marker}} -->
 Without an explicit `marker-begin`, `sync` also recognizes any whole line `<!-- BEGIN {{marker}} ({{note}}) -->`.
 It then rewrites that line to the current text, so blocks written with an earlier wording keep syncing.
 An explicit `marker-begin` is matched exactly.
+
+---
+
+## JSON Output in `sync` and `check`
+`sync --format json` and `check --format json` print one JSON array on `stdout`, one entry per selected tool, for exit codes `0` and `1`:
+```json
+[
+  {
+    "tool": "claude-code",
+    "status": "synced",
+    "changes": [
+      "instructions file updated: ~/.claude/CLAUDE.md",
+      "skill 'python-guidelines' updated: missing file in target: SKILL.md"
+    ]
+  }
+]
+```
+
+- `status` is `up-to-date`, `synced`, `changes-pending`, `failed`, or `unavailable`.
+- `synced` (`sync`) lists the applied changes; `changes-pending` (`check` and `sync --dry-run`) lists the planned ones.
+- `failed` means a write or deletion failed; the failure is the last entry of `changes`.
+- `unavailable` means a target file cannot be read or has invalid guarded-block markers.
+- `sync --dry-run` writes nothing and reports exactly as `check` does.
+- Log messages go to `stderr`; a missing digest or invalid arguments print nothing on `stdout`.
 
 ---
 

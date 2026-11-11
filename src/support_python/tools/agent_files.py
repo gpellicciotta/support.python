@@ -421,6 +421,8 @@ def sync_tool(
         logger.info(f"backed up existing file to {backup_path}", origin=tool.name)
     write_text_in_place(tool.target_file, new_content)
     logger.info(f"{action}: guarded dev-guidelines block synced", origin=tool.name)
+    if changes is not None:
+        changes.append(f"instructions file updated: {tool.target_file}")
     return True
 
 
@@ -632,8 +634,12 @@ def prune_skill_dirs(
                     raise OSError(f"{stale_dir} is not a direct child directory of {skills_dir}")
                 shutil.rmtree(stale_dir)
                 logger.info(f"{action}: pruned stale skill '{skill_name}'{removed_from}", origin=tool_name)
+                if changes is not None:
+                    changes.append(f"stale skill '{skill_name}'{located_in} removed")
             except Exception as error:
                 logger.error(f"FAILED to prune stale skill '{skill_name}'{removed_from}: {error}", origin=tool_name)
+                if changes is not None:
+                    changes.append(f"failed to prune stale skill '{skill_name}'{removed_from}: {error}")
                 retained.append(skill_name)
                 ok = False
 
@@ -778,8 +784,12 @@ def sync_tool_skills(
                 shutil.copytree(skill_path, target_dir, copy_function=copy_file_in_place, dirs_exist_ok=True)
                 remove_stale_skill_files(target_dir, stale_files)
                 logger.info(f"{action}: synced skill '{skill_name}'", origin=tool.name)
+                if changes is not None:
+                    changes.extend(f"skill '{skill_name}' updated: {d}" for d in diffs)
             except Exception as error:
                 logger.error(f"FAILED to sync skill '{skill_name}': {error}", origin=tool.name)
+                if changes is not None:
+                    changes.append(f"failed to sync skill '{skill_name}': {error}")
                 all_ok = False
 
     # Prune skills this script installed earlier that no longer exist in the source directory.
@@ -885,7 +895,7 @@ def configure_list_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def configure_check_parser(parser: argparse.ArgumentParser) -> None:
-    """Register tool names and output format flags for the check action."""
+    """Register tool names and output format flags for the check and sync actions."""
     configure_tool_names(parser)
     ToolHarness.add_format_option(parser)
 
@@ -902,7 +912,7 @@ def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
 def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
     """Run the sync or check action across the selected tools."""
     selected = select_tools(args.tool_names)
-    is_json = action == "check" and getattr(args, "format", "text") == "json"
+    is_json = getattr(args, "format", "text") == "json"
     # A dry-run sync only reports, so it runs the read-only check path end to end.
     sync_action = "check" if args.dry_run else action
     digest_path = _resolve_digest_path()
@@ -931,7 +941,12 @@ def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int
         ok = ok and tool_ok and skills_ok
         if is_json:
             has_invalid = any(c.startswith("invalid target ") for c in tool_changes)
-            status = "up-to-date" if (tool_ok and skills_ok) else ("unavailable" if has_invalid else "changes-pending")
+            if has_invalid:
+                status = "unavailable"
+            elif sync_action == "sync":
+                status = ("synced" if tool_changes else "up-to-date") if (tool_ok and skills_ok) else "failed"
+            else:
+                status = "up-to-date" if (tool_ok and skills_ok) else "changes-pending"
             payload.append({"tool": tool.name, "status": status, "changes": tool_changes})
     if is_json:
         logger.emit_json(payload, indent=2)
@@ -1174,9 +1189,10 @@ def build_harness() -> SyncHarness:
         detail="Installs the existing digest into the guarded block in each tool's instructions file and\n"
         "installs skills, pruning stale owned skills unless --no-prune. Never regenerates the digest;\n"
         "run 'agent-digest generate' first. Exits 1 when the digest is missing.\n"
-        "With --dry-run, reports what would change without writing or deleting anything.",
+        "With --dry-run, reports what would change without writing or deleting anything.\n"
+        "With --format json, prints one JSON document with each tool's status and its planned or applied changes.",
         usage_suffix="[TOOL ...] [options]",
-        configure_parser=configure_tool_names,
+        configure_parser=configure_check_parser,
     )
     harness.add_action(
         "check",
