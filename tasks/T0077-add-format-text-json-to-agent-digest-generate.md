@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 2, duration_s: 336.2, input: 116, output: 27276, cache_read: 3371936, cache_write: 109496}
+  worker: {turns: 4, duration_s: 395.0, input: 140, output: 29822, cache_read: 4130534, cache_write: 122046}
 work_duration: 180.2
+review_status: pending
+review_round: 1
 ---
 # T0077: Add --format text|json to agent-digest generate, reporting written and unchanged digest and skill files
 
@@ -58,4 +60,7 @@ Reuse the status names of `check --format json` where they apply.
 
 - [2026-11-11] **[Doc]**
   Documented the generate JSON output and added a changelog entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
