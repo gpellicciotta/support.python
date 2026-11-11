@@ -3,7 +3,7 @@ task: T0069
 round: 1
 verdict: approved
 reviewer: "@claude-2"
-reviewed_at: 2026-11-11T01:16:46Z
+reviewed_at: 2026-11-11T01:17:33Z
 reviewed_commit: "0a636a9"
 base_commit: "c2db699"
 branch: task/T0069-move-lint-markdown-settings-onto-the-shared-resolver
