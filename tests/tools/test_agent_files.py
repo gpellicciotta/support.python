@@ -2348,3 +2348,201 @@ class AgentFilesSharedSettingsTests(unittest.TestCase):
         code, _, err = _run_main(["list", "--config", str(self.tmp / "missing.json")])
         self.assertEqual(code, 2)
         self.assertIn("missing.json", err)
+
+
+def _write_skill(root: Path, name: str, body: str = "body") -> None:
+    (root / name).mkdir(parents=True, exist_ok=True)
+    (root / name / "SKILL.md").write_text(f"---\nname: {name}\ndescription: {body}\n---\n{body}\n", encoding="utf-8")
+
+
+class InstallSkillsTests(unittest.TestCase):
+    """Library function: installs only missing or outdated skills that this source owns."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.source = self.root / "bundle"
+        _write_skill(self.source, "alpha")
+        _write_skill(self.source, "beta")
+        self.target = self.root / "home" / "skills"
+        self.options = {"manifest_name": ".plan-skills.json", "manifest_source": "plan"}
+
+    def manifest(self, directory: Path | None = None) -> dict:
+        return json.loads(((directory or self.target) / ".plan-skills.json").read_text(encoding="utf-8"))
+
+    def test_fresh_install_reports_and_writes_manifest(self) -> None:
+        result = sync_mod.install_skills(self.target, self.source, version="1.2.3", **self.options)
+        self.assertEqual(result.skills_dir, self.target)
+        self.assertEqual(result.installed, ["alpha", "beta"])
+        self.assertEqual((result.unchanged, result.skipped, result.pruned), ([], [], []))
+        self.assertEqual((self.target / "alpha" / "SKILL.md").read_bytes(), (self.source / "alpha" / "SKILL.md").read_bytes())
+        self.assertEqual(self.manifest(), {"schema_version": 1, "source": "plan", "version": "1.2.3", "skills": ["alpha", "beta"]})
+
+    def test_second_run_is_unchanged_and_outdated_skill_is_reinstalled(self) -> None:
+        sync_mod.install_skills(self.target, self.source, **self.options)
+        again = sync_mod.install_skills(self.target, self.source, **self.options)
+        self.assertEqual((again.installed, again.unchanged), ([], ["alpha", "beta"]))
+        _write_skill(self.source, "beta", "changed")
+        third = sync_mod.install_skills(self.target, self.source, **self.options)
+        self.assertEqual((third.installed, third.unchanged), (["beta"], ["alpha"]))
+        self.assertIn("changed", (self.target / "beta" / "SKILL.md").read_text(encoding="utf-8"))
+
+    def test_skips_directory_another_tool_owns(self) -> None:
+        _write_skill(self.target, "alpha", "foreign")
+        result = sync_mod.install_skills(self.target, self.source, **self.options)
+        self.assertEqual((result.skipped, result.installed), (["alpha"], ["beta"]))
+        self.assertIn("foreign", (self.target / "alpha" / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertEqual(self.manifest()["skills"], ["beta"])
+
+    def test_prunes_owned_skill_no_longer_bundled_and_keeps_extra_files(self) -> None:
+        sync_mod.install_skills(self.target, self.source, **self.options)
+        (self.target / "beta" / "notes.txt").write_text("mine", encoding="utf-8")
+        shutil.rmtree(self.source / "beta")
+        result = sync_mod.install_skills(self.target, self.source, **self.options)
+        self.assertEqual(result.pruned, ["beta"])
+        self.assertFalse((self.target / "beta" / "SKILL.md").exists())
+        self.assertTrue((self.target / "beta" / "notes.txt").is_file())
+        self.assertEqual(self.manifest()["skills"], ["alpha"])
+
+    def test_prune_removes_emptied_directory_and_ignores_foreign_manifest(self) -> None:
+        sync_mod.install_skills(self.target, self.source, **self.options)
+        shutil.rmtree(self.source / "beta")
+        sync_mod.install_skills(self.target, self.source, **self.options)
+        self.assertFalse((self.target / "beta").exists())
+        other = self.root / "other"
+        other.mkdir()
+        (other / ".plan-skills.json").write_text(json.dumps({"source": "someone", "skills": ["alpha"]}), encoding="utf-8")
+        _write_skill(other, "alpha", "theirs")
+        result = sync_mod.install_skills(other, self.source, **self.options)
+        self.assertEqual(result.skipped, ["alpha"])
+
+    def test_no_prune_keeps_stale_owned_skills_in_the_manifest(self) -> None:
+        sync_mod.install_skills(self.target, self.source, **self.options)
+        shutil.rmtree(self.source / "beta")
+        result = sync_mod.install_skills(self.target, self.source, prune=False, **self.options)
+        self.assertEqual(result.pruned, [])
+        self.assertTrue((self.target / "beta" / "SKILL.md").is_file())
+        self.assertEqual(self.manifest()["skills"], ["alpha", "beta"])
+
+    def test_dry_run_reports_and_writes_nothing(self) -> None:
+        result = sync_mod.install_skills(self.target, self.source, dry_run=True, **self.options)
+        self.assertEqual(result.installed, ["alpha", "beta"])
+        self.assertFalse(self.target.exists())
+
+    def test_retire_removes_owned_skills_and_manifest_only(self) -> None:
+        legacy = self.root / "legacy"
+        sync_mod.install_skills(legacy, self.source, **self.options)
+        _write_skill(legacy, "other-tool")
+        (legacy / "alpha" / "extra.txt").write_text("keep", encoding="utf-8")
+        planned = sync_mod.retire_skills(legacy, dry_run=True, **self.options)
+        self.assertEqual(planned.pruned, ["alpha", "beta"])
+        self.assertTrue((legacy / "beta" / "SKILL.md").is_file())
+        result = sync_mod.retire_skills(legacy, **self.options)
+        self.assertEqual(result.pruned, ["alpha", "beta"])
+        self.assertFalse((legacy / ".plan-skills.json").exists())
+        self.assertFalse((legacy / "beta").exists())
+        self.assertTrue((legacy / "alpha" / "extra.txt").is_file())
+        self.assertTrue((legacy / "other-tool" / "SKILL.md").is_file())
+
+    def test_retire_without_manifest_does_nothing(self) -> None:
+        legacy = self.root / "legacy"
+        _write_skill(legacy, "alpha")
+        result = sync_mod.retire_skills(legacy, **self.options)
+        self.assertEqual(result.pruned, [])
+        self.assertTrue((legacy / "alpha" / "SKILL.md").is_file())
+
+    def test_install_skills_only_covers_targets_then_legacy_dirs(self) -> None:
+        legacy = self.root / "legacy"
+        sync_mod.install_skills(legacy, self.source, **self.options)
+        results = sync_mod.install_skills_only(self.source, [self.target], legacy_dirs=[legacy], version="9", **self.options)
+        self.assertEqual([r.skills_dir for r in results], [self.target, legacy])
+        self.assertEqual(results[0].installed, ["alpha", "beta"])
+        self.assertEqual(results[1].pruned, ["alpha", "beta"])
+        self.assertFalse((legacy / ".plan-skills.json").exists())
+
+
+class SkillsOnlyCliTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.skills = self.root / "skills"
+        _write_skill(self.skills, "alpha")
+        self.target = self.root / "tool_skills"
+        self.legacy = self.root / "legacy_skills"
+        self.instructions = self.root / "FAKE_AGENTS.md"
+        self.tool = sync_mod.Tool(
+            "fake-tool",
+            "fake-cmd",
+            self.instructions,
+            lambda p, t, to: [],
+            skills_dir=self.target,
+            legacy_skills_dirs=(self.legacy,),
+        )
+
+    def run_cli(self, *argv: str) -> tuple[int, str, str]:
+        with (
+            mock.patch.object(sync_mod, "DIGEST_PATH", self.root / "missing-digest.md"),
+            mock.patch.object(sync_mod, "SKILLS_DIR", self.skills),
+            mock.patch.object(sync_mod, "TOOLS", [self.tool]),
+        ):
+            return _run_main([*argv, "--log-file", str(self.root / "run.log")])
+
+    def test_sync_skills_only_needs_no_digest_and_leaves_instructions_alone(self) -> None:
+        self.instructions.write_text("personal\n", encoding="utf-8")
+        code, _, _ = self.run_cli("sync", "--skills-only")
+        self.assertEqual(code, 0)
+        self.assertTrue((self.target / "alpha" / "SKILL.md").is_file())
+        self.assertEqual(self.instructions.read_text(encoding="utf-8"), "personal\n")
+
+    def test_sync_skills_only_never_creates_missing_instructions_file(self) -> None:
+        self.assertEqual(self.run_cli("sync", "--skills-only")[0], 0)
+        self.assertFalse(self.instructions.exists())
+
+    def test_check_skills_only_reports_pending_then_clean(self) -> None:
+        self.assertEqual(self.run_cli("check", "--skills-only")[0], 1)
+        self.assertFalse(self.target.exists())
+        self.assertEqual(self.run_cli("sync", "--skills-only")[0], 0)
+        self.assertEqual(self.run_cli("check", "--skills-only")[0], 0)
+
+    def test_dry_run_writes_nothing_and_exits_one_with_pending_changes(self) -> None:
+        code, out, _ = self.run_cli("sync", "--skills-only", "--dry-run")
+        self.assertEqual(code, 1)
+        self.assertIn("alpha", out)
+        self.assertFalse(self.target.exists())
+
+    def test_json_output_lists_tool_status_and_changes(self) -> None:
+        code, out, _ = self.run_cli("sync", "--skills-only", "--format", "json")
+        self.assertEqual(code, 0)
+        payload = json.loads(out[out.index("[") :])
+        self.assertEqual(payload[0]["tool"], "fake-tool")
+        self.assertEqual(payload[0]["status"], "synced")
+        self.assertTrue(any("alpha" in change for change in payload[0]["changes"]))
+
+    def test_manifest_source_option_names_the_ownership_manifest(self) -> None:
+        self.assertEqual(self.run_cli("sync", "--skills-only", "--manifest-source", "plan")[0], 0)
+        manifest = json.loads((self.target / ".plan-skills.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifest["source"], "plan")
+
+    def test_integration_install_twice_remove_skill_then_retire_legacy(self) -> None:
+        _write_skill(self.skills, "beta")
+        _write_skill(self.legacy, "alpha", "old")
+        (self.legacy / ".dev-guidelines-skills.json").write_text(
+            json.dumps({"schema_version": 1, "source": "dev-guidelines", "skills": ["alpha"]}), encoding="utf-8"
+        )
+        _write_skill(self.legacy, "other-tool")
+        self.assertEqual(self.run_cli("sync", "--skills-only")[0], 0)
+        self.assertFalse((self.legacy / "alpha").exists())
+        self.assertFalse((self.legacy / ".dev-guidelines-skills.json").exists())
+        self.assertTrue((self.legacy / "other-tool" / "SKILL.md").is_file())
+        self.assertEqual(self.run_cli("sync", "--skills-only")[0], 0)
+        self.assertEqual(self.run_cli("check", "--skills-only")[0], 0)
+        shutil.rmtree(self.skills / "beta")
+        self.assertEqual(self.run_cli("check", "--skills-only")[0], 1)
+        self.assertEqual(self.run_cli("sync", "--skills-only")[0], 0)
+        self.assertFalse((self.target / "beta").exists())
+        self.assertTrue((self.target / "alpha" / "SKILL.md").is_file())
+
+    def test_without_skills_only_a_missing_digest_still_fails(self) -> None:
+        self.assertEqual(self.run_cli("sync")[0], 1)

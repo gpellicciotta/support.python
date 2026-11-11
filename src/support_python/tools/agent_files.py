@@ -21,7 +21,7 @@ import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Sequence
@@ -198,6 +198,7 @@ TOOLS: list[Tool] = [
         ),
         skills_dir=Path.home() / ".gemini" / "config" / "skills",
         native_skill_discovery=True,
+        legacy_skills_dirs=(Path.home() / ".gemini" / "antigravity-cli" / "skills",),
     ),
     Tool(
         "codex-cli",
@@ -822,6 +823,229 @@ def sync_tool_skills(
     return all_ok
 
 
+@dataclass
+class SkillInstallResult:
+    """What installing skills into one skills directory did, or would do in a dry run.
+
+    Attributes:
+        skills_dir: Directory the skills were installed into, or retired from.
+        installed: Skills written because they were missing or outdated.
+        unchanged: Skills already identical to the source copy.
+        skipped: Skills left alone because another tool owns a directory with that name.
+        pruned: Owned skills no longer in the source, now removed; for a retired directory, every owned skill.
+    """
+
+    skills_dir: Path
+    installed: list[str] = field(default_factory=list)
+    unchanged: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
+    pruned: list[str] = field(default_factory=list)
+
+
+def _owned_skill_names(skills_dir: Path, manifest_name: str, manifest_source: str) -> list[str] | None:
+    """Return the skills the manifest in skills_dir lists, or None when it is missing, invalid, or another source's."""
+    try:
+        manifest = json.loads((skills_dir / manifest_name).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(manifest, dict) or manifest.get("source") != manifest_source:
+        return None
+    return [name for name in manifest.get("skills", []) if isinstance(name, str)]
+
+
+def _remove_skill_file(skills_dir: Path, name: str) -> None:
+    """Delete one skill's SKILL.md, and its directory once nothing else is left in it."""
+    skill_file = skills_dir / name / "SKILL.md"
+    skill_file.unlink(missing_ok=True)
+    if skill_file.parent.is_dir() and not any(skill_file.parent.iterdir()):
+        skill_file.parent.rmdir()
+
+
+def install_skills(
+    skills_dir: Path,
+    skills_source: Path,
+    version: str = "",
+    dry_run: bool = False,
+    prune: bool = True,
+    manifest_name: str | None = None,
+    manifest_source: str | None = None,
+) -> SkillInstallResult:
+    """Install the ``{name}/SKILL.md`` skills of skills_source into skills_dir, touching only skills this source owns.
+
+    Only missing or outdated skills are written. A skill directory the manifest does not list is skipped. Owned skills
+    missing from skills_source are pruned unless prune is False, and extra files in their directories stay.
+    This function neither logs nor exits the process.
+
+    Args:
+        skills_dir: Target skills directory, such as ``~/.claude/skills``.
+        skills_source: Directory of skill directories, each holding a ``SKILL.md``.
+        version: Version recorded in the ownership manifest.
+        dry_run: Report what would change without writing anything.
+        prune: Remove owned skills that skills_source no longer holds.
+        manifest_name: Ownership manifest file name; defaults to the configured name.
+        manifest_source: Ownership manifest source; defaults to the configured source.
+
+    Returns:
+        The per-skill outcome.
+    """
+    name_of_manifest = manifest_name or SKILLS_MANIFEST_NAME
+    source_of_manifest = manifest_source or SKILLS_MANIFEST_SOURCE
+    owned = _owned_skill_names(skills_dir, name_of_manifest, source_of_manifest) or []
+    result = SkillInstallResult(skills_dir)
+    skill_dirs = get_available_skills(skills_source)
+    for skill_dir in skill_dirs:
+        content = (skill_dir / "SKILL.md").read_bytes()
+        target = skills_dir / skill_dir.name / "SKILL.md"
+        if target.parent.exists() and skill_dir.name not in owned:
+            result.skipped.append(skill_dir.name)
+        elif target.is_file() and target.read_bytes() == content:
+            result.unchanged.append(skill_dir.name)
+        else:
+            result.installed.append(skill_dir.name)
+            if not dry_run:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(content)
+    source_names = {skill_dir.name for skill_dir in skill_dirs}
+    stale = [name for name in owned if name not in source_names]
+    kept = [] if prune else stale
+    if prune:
+        result.pruned.extend(stale)
+        if not dry_run:
+            for name in stale:
+                _remove_skill_file(skills_dir, name)
+    if not dry_run:
+        manifest = {
+            "schema_version": SKILLS_MANIFEST_SCHEMA_VERSION,
+            "source": source_of_manifest,
+            "version": version,
+            "skills": sorted({*result.installed, *result.unchanged, *kept}),
+        }
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        (skills_dir / name_of_manifest).write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return result
+
+
+def retire_skills(
+    skills_dir: Path,
+    dry_run: bool = False,
+    manifest_name: str | None = None,
+    manifest_source: str | None = None,
+) -> SkillInstallResult:
+    """Remove every skill the manifest lists from a skills directory that is no longer installed into, then the manifest.
+
+    Skills other tools installed, and extra files inside owned skill directories, stay in place.
+
+    Args:
+        skills_dir: Skills directory an earlier version installed into.
+        dry_run: Report what would be removed without deleting anything.
+        manifest_name: Ownership manifest file name; defaults to the configured name.
+        manifest_source: Ownership manifest source; defaults to the configured source.
+
+    Returns:
+        The removed skills under ``pruned``; empty when the directory has no manifest of this source.
+    """
+    name_of_manifest = manifest_name or SKILLS_MANIFEST_NAME
+    owned = _owned_skill_names(skills_dir, name_of_manifest, manifest_source or SKILLS_MANIFEST_SOURCE)
+    result = SkillInstallResult(skills_dir, pruned=list(owned or []))
+    if owned is None or dry_run:
+        return result
+    for name in owned:
+        _remove_skill_file(skills_dir, name)
+    (skills_dir / name_of_manifest).unlink()
+    return result
+
+
+def install_skills_only(
+    skills_source: Path,
+    targets: Sequence[Path],
+    legacy_dirs: Sequence[Path] = (),
+    version: str = "",
+    dry_run: bool = False,
+    prune: bool = True,
+    manifest_name: str | None = None,
+    manifest_source: str | None = None,
+) -> list[SkillInstallResult]:
+    """Install skills into each target directory and retire the owned skills of each legacy directory.
+
+    It never touches instruction files and needs no digest. Callers choose the targets, such as the skills directories
+    of the tools they found ready. Errors from the file system propagate to the caller.
+
+    Args:
+        skills_source: Directory of skill directories, each holding a ``SKILL.md``.
+        targets: Skills directories to install into.
+        legacy_dirs: Skills directories an earlier version installed into, to retire.
+        version: Version recorded in the ownership manifests.
+        dry_run: Report what would change without writing anything.
+        prune: Remove owned skills that skills_source no longer holds from the targets.
+        manifest_name: Ownership manifest file name; defaults to the configured name.
+        manifest_source: Ownership manifest source; defaults to the configured source.
+
+    Returns:
+        One result per target, then one per legacy directory.
+    """
+    options = {"manifest_name": manifest_name, "manifest_source": manifest_source}
+    results = [install_skills(target, skills_source, version, dry_run, prune, **options) for target in targets]
+    results.extend(retire_skills(legacy, dry_run, **options) for legacy in legacy_dirs)
+    return results
+
+
+def _skill_only_changes(result: SkillInstallResult, retired: bool) -> list[str]:
+    """Describe the pending or applied changes of one result, one line per skill."""
+    if retired:
+        return [f"skill '{name}' retired from {result.skills_dir}" for name in result.pruned]
+    return [
+        *(f"skill '{name}' installed" for name in result.installed),
+        *(f"skill '{name}' pruned" for name in result.pruned),
+    ]
+
+
+def action_skills_only(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
+    """Run sync or check on skills only: no digest, no instruction files; return the exit code."""
+    skills_source = _resolve_skills_dir()
+    if not skills_source.is_dir():
+        logger.error(f"skills directory not found at {skills_source}", origin=TOOL_NAME)
+        return 1
+    is_json = getattr(args, "format", "text") == "json"
+    dry_run = args.dry_run or action == "check"
+    payload: list[dict[str, object]] = []
+    ok = True
+    for tool in select_tools(args.tool_names):
+        if tool.skills_dir is None:
+            continue
+        changes: list[str] = []
+        try:
+            results = install_skills_only(
+                skills_source,
+                [tool.skills_dir],
+                legacy_dirs=tool.legacy_skills_dirs,
+                version=TOOL_VERSION,
+                dry_run=dry_run,
+                prune=not args.no_prune,
+            )
+        except OSError as error:
+            logger.error(f"FAILED to install skills into {tool.skills_dir}: {error}", origin=tool.name)
+            ok = False
+            if is_json:
+                payload.append({"tool": tool.name, "status": "failed", "changes": [f"failed to install skills: {error}"]})
+            continue
+        for index, result in enumerate(results):
+            changes.extend(_skill_only_changes(result, retired=index > 0))
+            for name in result.skipped:
+                logger.info(f"skip: skill '{name}' in {result.skills_dir} belongs to another tool", origin=tool.name)
+        for change in changes:
+            logger.info(f"{action}: {change}" + (" (pending)" if dry_run else ""), origin=tool.name)
+        if not changes:
+            logger.debug_msg(f"{action}: skills already up to date", origin=tool.name)
+        if dry_run and changes:
+            ok = False
+        if is_json:
+            status = ("changes-pending" if changes else "up-to-date") if dry_run else ("synced" if changes else "up-to-date")
+            payload.append({"tool": tool.name, "status": status, "changes": changes})
+    if is_json:
+        logger.emit_json(payload, indent=2)
+    return 0 if ok else 1
+
+
 def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bool:
     """Run the agent review for one tool; return True on success or when the tool is not installed."""
     resolved_command = resolve_command(tool)
@@ -923,6 +1147,8 @@ def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
 
 def action_sync(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
     """Run the sync or check action across the selected tools."""
+    if args.skills_only:
+        return action_skills_only(action, args, logger)
     selected = select_tools(args.tool_names)
     is_json = getattr(args, "format", "text") == "json"
     # A dry-run sync only reports, so it runs the read-only check path end to end.
@@ -1140,6 +1366,7 @@ def build_harness() -> SyncHarness:
             f"{TOOL_NAME} list",
             f"{TOOL_NAME} check claude-code",
             f"{TOOL_NAME} sync --dry-run",
+            f"{TOOL_NAME} sync --skills-only --skills-dir path/to/skills",
             f"{TOOL_NAME} review codex-cli --timeout 1200 --log-file logs/review.log",
         ],
         detailed_help="Configured tools:\n" + "\n".join(f"  {tool.name:<23}{tool.target_file}" for tool in TOOLS),
@@ -1175,6 +1402,11 @@ def build_harness() -> SyncHarness:
         help="report what sync would change without writing or deleting anything",
     )
     harness.add_global_argument(
+        "--skills-only",
+        action="store_true",
+        help="sync or check only the skills: skip the guarded block and the digest (sync and check)",
+    )
+    harness.add_global_argument(
         "--no-prune",
         action="store_true",
         help="keep stale skills and stale skill files on sync, reporting them only",
@@ -1201,6 +1433,8 @@ def build_harness() -> SyncHarness:
         detail="Installs the existing digest into the guarded block in each tool's instructions file and\n"
         "installs skills, pruning stale owned skills unless --no-prune. Never regenerates the digest;\n"
         "run 'agent-digest generate' first. Exits 1 when the digest is missing.\n"
+        "With --skills-only, installs only the SKILL.md of each skill: no digest, no instructions files,\n"
+        "and skills in directories that another tool owns are skipped.\n"
         "With --dry-run, reports what would change without writing or deleting anything.\n"
         "With --format json, prints one JSON document with each tool's status and its planned or applied changes.",
         usage_suffix="[TOOL ...] [options]",
@@ -1211,7 +1445,8 @@ def build_harness() -> SyncHarness:
         "show what sync would change, without writing anything (default: all tools)",
         handler=lambda args, logger: action_sync("check", args, logger),
         detail="Compares each tool's guarded block and installed skills against the existing digest and\n"
-        "skills directory. Exits 1 when any tool has pending changes or the digest is missing.",
+        "skills directory. Exits 1 when any tool has pending changes or the digest is missing.\n"
+        "With --skills-only, compares only the skills and needs no digest.",
         usage_suffix="[TOOL ...] [options]",
         configure_parser=configure_check_parser,
     )

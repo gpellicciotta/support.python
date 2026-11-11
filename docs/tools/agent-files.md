@@ -11,8 +11,8 @@ Specifications: [config file](../specs/config-agent-files.md) and [JSON output](
 Run actions through the `agent-files` console script in [agent_files.py](../../src/support_python/tools/agent_files.py):
 ```bash
 agent-files list [--format text|json] [--config PATH]
-agent-files sync [TOOL ...] [--format text|json] [--config PATH] [--dry-run] [--no-prune]
-agent-files check [TOOL ...] [--format text|json] [--config PATH]
+agent-files sync [TOOL ...] [--format text|json] [--config PATH] [--dry-run] [--no-prune] [--skills-only]
+agent-files check [TOOL ...] [--format text|json] [--config PATH] [--skills-only]
 agent-files review [TOOL ...] [--config PATH] [--timeout SECONDS]
 agent-files config [list|names|path|get|set|delete|edit] [NAME] [VALUE] [--user|--system] [--format text|json]
 ```
@@ -28,6 +28,7 @@ Supported configuration flags override environment variables, files, and built-i
 - `--marker-begin TEXT` overrides the opening HTML comment marker line.
 - `--marker-end TEXT` overrides the closing HTML comment marker line.
 - `--manifest-source NAME` sets the ownership `source` recorded in skills manifests.
+- `--skills-only` makes `sync` and `check` handle only the skills; see [Skills-Only Mode](#skills-only-mode).
 - `--legacy-skill NAME` replaces `legacy-skill-names` with the specified bootstrap skill name (repeatable).
 
 Default digest and skills paths match `agent-digest` and resolve under `repo-root`.
@@ -119,6 +120,43 @@ Any other `marker` gets `<!-- BEGIN {{marker}} -->` and `<!-- END {{marker}} -->
 Without an explicit `marker-begin`, `sync` also recognizes any whole line `<!-- BEGIN {{marker}} ({{note}}) -->`.
 It then rewrites that line to the current text, so blocks written with an earlier wording keep syncing.
 An explicit `marker-begin` is matched exactly.
+
+---
+
+## Skills-Only Mode
+`sync --skills-only` and `check --skills-only` install the skills in `--skills-dir` and skip the guarded block.
+They need no digest and never read or write an instructions file.
+```bash
+agent-files sync --skills-only --skills-dir path/to/skills --manifest-source plan
+```
+
+- A skill is a `{{name}}/SKILL.md` directory; only `SKILL.md` is installed.
+- Only missing or outdated skills are written.
+- A skill directory that the manifest of `--manifest-source` does not list belongs to another tool and is skipped.
+- Owned skills missing from the source are pruned unless `--no-prune`; extra files in their directories stay.
+- Each tool's legacy skills directories lose their owned skills and manifest; other tools' skills stay.
+- `--dry-run` and `check` write nothing and exit 1 when a change is pending.
+- A missing skills directory exits 1.
+- `--format json` prints the entries described in [JSON Output](#json-output-in-sync-and-check).
+
+Import the same installation as a library; it takes explicit paths, returns results, and neither logs nor exits:
+```python
+from support_python.tools.agent_files import install_skills_only
+
+results = install_skills_only(
+    skills_source,
+    [Path.home() / ".claude" / "skills"],
+    legacy_dirs=[Path.home() / ".gemini" / "antigravity-cli" / "skills"],
+    version="1.0.0",
+    manifest_name=".plan-skills.json",
+    manifest_source="plan",
+)
+for result in results:
+    print(result.skills_dir, result.installed, result.unchanged, result.skipped, result.pruned)
+```
+
+`install_skills` and `retire_skills` handle one directory each.
+The `antigravity` tool retires `~/.gemini/antigravity-cli/skills`, and `codex-cli` retires `~/.codex/skills`.
 
 ---
 

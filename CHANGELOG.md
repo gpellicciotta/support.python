@@ -14,7 +14,10 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.39-pre
+## v2.0.40-pre
+- CLI: Added `--skills-only` to `agent-files sync` and `check`, installing skills without a digest or instructions files ([agent_files.py](src/support_python/tools/agent_files.py)).
+- Library: Added `install_skills_only`, `install_skills`, `retire_skills`, and `SkillInstallResult` to `agent_files`, reporting installed, unchanged, skipped, and pruned skills per directory ([agent_files.py](src/support_python/tools/agent_files.py)).
+- CLI: `agent-files` now retires skills it installed in `~/.gemini/antigravity-cli/skills` ([agent_files.py](src/support_python/tools/agent_files.py)).
 
 ## v2.0.38 [released: 2026-11-11]
 - Library: Documented every public module, class, function, method, and `__init__` in `src/`, and enabled ruff `D100`-`D107` for `src/` so missing docstrings fail the lint ([pyproject.toml](pyproject.toml)).
