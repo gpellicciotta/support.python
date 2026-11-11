@@ -15,6 +15,7 @@ A summarized overview of all changes, per version of this project.
 ---
 
 ## v3.2.0-pre
+- DevEx: Added `--skip-github-release` and forwarded release skip flags to project-owned tasks, including Gradle properties.
 - DevEx: Enabled changelog-only versions for DevOps `version`, `versions`, and `release` when no supported manifest exists.
 - DevEx: Added `devops versions VERSION` to update Python, Gradle, and Node versions and active changelog headings, including dry runs.
 - Docs: Moved the breaking changes since v2.0.0 from [migration-v2.md](docs/migration-v2.md) into the new [migration-v3.md](docs/migration-v3.md).

@@ -329,11 +329,21 @@ class GradleHelpTests(GradleTestCase):
         self.assertNotIn("virtual environment", out)
         self.assertIn("a prerequisite is missing", out)
 
-    def test_skip_checks_with_a_release_task_warns_that_it_is_ignored(self) -> None:
+    def test_skip_checks_with_a_release_task_passes_the_project_property(self) -> None:
         code, out, err = run_cli(self.cli(release_task="doFullRelease"), "release", "--dry-run", "--skip-checks")
         self.assertEqual(code, 0)
-        self.assertIn("--skip-checks", out + err)
-        self.assertEqual(self.runner.tails(), [["doFullRelease", "--dry-run"]])
+        self.assertNotIn("has no effect", out + err)
+        self.assertEqual(self.runner.tails(), [["doFullRelease", "--dry-run", "-PskipChecks=true"]])
+
+    def test_skip_checks_reaches_a_real_release(self) -> None:
+        code, _, _ = run_cli(self.cli(release_task="doFullRelease"), "release", "--yes", "--skip-checks")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.runner.tails(), [["doFullRelease", "-PskipChecks=true"]])
+
+    def test_skip_github_reaches_project_owned_release(self) -> None:
+        code, _, _ = run_cli(self.cli(release_task="doFullRelease"), "release", "--yes", "--skip-github-release")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.runner.tails(), [["doFullRelease", "-PskipGithubRelease=true"]])
 
 
 class GradleWrapperIntegrationTests(unittest.TestCase):

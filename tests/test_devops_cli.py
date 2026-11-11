@@ -231,6 +231,11 @@ class VersionsActionTests(DevopsCliTestCase):
 
 
 class ReleaseActionTests(DevopsCliTestCase):
+    def test_release_can_skip_github(self) -> None:
+        code, pipeline = self.release("--skip-github-release")
+        self.assertEqual(code, 0)
+        self.assertTrue(pipeline.call_args.kwargs["skip_github_release"])
+
     def release(self, *flags: str) -> tuple[int, mock.MagicMock]:
         cli = self.cli()
         with mock.patch("support_python.devops.cli.ReleasePipeline") as pipeline:

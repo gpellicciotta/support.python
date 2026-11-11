@@ -116,11 +116,15 @@ class Project(ABC):
         """Return help summaries replacing the generic ones of :class:`~support_python.devops.cli.DevopsCli`, by action."""
         return {}
 
-    def release(self, *, dry_run: bool = False, assume_yes: bool = False) -> Optional[bool]:
+    def release(
+        self, *, dry_run: bool = False, assume_yes: bool = False, skip_checks: bool = False, skip_github_release: bool = False
+    ) -> Optional[bool]:
         """Run the project's own release instead of :class:`~support_python.devops.release.ReleasePipeline`.
 
         Returns:
             Whether the release succeeded, or ``None`` when the project has no own release (the default).
+
+        Overrides must honor requested ``skip_checks`` and ``skip_github_release`` options.
         """
         return None
 
@@ -309,7 +313,13 @@ class GradleProject(Project):
         return summaries
 
     def release(
-        self, *, dry_run: bool = False, assume_yes: bool = False, input_fn: Optional[Callable[[str], str]] = None
+        self,
+        *,
+        dry_run: bool = False,
+        assume_yes: bool = False,
+        input_fn: Optional[Callable[[str], str]] = None,
+        skip_checks: bool = False,
+        skip_github_release: bool = False,
     ) -> Optional[bool]:
         """Run ``release_task`` after the typed confirmation, or with Gradle's ``--dry-run`` and no confirmation.
 
@@ -318,8 +328,13 @@ class GradleProject(Project):
         """
         if self.release_task is None:
             return None
+        options = []
+        if skip_checks:
+            options.append("-PskipChecks=true")
+        if skip_github_release:
+            options.append("-PskipGithubRelease=true")
         if dry_run:
-            return self._gradle(self.release_task, "--dry-run")
+            return self._gradle(self.release_task, "--dry-run", *options)
         try:
             tag = f"v{release_version(read_version(self.root))}"
         except (FileNotFoundError, ValueError) as exc:
@@ -330,7 +345,7 @@ class GradleProject(Project):
             if not confirm_typed(summary, f"release {tag}", input_fn=input_fn or input):
                 self.logger.error("Release not confirmed; nothing was changed.")
                 return False
-        return self._gradle(self.release_task, *self.release_args)
+        return self._gradle(self.release_task, *self.release_args, *options)
 
     def _gradle(self, *args: str) -> bool:
         if not self.wrapper.is_file():

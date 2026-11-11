@@ -94,6 +94,8 @@ repo = parse_github_repo("git@github.com:owner/name.git")  # "owner/name"
 `ReleasePipeline` runs the whole release from the repository root and returns 0 or 1:
 - It checks every precondition before any change: a clean tree, the main branch, an authenticated `gh`, and fresh tags.
 - It also requires no existing tag or GitHub release, and non-empty release notes.
+- Set `skip_github_release=True` to omit all `gh` checks, publication, and the final GitHub release URL.
+- Git safeguards, builds, tags, pushes, and development reopening still run with this option.
 - It then runs the quality check and asks the user to type `release v{{version}}` unless `assume_yes` is set.
 - Next it freezes the `-pre` version, tags, pushes, and publishes a GitHub release with assets.
 - An optional `build` hook runs after the freeze commit and before tagging; `assets` is then resolved after it.
@@ -180,7 +182,11 @@ Test selection items starting with `-` pass to Gradle unchanged.
 It reads the version from `gradle.properties` and releases `build/libs/*.jar` and `*/build/libs/*.jar`.
 With `release_task`, `release` asks for the typed confirmation, then runs that task with `release_args` instead of `ReleasePipeline`.
 `release --dry-run` runs the task with Gradle's own `--dry-run` and no prompt.
-`release --skip-checks` has no effect with a `release_task` and logs a warning.
+`release --skip-checks` passes `-PskipChecks=true` to the release task, including during dry runs.
+`release --skip-github-release` passes `-PskipGithubRelease=true` to that task.
+The project-owned task must implement these properties to skip its checks and GitHub publication.
+Custom `Project.release` overrides must accept and honor requested `skip_checks` and `skip_github_release` keyword arguments.
+Without skip flags, existing overrides receive only `dry_run` and `assume_yes`.
 For example, `GradleProject(REPO_ROOT, release_task="doFullRelease", release_args=["-PreleaseConfirmed=yes"])`.
 
 ### NodeProject

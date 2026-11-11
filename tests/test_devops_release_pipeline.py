@@ -284,6 +284,24 @@ class PreconditionTests(PipelineTestBase):
 
 
 class DryRunTests(PipelineTestBase):
+    def test_skip_github_dry_run_never_queries_gh(self) -> None:
+        self.gh.version_code = 127
+        before, origin_before = self.snapshot(), self.origin_log()
+        self.assertEqual(self.run_pipeline(dry_run=True, skip_github_release=True), 0)
+        self.assert_untouched(before, origin_before)
+        self.assertEqual(self.gh.queries, [])
+        self.assertNotIn("gh release", self.logger.text())
+
+    def test_skip_github_still_pushes_tag_and_reopens_development(self) -> None:
+        self.gh.auth_code = 1
+        self.gh.release_exists = True
+        self.assertEqual(self.run_pipeline(skip_github_release=True), 0)
+        self.assertEqual(self.gh.queries, [])
+        self.assertFalse(any(argv[0] == "gh" for argv in self.gh.steps))
+        self.assertEqual(git(self.origin, "tag", "--list"), "v1.0.0")
+        self.assertIn("1.0.1-pre", (self.root / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertNotIn("/releases/tag/", self.logger.text())
+
     def test_dry_run_changes_nothing_and_logs_every_planned_command(self) -> None:
         before, origin_before = self.snapshot(), self.origin_log()
         self.assertEqual(self.run_pipeline(dry_run=True), 0)

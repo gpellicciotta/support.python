@@ -245,7 +245,7 @@ class DevopsCli:
                 "The project is rebuilt after the version freeze, and those outputs are attached to the GitHub release.\n"
                 "A project with its own release, such as a GradleProject with a release_task, runs that instead."
             ),
-            usage_suffix="[--dry-run] [--skip-checks] [--yes]",
+            usage_suffix="[--dry-run] [--skip-checks] [--skip-github-release] [--yes]",
             configure_parser=_configure_release,
         )
 
@@ -284,10 +284,13 @@ class DevopsCli:
 
     def _release(self, args: argparse.Namespace, logger: CliLogger) -> int:
         self.project.logger = logger
-        released = self.project.release(dry_run=args.dry_run, assume_yes=args.yes)
+        options = {}
+        if args.skip_checks:
+            options["skip_checks"] = True
+        if args.skip_github_release:
+            options["skip_github_release"] = True
+        released = self.project.release(dry_run=args.dry_run, assume_yes=args.yes, **options)
         if released is not None:
-            if args.skip_checks:
-                logger.warning("--skip-checks has no effect on a project with its own release.")
             return 0 if released else 1
         pipeline = ReleasePipeline(
             root=self.project.root,
@@ -297,6 +300,7 @@ class DevopsCli:
             build=self.project.build,
             dry_run=args.dry_run,
             assume_yes=args.yes,
+            skip_github_release=args.skip_github_release,
             runner=self.project.runner,
         )
         return pipeline.run()
@@ -315,6 +319,7 @@ def _configure_test(parser: argparse.ArgumentParser) -> None:
 def _configure_release(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--dry-run", action="store_true", help="log the planned steps without changing anything")
     parser.add_argument("--skip-checks", action="store_true", help="skip the `check` quality check")
+    parser.add_argument("--skip-github-release", action="store_true", help="skip GitHub release creation and gh checks")
     parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
 
 

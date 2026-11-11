@@ -56,6 +56,9 @@ The real run pushes and publishes, so run it only with explicit approval.
 6. Tag `v{{version}}`, push `main` and the tag, and publish the GitHub release with the wheel and sdist.
 7. Open the next patch `-pre` version, commit, and push.
 
+Use `--skip-github-release` to omit GitHub publication and all `gh` checks.
+Git safeguards, builds, tagging, and pushes still run.
+
 [publish.yml](../.github/workflows/publish.yml) then rebuilds the tag and replaces the release assets with its own build.
 
 To release by hand when the pipeline cannot run:
@@ -75,7 +78,7 @@ It imports the package from `src/`, so it needs no install; its commands run thr
 python scripts/devops.py lint | format | build | check | clean
 python scripts/devops.py test [--slow] [SELECTION...] [-- PYTEST-OPTIONS...]
 python scripts/devops.py versions [VERSION] [--dry-run]
-python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
+python scripts/devops.py release [--dry-run] [--skip-checks] [--skip-github-release] [--yes]
 python scripts/devops.py help [--verbose] | version
 ```
 - `lint` runs `ruff check .` and `ruff format --check .`; `format` runs `ruff format .`.

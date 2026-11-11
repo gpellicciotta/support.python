@@ -289,6 +289,7 @@ class ReleasePipeline:
         dry_run: Log every planned edit and command without running the quality check, prompting, or changing
             anything. Read-only precondition queries, including ``git fetch``, still run.
         assume_yes: Skip the typed confirmation.
+        skip_github_release: Skip all gh queries, GitHub publication, and the final release URL.
         runner: Runs a side-effecting command as ``runner(argv, root, logger)`` and returns its exit code.
         query: Runs a read-only command as ``query(argv, root)`` and returns its exit code and output.
         input_fn: Prompt function used for the typed confirmation.
@@ -307,6 +308,7 @@ class ReleasePipeline:
     query: Callable[[Sequence[str], Path], tuple[int, str]] = capture_command
     input_fn: Callable[[str], str] = input
     today: Callable[[], date] = date.today
+    skip_github_release: bool = False
 
     def run(self) -> int:
         """Run the pipeline.
@@ -363,7 +365,8 @@ class ReleasePipeline:
             self.logger.info(description)
             if not action():
                 return self._fail(f"Step failed: {description}. Earlier steps were not rolled back.")
-        self.logger.info(f"Released {tag}{self._release_url(root, tag)}.")
+        url = "" if self.skip_github_release else self._release_url(root, tag)
+        self.logger.info(f"Released {tag}{url}.")
         return 0
 
     def _fail(self, message: str) -> int:
@@ -389,9 +392,9 @@ class ReleasePipeline:
         if code != 0 or branch != self.main_branch:
             return fail(f"Releases must be cut from branch '{self.main_branch}' (currently on '{branch}').")
 
-        if self.query(["gh", "--version"], root)[0] != 0:
+        if not self.skip_github_release and self.query(["gh", "--version"], root)[0] != 0:
             return fail("The 'gh' CLI is not installed; see https://cli.github.com/.")
-        if self.query(["gh", "auth", "status"], root)[0] != 0:
+        if not self.skip_github_release and self.query(["gh", "auth", "status"], root)[0] != 0:
             return fail("The 'gh' CLI is not authenticated; run 'gh auth login' before releasing.")
 
         code, out = self.query(["git", "fetch", "origin", self.main_branch, "--tags"], root)
@@ -404,7 +407,7 @@ class ReleasePipeline:
             return fail(f"Tag '{tag}' already exists on origin.")
         if self.query(["git", "rev-parse", "-q", "--verify", f"refs/tags/{tag}"], root)[0] == 0:
             return fail(f"Tag '{tag}' already exists locally; delete it or release another version.")
-        if self.query(["gh", "release", "view", tag], root)[0] == 0:
+        if not self.skip_github_release and self.query(["gh", "release", "view", tag], root)[0] == 0:
             return fail(f"GitHub release '{tag}' already exists.")
 
         try:
@@ -446,7 +449,7 @@ class ReleasePipeline:
             self._command(root, ["git", "tag", tag]),
             self._command(root, ["git", "push", "origin", self.main_branch]),
             self._command(root, ["git", "push", "origin", tag]),
-            self._publish(root, tag, notes, assets, built=self.build is not None),
+            *([] if self.skip_github_release else [self._publish(root, tag, notes, assets, built=self.build is not None)]),
             self._edit(root, "CHANGELOG.md", f"## v{next_version}", lambda text: open_dev_changelog(text, next_version)),
             *([] if version_name == "CHANGELOG.md" else [self._set_version(root, entry, version_name, next_version)]),
             self._command(root, ["git", "add", *changed]),
