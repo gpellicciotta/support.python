@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: adhoc
+usage:
+  worker: {turns: 2, duration_s: 336.2, input: 116, output: 27276, cache_read: 3371936, cache_write: 109496}
+work_duration: 180.2
 ---
 # T0077: Add --format text|json to agent-digest generate, reporting written and unchanged digest and skill files
 
@@ -32,3 +35,27 @@ Reuse the status names of `check --format json` where they apply.
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 2 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the CLI guidelines and the agent-digest generate handler.
+
+- [2026-11-11] **[Implement]**
+  Added GenerateJsonFormatTests covering statuses, dry run, and failure cases.
+
+- [2026-11-11] **[Verify]**
+  Red phase showed 7 failed, 1 passed before implementation.
+
+- [2026-11-11] **[Implement]**
+  Collected per-item results in action_generate and emitted them with emit_json.
+
+- [2026-11-11] **[Verify]**
+  Full suite passed with 1142 tests; slow digest tests passed.
+
+- [2026-11-11] **[Doc]**
+  Documented the generate JSON output and added a changelog entry.
+

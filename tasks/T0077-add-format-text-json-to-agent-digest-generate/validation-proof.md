@@ -9,3 +9,18 @@
 - `ruff check src tests`: `All checks passed!`; `ruff format` applied.
 - `lint-markdown check --offline`: only 7 pre-existing issues in frozen `tests/fixtures/agent_digest/`.
 - `scripts/devops.py check` not run: the worktree has no `.venv`; ran pytest and ruff from the main checkout venv instead.
+
+## Terminal output
+```text
+$ python -m pytest tests/tools/test_agent_digest.py -k GenerateJson -q   (before implementation)
+7 failed, 1 passed
+
+$ python -m pytest tests -q -x   (after implementation)
+1142 passed, 5 skipped, 181 subtests passed in 12.26s
+
+$ python -m pytest -m slow --timeout=120 tests/tools/test_agent_digest.py -q
+4 passed in 2.87s
+
+$ python -m pytest tests/tools/test_agent_digest.py -q
+53 passed, 23 subtests passed in 4.63s
+```
