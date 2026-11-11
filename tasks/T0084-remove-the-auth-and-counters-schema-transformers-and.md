@@ -5,17 +5,20 @@ session: claude-20261111-fffa55
 needs: []
 branch: task/T0084-remove-the-auth-and-counters-schema-transformers-and
 worktree: .plan/work/T0084-remove-the-auth-and-counters-schema-transformers-and
-status: active
+status: completed
 started_at: "2026-11-11T00:14:19Z"
-ended_at: —
+ended_at: "2026-11-11T00:22:46Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 855.4, input: 204, output: 55946, cache_read: 9335840, cache_write: 230258}
-work_duration: 406.3
-review_status: pending
+  review: {turns: 2, duration_s: 69.4, input: 24, output: 3504, cache_read: 417132, cache_write: 54514}
+work_duration: 506.5
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: 58ba25a33b605128a4be6c5a7be94e2ddd6f7e79
 ---
 # T0084: Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map
 
@@ -34,7 +37,7 @@ The auth and counters repositories define their rules locally when they upgrade,
 - [x] **[Implement]** Remove the schema transformers and parameters, and add snapshot transformers to LocalMySqlManager.
 - [x] **[Verify]**    Run `python scripts/devops.py check`, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Update sql-anonymizer.md, index.md, migration-v2.md, and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -68,4 +71,11 @@ The auth and counters repositories define their rules locally when they upgrade,
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: Work meets all goals.
+  - Findings: [review-findings-1.md](T0084-remove-the-auth-and-counters-schema-transformers-and/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
