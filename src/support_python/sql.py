@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import io
 import re
-from typing import Callable, Optional, TextIO
+from typing import Callable, Mapping, Optional, Sequence, TextIO, Union
 
 from .crypto import DEFAULT_TEST_PASSWORD, get_standard_password_hash
 
@@ -178,6 +178,232 @@ def _clean_int(val: str) -> Optional[int]:
 def _sql_str(val: str) -> str:
     escaped = val.replace("\\", "\\\\").replace("'", "\\'")
     return f"'{escaped}'"
+
+
+# =============================================================================
+# SQL Value Helpers and Declarative Transformer Builder
+# =============================================================================
+
+
+class _KeepSentinel:
+    """Sentinel returned by a column rule to leave the column value unchanged."""
+
+    def __repr__(self) -> str:
+        return "KEEP"
+
+
+KEEP = _KeepSentinel()
+
+
+def sql_value(literal: str) -> Optional[str]:
+    """Unquote and unescape one parsed SQL literal.
+
+    Args:
+        literal: Raw SQL literal string (e.g. ``'hello'``, ``NULL``, ``123``).
+
+    Returns:
+        The unquoted and unescaped string, or ``None`` when the literal is SQL NULL.
+    """
+    if literal is None:
+        return None
+    s = literal.strip()
+    if s.upper() == "NULL":
+        return None
+    if (s.startswith("'") and s.endswith("'")) or (s.startswith('"') and s.endswith('"')):
+        inner = s[1:-1]
+        res: list[str] = []
+        i = 0
+        n = len(inner)
+        while i < n:
+            if inner[i] == "\\" and i + 1 < n:
+                res.append(inner[i + 1])
+                i += 2
+            elif inner[i] == "'" and i + 1 < n and inner[i + 1] == "'":
+                res.append("'")
+                i += 2
+            elif inner[i] == '"' and i + 1 < n and inner[i + 1] == '"':
+                res.append('"')
+                i += 2
+            else:
+                res.append(inner[i])
+                i += 1
+        return "".join(res)
+    return s
+
+
+def sql_literal(value: Optional[Union[str, int]]) -> str:
+    """Format a Python value as a valid SQL literal.
+
+    Args:
+        value: None (emits NULL), an int (emits digits), or a str (emits escaped single-quoted literal).
+
+    Returns:
+        Formatted SQL literal string.
+
+    Raises:
+        TypeError: If value is not None, int (excluding bool), or str.
+    """
+    if value is None:
+        return "NULL"
+    if isinstance(value, bool):
+        raise TypeError(f"Boolean values are not supported as SQL literals: {value!r}")
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, str):
+        escaped = value.replace("\\", "\\\\").replace("'", "\\'")
+        return f"'{escaped}'"
+    raise TypeError(f"Unsupported SQL literal value type: {type(value).__name__}")
+
+
+def sql_int(literal: str) -> Optional[int]:
+    """Parse an integer from a SQL literal.
+
+    Args:
+        literal: Raw SQL literal string.
+
+    Returns:
+        The parsed integer, or ``None`` for NULL, non-integers, or invalid literals.
+    """
+    if literal is None:
+        return None
+    val = literal.strip()
+    if val.upper() == "NULL":
+        return None
+    if (val.startswith("'") and val.endswith("'")) or (val.startswith('"') and val.endswith('"')):
+        val = val[1:-1].strip()
+    try:
+        return int(val)
+    except ValueError:
+        return None
+
+
+def _normalize_col_name(name: str) -> str:
+    return name.strip().strip("`'\"").lower().replace("-", "_")
+
+
+def column_index(
+    col_names: Optional[Sequence[str]],
+    name: str,
+    position: Optional[int] = None,
+) -> Optional[int]:
+    """Resolve the 0-based index of a column by name or fallback position.
+
+    Matches column names case-insensitively, ignoring backticks and quotes,
+    and treating dashes (``-``) and underscores (``_``) as equal.
+
+    Args:
+        col_names: Sequence of column names from an INSERT statement, or None when absent.
+        name: Name of the column to find.
+        position: Optional fallback 0-based position to return when ``col_names`` is None.
+
+    Returns:
+        The matched column index in ``col_names``, or ``position`` if ``col_names`` is None,
+        or ``None`` if ``col_names`` is provided but does not contain the column.
+    """
+    if col_names is None:
+        return position
+    target = _normalize_col_name(name)
+    for idx, col in enumerate(col_names):
+        if _normalize_col_name(col) == target:
+            return idx
+    return None
+
+
+class RowView:
+    """Read-only view of a parsed SQL row resolving columns by name or fallback position."""
+
+    def __init__(
+        self,
+        row: Sequence[str],
+        col_names: Optional[Sequence[str]] = None,
+        positions: Optional[Mapping[str, int]] = None,
+    ) -> None:
+        self._row = tuple(row)
+        self._col_names = tuple(col_names) if col_names is not None else None
+        self._positions = {_normalize_col_name(k): v for k, v in positions.items()} if positions is not None else None
+
+    def _col_idx(self, name: str) -> Optional[int]:
+        fallback_pos = None
+        if self._positions is not None:
+            fallback_pos = self._positions.get(_normalize_col_name(name))
+        return column_index(self._col_names, name, position=fallback_pos)
+
+    def has(self, name: str) -> bool:
+        """Return True if the column exists in this row."""
+        idx = self._col_idx(name)
+        return idx is not None and 0 <= idx < len(self._row)
+
+    def raw(self, name: str) -> Optional[str]:
+        """Return the raw SQL literal string of the column, or None if absent."""
+        idx = self._col_idx(name)
+        if idx is not None and 0 <= idx < len(self._row):
+            return self._row[idx]
+        return None
+
+    def text(self, name: str) -> Optional[str]:
+        """Return the unquoted and unescaped text value of the column, or None if absent or NULL."""
+        raw_val = self.raw(name)
+        if raw_val is None:
+            return None
+        return sql_value(raw_val)
+
+    def int(self, name: str) -> Optional[int]:
+        """Return the integer value of the column, or None if absent, NULL, or non-integer."""
+        raw_val = self.raw(name)
+        if raw_val is None:
+            return None
+        return sql_int(raw_val)
+
+
+# Type alias for declarative column rule callables
+ColumnRule = Callable[[RowView], object]
+
+
+def column_rules_transformer(
+    rules: Mapping[str, ColumnRule],
+    *,
+    positions: Optional[Mapping[str, int]] = None,
+) -> TableTransformer:
+    """Build a TableTransformer from declarative per-column rules.
+
+    Args:
+        rules: Mapping of column_name -> rule_callable(RowView) -> (str | int | None | KEEP).
+        positions: Optional mapping of column_name -> fallback 0-based index for dumps without column lists.
+
+    Returns:
+        A TableTransformer function modifying rows in place and returning count of modified rows.
+    """
+    positions_map = {_normalize_col_name(k): v for k, v in positions.items()} if positions is not None else None
+
+    def transformer(rows: list[list[str]], col_names: Optional[list[str]] = None) -> int:
+        resolved_rules: list[tuple[Optional[int], ColumnRule]] = []
+        for col_name, rule in rules.items():
+            pos = positions_map.get(_normalize_col_name(col_name)) if positions_map else None
+            idx = column_index(col_names, col_name, position=pos)
+            resolved_rules.append((idx, rule))
+
+        modified_rows = 0
+        for row in rows:
+            row_has_rule_col = any(idx is not None and 0 <= idx < len(row) for idx, _ in resolved_rules)
+            if not row_has_rule_col:
+                continue
+
+            view = RowView(row, col_names=col_names, positions=positions)
+            staged: list[tuple[int, str]] = []
+            for idx, rule in resolved_rules:
+                if idx is not None and 0 <= idx < len(row):
+                    res = rule(view)
+                    if res is not KEEP:
+                        staged.append((idx, sql_literal(res)))
+
+            for idx, literal_str in staged:
+                row[idx] = literal_str
+
+            modified_rows += 1
+
+        return modified_rows
+
+    return transformer
 
 
 # =============================================================================
@@ -602,12 +828,20 @@ def anonymize_sql_string(
 
 
 __all__ = [
+    "ColumnRule",
+    "KEEP",
+    "RowView",
     "TableTransformer",
     "anonymize_sql_stream",
     "anonymize_sql_string",
+    "column_index",
+    "column_rules_transformer",
     "format_sql_row_tuples",
     "get_anonymized_user_info",
     "parse_sql_row_tuples",
+    "sql_int",
+    "sql_literal",
+    "sql_value",
     "transform_auth_applications",
     "transform_auth_credentials",
     "transform_auth_tokens",

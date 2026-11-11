@@ -7,13 +7,21 @@ import io
 from pathlib import Path
 import unittest
 
-from support_python.crypto import get_standard_password_hash
+from support_python.crypto import DEFAULT_TEST_PASSWORD, get_standard_password_hash
 from support_python.sql import (
+    KEEP,
+    ColumnRule,
+    RowView,
     anonymize_sql_stream,
     anonymize_sql_string,
+    column_index,
+    column_rules_transformer,
     format_sql_row_tuples,
     get_anonymized_user_info,
     parse_sql_row_tuples,
+    sql_int,
+    sql_literal,
+    sql_value,
     transform_auth_applications,
     transform_auth_credentials,
     transform_auth_tokens,
@@ -281,6 +289,279 @@ REPLACE INTO `credentials` (`data`, `type`, `user-id`) VALUES ('secret_pass_val'
         self.assertNotIn("SQL_LOG_BIN", anon_sql)
         self.assertNotIn("GTID_PURGED", anon_sql)
         self.assertIn("SELECT 1;", anon_sql)
+
+    def test_sql_value_and_sql_literal_round_trip(self):
+        self.assertEqual(sql_literal(None), "NULL")
+        self.assertIsNone(sql_value("NULL"))
+        self.assertIsNone(sql_value("null"))
+        self.assertIsNone(sql_value("Null"))
+        self.assertIsNone(sql_value("  NULL  "))
+
+        self.assertEqual(sql_literal(42), "42")
+        self.assertEqual(sql_literal(0), "0")
+        self.assertEqual(sql_literal(-15), "-15")
+        self.assertEqual(sql_value("42"), "42")
+
+        self.assertEqual(sql_literal("NULL"), "'NULL'")
+        self.assertEqual(sql_value("'NULL'"), "NULL")
+
+        self.assertEqual(sql_literal(""), "''")
+        self.assertEqual(sql_value("''"), "")
+
+        samples = [
+            "simple text",
+            "O'Connor",
+            r"path\to\file",
+            r"quotes 'and' \backslashes\\",
+            r"'already quoted'",
+            "double \"quotes\" and 'single'",
+            "line1\nline2\ttab",
+        ]
+        for sample in samples:
+            lit = sql_literal(sample)
+            self.assertEqual(sql_value(lit), sample)
+
+        with self.assertRaises(TypeError):
+            sql_literal(True)
+        with self.assertRaises(TypeError):
+            sql_literal([1, 2, 3])
+
+    def test_sql_int(self):
+        self.assertEqual(sql_int("42"), 42)
+        self.assertEqual(sql_int("0"), 0)
+        self.assertEqual(sql_int("-7"), -7)
+        self.assertEqual(sql_int("  42  "), 42)
+        self.assertEqual(sql_int("'42'"), 42)
+        self.assertIsNone(sql_int("NULL"))
+        self.assertIsNone(sql_int("null"))
+        self.assertIsNone(sql_int("not_a_number"))
+        self.assertIsNone(sql_int("12.34"))
+        self.assertIsNone(sql_int(""))
+
+    def test_column_index(self):
+        cols = ["id", "auth_user_id", "`target-url`", "'Secret'"]
+        self.assertEqual(column_index(cols, "AUTH_USER_ID"), 1)
+        self.assertEqual(column_index(cols, "auth-user-id"), 1)
+        self.assertEqual(column_index(cols, "`auth_user_id`"), 1)
+        self.assertEqual(column_index(cols, "target_url"), 2)
+        self.assertEqual(column_index(cols, "target-url"), 2)
+        self.assertEqual(column_index(cols, "secret"), 3)
+        self.assertEqual(column_index(cols, "SECRET"), 3)
+
+        self.assertIsNone(column_index(cols, "missing"))
+        self.assertIsNone(column_index(cols, "missing", position=5))
+
+        self.assertEqual(column_index(None, "anything", position=2), 2)
+        self.assertIsNone(column_index(None, "anything", position=None))
+
+    def test_row_view(self):
+        row = ["1", r"'Alice \'Cool\' Doe'", "'alice@example.com'", "42", "NULL"]
+        cols = ["id", "name", "email", "auth-user-id", "optional_data"]
+        view = RowView(row, col_names=cols)
+        self.assertTrue(view.has("name"))
+        self.assertTrue(view.has("AUTH-USER-ID"))
+        self.assertFalse(view.has("missing"))
+
+        self.assertEqual(view.raw("name"), r"'Alice \'Cool\' Doe'")
+        self.assertEqual(view.raw("auth_user_id"), "42")
+        self.assertEqual(view.raw("optional_data"), "NULL")
+        self.assertIsNone(view.raw("missing"))
+
+        self.assertEqual(view.text("name"), "Alice 'Cool' Doe")
+        self.assertIsNone(view.text("optional_data"))
+        self.assertIsNone(view.text("missing"))
+
+        self.assertEqual(view.int("id"), 1)
+        self.assertEqual(view.int("auth_user_id"), 42)
+        self.assertIsNone(view.int("name"))
+        self.assertIsNone(view.int("optional_data"))
+        self.assertIsNone(view.int("missing"))
+
+        view_pos = RowView(row, positions={"id": 0, "name": 1, "auth-user-id": 3})
+        self.assertEqual(view_pos.text("name"), "Alice 'Cool' Doe")
+        self.assertEqual(view_pos.int("auth_user_id"), 42)
+        self.assertIsNone(view_pos.text("missing"))
+
+    def test_column_rules_transformer_unit(self):
+        rows = [["1", "'Alice'", "'secret1'"], ["2", "'Bob'", "'secret2'"]]
+        transformer = column_rules_transformer(
+            {"name": lambda r: KEEP, "secret": lambda r: "masked"},
+            positions={"id": 0, "name": 1, "secret": 2},
+        )
+        count = transformer(rows, None)
+        self.assertEqual(count, 2)
+        self.assertEqual(rows[0][1], "'Alice'")
+        self.assertEqual(rows[0][2], "'masked'")
+        self.assertEqual(rows[1][1], "'Bob'")
+        self.assertEqual(rows[1][2], "'masked'")
+
+        rows = [["'original'", "'old'"]]
+        transformer = column_rules_transformer(
+            {
+                "col1": lambda r: "rewritten",
+                "col2": lambda r: f"saw-{r.text('col1')}",
+            },
+            positions={"col1": 0, "col2": 1},
+        )
+        transformer(rows, None)
+        self.assertEqual(rows[0][0], "'rewritten'")
+        self.assertEqual(rows[0][1], "'saw-original'")
+
+        rows = [["1", "'test'"]]
+        transformer = column_rules_transformer({"name": lambda r: KEEP}, positions={"name": 1})
+        count = transformer(rows, None)
+        self.assertEqual(count, 1)
+        self.assertEqual(rows[0][1], "'test'")
+
+        rows = [["1", "'test'"]]
+        transformer = column_rules_transformer({"other": lambda r: "new"})
+        count = transformer(rows, ["id", "val"])
+        self.assertEqual(count, 0)
+        self.assertEqual(rows[0], ["1", "'test'"])
+
+        def dummy_rule(r: RowView) -> object:
+            return KEEP
+
+        rule_fn: ColumnRule = dummy_rule
+        self.assertIs(rule_fn(RowView([])), KEEP)
+
+    def test_declarative_builder_auth_and_counters_equivalence(self):
+        auth_users_transformer = column_rules_transformer(
+            {
+                "name": lambda r: get_anonymized_user_info(r.int("id") or 0)[0],
+                "email": lambda r: get_anonymized_user_info(r.int("id") or 0)[1],
+            },
+            positions={"id": 0, "name": 1, "email": 2},
+        )
+
+        def make_credentials_transformer(custom_password=None):
+            std_hash = get_standard_password_hash(custom_password or DEFAULT_TEST_PASSWORD)
+            b64_password_hash = base64.b64encode(std_hash.encode("ascii")).decode("ascii")
+
+            def transform_data(row: RowView) -> object:
+                cred_type = (row.text("type") or "password").lower()
+                user_id = row.int("user-id") or 0
+                if cred_type == "password":
+                    return b64_password_hash
+                elif cred_type == "federated-id":
+                    orig_data = row.text("data") or ""
+                    try:
+                        decoded = base64.b64decode(orig_data, validate=True).decode("utf-8", errors="replace")
+                        if ":" in decoded:
+                            orig_data = decoded
+                    except Exception:
+                        pass
+                    if ":" in orig_data:
+                        prefix_part, _ = orig_data.rsplit(":", 1)
+                        fed_val = f"{prefix_part}:anon-sub-{user_id}"
+                    else:
+                        fed_val = f"google:anon-sub-{user_id}"
+                    return base64.b64encode(fed_val.encode("utf-8")).decode("ascii")
+                return KEEP
+
+            return column_rules_transformer(
+                {"data": transform_data},
+                positions={"type": 1, "user-id": 2, "data": 3},
+            )
+
+        auth_tokens_transformer = column_rules_transformer(
+            {
+                "data": lambda r: base64.b64encode(f"anon-token-{r.int('id') or 0}".encode("utf-8")).decode("ascii"),
+            },
+            positions={"id": 0, "data": 3},
+        )
+
+        auth_applications_transformer = column_rules_transformer(
+            {
+                "app-secret": lambda r: None,
+            },
+            positions={"app-secret": 6},
+        )
+
+        auth_custom = {
+            "users": auth_users_transformer,
+            "credentials": make_credentials_transformer(),
+            "tokens": auth_tokens_transformer,
+            "applications": auth_applications_transformer,
+        }
+
+        # Auth Fixture E2E equivalence test (multi-table with and without column lists)
+        with open(AUTH_FIXTURE, "r", encoding="utf-8") as in_f:
+            auth_fixture_sql = in_f.read()
+        expected_sql, expected_stats = anonymize_sql_string(auth_fixture_sql, app="auth")
+        built_sql, built_stats = anonymize_sql_string(auth_fixture_sql, app="", custom_transformers=auth_custom)
+        self.assertEqual(built_sql, expected_sql)
+        self.assertEqual(built_stats, expected_stats)
+
+        # Inline multi-table dump test with and without column lists for auth
+        inline_auth_sql = """
+INSERT INTO `users` VALUES (0, 'Admin User Real', 'admin@real.com', '["admin"]', '2026-01-01', '2026-01-01', NULL);
+INSERT INTO `users` (`email`, `id`, `name`) VALUES ('custom@corp.org', 10, 'Custom User');
+INSERT INTO `credentials` VALUES (1, 'password', 10, 'secret_pass_hash', '2026-01-02', '2026-01-02', NULL);
+REPLACE INTO `credentials` (`data`, `type`, `user_id`) VALUES ('secret_pass_val', 'password', 10);
+INSERT INTO `tokens` VALUES (101, 'session', 10, 'session_token_xyz', '2026-01-02', '2026-01-02', NULL);
+INSERT INTO `tokens` (`data`, `id`) VALUES ('token_val', 102);
+INSERT INTO `applications` VALUES (1, 'counters', 'Counters', 'http://localhost', NULL, NULL, 'app_secret_val', '2026-01-01', '2026-01-01');
+INSERT INTO `applications` (`app_secret`, `id`) VALUES ('secret_hash', 2);
+"""
+        exp_inline, exp_inline_stats = anonymize_sql_string(inline_auth_sql, app="auth")
+        built_inline, built_inline_stats = anonymize_sql_string(inline_auth_sql, app="", custom_transformers=auth_custom)
+        self.assertEqual(built_inline, exp_inline)
+        self.assertEqual(built_inline_stats, exp_inline_stats)
+
+        # Counters rules
+        def _counters_user_info(row: RowView) -> tuple[str, str]:
+            auth_id = row.int("auth-user-id")
+            if auth_id is None:
+                auth_id = row.int("id") or 0
+            return get_anonymized_user_info(auth_id)
+
+        counters_users_transformer = column_rules_transformer(
+            {
+                "name": lambda r: _counters_user_info(r)[0],
+                "email": lambda r: _counters_user_info(r)[1],
+            },
+            positions={"id": 0, "name": 1, "email": 2, "auth-user-id": 8},
+        )
+
+        counters_webhooks_transformer = column_rules_transformer(
+            {
+                "target-url": lambda r: f"https://example.local/webhook/anon-{r.int('id') or 0}",
+                "secret": lambda r: f"anon-secret-{r.int('id') or 0}",
+            },
+            positions={"id": 0, "target-url": 3, "secret": 4},
+        )
+
+        counters_custom = {
+            "users": counters_users_transformer,
+            "tokens": auth_tokens_transformer,
+            "webhooks": counters_webhooks_transformer,
+        }
+
+        # Counters Fixture E2E equivalence test
+        with open(COUNTERS_FIXTURE, "r", encoding="utf-8") as in_f:
+            counters_fixture_sql = in_f.read()
+        exp_counters_sql, exp_counters_stats = anonymize_sql_string(counters_fixture_sql, app="counters")
+        built_counters_sql, built_counters_stats = anonymize_sql_string(
+            counters_fixture_sql, app="", custom_transformers=counters_custom
+        )
+        self.assertEqual(built_counters_sql, exp_counters_sql)
+        self.assertEqual(built_counters_stats, exp_counters_stats)
+
+        # Inline multi-table dump test with and without column lists for counters
+        inline_counters_sql = """
+INSERT INTO `users` VALUES (1, 'Alice Real Name', 'alice@old-email.com', NULL, NULL, '2026-01-01', '2026-01-01', NULL, 15);
+INSERT INTO `users` (`auth_user_id`, `email`, `id`, `name`) VALUES (NULL, 'legacy@old-email.com', 2, 'Legacy Standalone');
+INSERT INTO `tokens` VALUES (101, 'session', 15, 'session_token_xyz', '2026-01-02', '2026-01-02', NULL);
+INSERT INTO `webhooks` VALUES (5, 10, 15, 'https://my-site.com/hook', 'super_secret', 1, '2026-01-01', '2026-01-01');
+INSERT INTO `webhooks` (`id`, `secret`, `target_url`) VALUES (6, 'webhook_sec', 'https://other-site.com/hook');
+"""
+        exp_inline_c, exp_inline_c_stats = anonymize_sql_string(inline_counters_sql, app="counters")
+        built_inline_c, built_inline_c_stats = anonymize_sql_string(
+            inline_counters_sql, app="", custom_transformers=counters_custom
+        )
+        self.assertEqual(built_inline_c, exp_inline_c)
+        self.assertEqual(built_inline_c_stats, exp_inline_c_stats)
 
 
 if __name__ == "__main__":
