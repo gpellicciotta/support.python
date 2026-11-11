@@ -7,9 +7,9 @@ Dual-layer Git repository backup and restore utility implemented in [git_reposit
 ## Command-Line Interface
 Run actions through the `git-repository-backup` console script in [git_repository_backup.py](../../src/support_python/tools/git_repository_backup.py):
 ```bash
-git-repository-backup backup [options]
+git-repository-backup backup [--format text|json] [options]
 git-repository-backup list [--format text|json] [options]
-git-repository-backup restore (--source PATH | --name NAME) --target DIR [options]
+git-repository-backup restore (--source PATH | --name NAME) --target DIR [--format text|json] [options]
 git-repository-backup set-password --archive-dir PATH --password-keyring NAME [options]
 git-repository-backup config [list|names|path|get|set|delete|edit] [name] [value] [options]
 ```
@@ -22,7 +22,8 @@ Supported options:
 - `--no-mirror` disables the mirror backup layer.
 - `--archive-dir PATH` sets the directory holding AES-256 encrypted 7-Zip archives (`{{name}}.7z`).
 - `--no-archive` disables the archive backup layer.
-- `--format text|json` selects human-readable lines (`{{name}}  {{path}}`) or a JSON array of `{"name": "...", "path": "..."}` objects for `list` (default: `text`).
+- `--format text|json` selects text or JSON output on `list`, `backup`, and `restore` (default: `text`); see [JSON Output](#json-output).
+- `list` prints `{{name}}  {{path}}` lines in `text` mode, or a JSON array of `{"name": "...", "path": "..."}` objects.
 - In `json` mode, log messages go to `stderr` so `stdout` holds only the JSON document.
 - `--source PATH` restores from a specific bare mirror directory or `.7z` archive file.
 - `--name NAME` restores a named repository from `--mirror-dir` or `--archive-dir` (preferring the mirror).
@@ -106,3 +107,29 @@ git-repository-backup config path --all
 - `list`, `names`, `path`, and `get` accept `--format text|json`.
 - Unknown names and invalid values exit `2` and leave files untouched.
 - The action reads only the user and system files; deprecated locations stay read-only for `backup`, `list`, and `restore`.
+
+---
+
+## JSON Output
+`backup --format json` prints one JSON array on `stdout` with one entry per repository and enabled layer, for exit codes `0` and `1`:
+```json
+[
+  {"repository": "alpha", "layer": "mirror", "status": "mirrored"},
+  {"repository": "alpha", "layer": "archive", "status": "archived"},
+  {"repository": "beta", "layer": "mirror", "status": "failed", "detail": "git fetch failed"}
+]
+```
+
+- `layer` is `mirror` or `archive`.
+- `status` is `mirrored`, `archived`, `up-to-date` (archive unchanged), `would-mirror`, `would-archive` (`--dry-run`), `skipped`, or `failed`.
+- `detail` holds the reason for `skipped` and `failed` entries.
+- Repositories without commits are `skipped`; a failed archive layer setup marks every pending repository `failed`.
+
+`restore --format json` prints one JSON object once the source and target are resolved:
+```json
+{"status": "restored", "kind": "mirror", "source": "mirrors/alpha.git", "target": "restored/alpha", "branch": "main"}
+```
+
+- `status` is `restored`, `would-restore` (`--dry-run`), or `failed`, with the reason in `detail`.
+- `kind` is `mirror` or `archive`; `branch` is the checked-out branch, or `null` when none was checked out.
+- Log messages go to `stderr`; invalid arguments or configuration (exit `2`) print nothing on `stdout`.

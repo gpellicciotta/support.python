@@ -133,7 +133,7 @@ Options:
   --password-env NAME    read the archive password from this environment variable
   --password-keyring NAME
                          read the archive password from this OS keyring service
-  --format text|json     output format for list (default: text)
+  --format text|json     output format for list, backup, and restore (default: text)
   --dry-run              report planned actions without writing anything
   -v, --verbose          enable verbose output logging
   --log-file PATH        append operational logs to specified file
@@ -695,8 +695,22 @@ def archive_repo(repo: Path, archive_dir: Path, seven_zip: str, password: str, l
         logger.info(f"Archived {name} to {archive_dir / f'{name}.7z'}")
 
 
-def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> int:
-    """Back up the repos through the enabled layers and return the exit code."""
+def record_result(results: list[dict[str, str]], repo: Path, layer: str, status: str, detail: str | None = None) -> None:
+    """Append one repository and layer outcome, with an optional detail, to the results."""
+    entry = {"repository": repo.name, "layer": layer, "status": status}
+    if detail is not None:
+        entry["detail"] = detail
+    results.append(entry)
+
+
+def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger, results: list[dict[str, str]] | None = None) -> int:
+    """Back up the repos through the enabled layers and return the exit code.
+
+    Appends one entry per repository and enabled layer to results when given.
+    """
+    if results is None:
+        results = []
+    layers = [layer for layer, directory in (("mirror", settings.mirror_dir), ("archive", settings.archive_dir)) if directory]
     seven_zip = None
     keyring_password = None
     if settings.archive_dir is not None:
@@ -716,9 +730,13 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
         except BackupError as exc:
             logger.error(f"{repo}: {exc}")
             failures += 1
+            for layer in layers:
+                record_result(results, repo, layer, "failed", str(exc))
             continue
         if fingerprint is None:
             logger.warn(f"Skipping {repo.name}: repo has no commits ({repo}).")
+            for layer in layers:
+                record_result(results, repo, layer, "skipped", "repo has no commits")
             continue
         fingerprints[repo] = fingerprint
 
@@ -728,9 +746,11 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
             try:
                 mirror_repo(repo, settings.mirror_dir, settings.dry_run, logger)
                 mirrored += 1
+                record_result(results, repo, "mirror", "would-mirror" if settings.dry_run else "mirrored")
             except BackupError as exc:
                 logger.error(f"Mirror of {repo.name} failed: {exc}")
                 failures += 1
+                record_result(results, repo, "mirror", "failed", str(exc))
 
     archived = unchanged = 0
     if settings.archive_dir is not None and seven_zip is not None:
@@ -740,6 +760,7 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
         for repo, fingerprint in fingerprints.items():
             if state.get(repo.name) == fingerprint and (archive_dir / f"{repo.name}.7z").exists():
                 unchanged += 1
+                record_result(results, repo, "archive", "up-to-date")
                 if logger.verbose:
                     logger.info(f"Archive of {repo.name} is up to date.")
             else:
@@ -748,6 +769,7 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
         if settings.dry_run:
             for repo in pending:
                 logger.info(f"[dry-run] Would archive {repo.name} to {archive_dir / f'{repo.name}.7z'}")
+                record_result(results, repo, "archive", "would-archive")
             archived = len(pending)
         elif pending:
             try:
@@ -755,6 +777,8 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
                 password = verify_password(settings, seven_zip, logger, keyring_password)
             except (BackupError, OSError) as exc:
                 logger.error(f"Archive layer failed: {exc}")
+                for repo in pending:
+                    record_result(results, repo, "archive", "failed", str(exc))
                 return 1
             for repo in pending:
                 try:
@@ -762,9 +786,11 @@ def run_backup(settings: Settings, repos: Sequence[Path], logger: CliLogger) -> 
                     state[repo.name] = fingerprints[repo]
                     save_state(archive_dir, state)
                     archived += 1
+                    record_result(results, repo, "archive", "archived")
                 except (BackupError, OSError, subprocess.TimeoutExpired) as exc:
                     logger.error(f"Archive of {repo.name} failed: {exc}")
                     failures += 1
+                    record_result(results, repo, "archive", "failed", str(exc))
 
     summary = [f"{len(fingerprints)} repos"]
     if settings.mirror_dir is not None:
@@ -917,7 +943,19 @@ def restore_from_archive(archive: Path, target: Path, seven_zip: str, password: 
 
 
 def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger) -> int:
-    """Restore one repo from a mirror or archive into the target directory and return the exit code."""
+    """Restore one repo from a mirror or archive into the target directory and return the exit code.
+
+    In json mode, prints one document with the status, source, target, and checked-out branch.
+    """
+    report: dict[str, Any] = {}
+    code = restore_repo(settings, args, logger, report)
+    if report and getattr(args, "format", "text") == "json":
+        logger.emit_json(report, indent=2)
+    return code
+
+
+def restore_repo(settings: Settings, args: argparse.Namespace, logger: CliLogger, report: dict[str, Any]) -> int:
+    """Restore one repo and fill the report once the source and target are resolved."""
     if not args.target:
         raise UsageError("restore needs --target DIR.")
     if bool(args.source) == bool(args.name):
@@ -928,6 +966,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
         source = find_named_source(args.name, settings, logger)
     target = to_path(args.target)
     check_restore_target(target)
+    report.update(status="failed", kind=source.kind, source=str(source.path), target=str(target), branch=None)
 
     seven_zip = None
     if source.kind == "archive":
@@ -936,6 +975,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
             raise UsageError("7-Zip executable not found; pass --seven-zip.")
     if settings.dry_run:
         logger.info(f"[dry-run] Would restore {source.kind} {source.path} to {target}")
+        report["status"] = "would-restore"
         return 0
 
     password = None
@@ -946,6 +986,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
             password = obtain_password(settings, confirm=False)
         except BackupError as exc:
             logger.error(f"Restore failed: {exc}")
+            report["detail"] = str(exc)
             return 1
 
     created = not target.exists()
@@ -961,11 +1002,13 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
         else:
             run_git(["-C", str(target), "symbolic-ref", "HEAD", head], logger)
             run_git(["-C", str(target), "checkout", "-q", "-f"], logger)
+            report["branch"] = head.removeprefix("refs/heads/")
     except (BackupError, OSError, subprocess.TimeoutExpired, KeyboardInterrupt) as exc:
         if isinstance(exc, KeyboardInterrupt):
             logger.error(f"Restore of {source.path} interrupted; cleaning up {target}.")
         else:
             logger.error(f"Restore of {source.path} failed: {exc}")
+            report["detail"] = str(exc)
         try:
             clear_target(target, created)
         except OSError as cleanup_exc:
@@ -974,6 +1017,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
             logger.error(f"Interrupted again; cleanup abandoned, so {target} may hold a partial restore.")
             return 130
         return 130 if isinstance(exc, KeyboardInterrupt) else 1
+    report["status"] = "restored"
     logger.info(f"Restored {source.kind} {source.path} to {target}; add a remote with: git remote add origin {{{{url}}}}")
     return 0
 
@@ -1005,7 +1049,11 @@ def run_action(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
 
     if settings.mirror_dir is None and settings.archive_dir is None:
         raise UsageError("No backup layer enabled; set a mirror directory or an archive directory.")
-    return run_backup(settings, repos, logger)
+    results: list[dict[str, str]] = []
+    code = run_backup(settings, repos, logger, results)
+    if getattr(args, "format", "text") == "json":
+        logger.emit_json(results, indent=2)
+    return code
 
 
 def action_handler(action: str) -> Callable[[argparse.Namespace, CliLogger], int]:
@@ -1038,7 +1086,7 @@ def describe_config(value: str | None) -> str:
 
 
 def configure_list_parser(parser: argparse.ArgumentParser) -> None:
-    """Register output format flags for the list action."""
+    """Register output format flags for the list, backup, and restore actions."""
     ToolHarness.add_format_option(parser)
 
 
@@ -1113,14 +1161,21 @@ def build_harness() -> BackupHarness:
     harness.add_global_argument("--password-env", type=str, default=None, help="environment variable holding the password")
     harness.add_global_argument("--password-keyring", type=str, default=None, help="keyring service holding the password")
     harness.add_global_argument("--dry-run", action="store_true", help="report planned actions without writing")
-    harness.add_action("backup", "back up all discovered repos", handler=action_handler("backup"))
+    harness.add_action(
+        "backup", "back up all discovered repos", handler=action_handler("backup"), configure_parser=configure_list_parser
+    )
     harness.add_action(
         "list",
         "list discovered repos and their backup names",
         handler=action_handler("list"),
         configure_parser=configure_list_parser,
     )
-    harness.add_action("restore", "rebuild a working repo from one mirror or archive", handler=action_handler("restore"))
+    harness.add_action(
+        "restore",
+        "rebuild a working repo from one mirror or archive",
+        handler=action_handler("restore"),
+        configure_parser=configure_list_parser,
+    )
     harness.add_action("set-password", "verify the archive password and store it", handler=action_handler("set-password"))
     add_config_actions(harness, build_schema())
     return harness

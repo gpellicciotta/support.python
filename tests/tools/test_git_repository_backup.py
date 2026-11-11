@@ -673,6 +673,91 @@ class TestMirror(BackupTestCase):
         self.assertFalse(self.archives.exists())
 
 
+class TestBackupJsonFormat(BackupTestCase):
+    def entries(self, *extra: str) -> tuple[int, list[dict[str, Any]], str]:
+        code, out, err = self.run_main(*self.backup_args("--no-archive", "--format", "json", *extra))
+        return code, json.loads(out), err
+
+    def test_reports_one_mirror_entry_per_repo(self) -> None:
+        make_repo(self.root / "alpha")
+        make_repo(self.root / "beta")
+        code, entries, err = self.entries()
+        self.assertEqual(code, 0, err)
+        self.assertEqual(
+            entries,
+            [
+                {"repository": "alpha", "layer": "mirror", "status": "mirrored"},
+                {"repository": "beta", "layer": "mirror", "status": "mirrored"},
+            ],
+        )
+        self.assertIn("Backup finished", err)
+
+    def test_dry_run_reports_planned_entries_without_writing(self) -> None:
+        make_repo(self.root / "alpha")
+        code, entries, _ = self.entries("--dry-run")
+        self.assertEqual(code, 0)
+        self.assertEqual(entries, [{"repository": "alpha", "layer": "mirror", "status": "would-mirror"}])
+        self.assertFalse(self.mirrors.exists())
+
+    def test_reports_failed_and_skipped_repos(self) -> None:
+        make_repo(self.root / "alpha")
+        make_repo(self.root / "beta")
+        empty = self.root / "empty"
+        empty.mkdir()
+        git(empty, "init", "-q")
+        original = backup_git_repos.mirror_repo
+
+        def flaky(repo: Path, *args: Any) -> None:
+            if repo.name == "beta":
+                raise backup_git_repos.BackupError("disk full")
+            original(repo, *args)
+
+        with mock.patch.object(backup_git_repos, "mirror_repo", side_effect=flaky):
+            code, entries, err = self.entries()
+        self.assertEqual(code, 1)
+        by_repo = {entry["repository"]: entry for entry in entries}
+        self.assertEqual(by_repo["alpha"]["status"], "mirrored")
+        self.assertEqual((by_repo["beta"]["status"], by_repo["beta"]["detail"]), ("failed", "disk full"))
+        self.assertEqual(by_repo["empty"]["status"], "skipped")
+        self.assertIn("disk full", err)
+
+    def test_text_format_keeps_log_lines(self) -> None:
+        make_repo(self.root / "alpha")
+        code, out, err = self.run_main(*self.backup_args("--no-archive", "--format", "text"))
+        self.assertEqual(code, 0, err)
+        self.assertIn("Backup finished: 1 repos, 1 mirrored.", out + err)
+        self.assertNotIn('"layer"', out)
+
+    def test_usage_error_prints_no_document(self) -> None:
+        code, out, _ = self.run_main("backup", "--format", "json")
+        self.assertEqual((code, out), (2, ""))
+
+
+@pytest.mark.slow
+@unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
+class TestBackupJsonArchive(BackupTestCase):
+    def test_reports_archived_then_up_to_date(self) -> None:
+        make_repo(self.root / "alpha")
+        args = self.backup_args("--format", "json")
+        code, out, err = self.run_main(*args)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(
+            json.loads(out),
+            [
+                {"repository": "alpha", "layer": "mirror", "status": "mirrored"},
+                {"repository": "alpha", "layer": "archive", "status": "archived"},
+            ],
+        )
+        entries = json.loads(self.run_main(*args)[1])
+        self.assertEqual([e["status"] for e in entries], ["mirrored", "up-to-date"])
+
+    def test_dry_run_reports_would_archive(self) -> None:
+        make_repo(self.root / "alpha")
+        code, out, _ = self.run_main(*self.backup_args("--format", "json", "--dry-run"))
+        self.assertEqual(code, 0)
+        self.assertEqual([e["status"] for e in json.loads(out)], ["would-mirror", "would-archive"])
+
+
 @pytest.mark.slow
 @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
 class TestArchive(BackupTestCase):
@@ -1199,6 +1284,45 @@ class TestActionCompletionSummaries(RestoreTestCase):
         pattern = FINISHED_PATTERN.format(action="restore", status="failed")
         self.assertRegex(err.splitlines()[-1], r"^\*\*\[ERROR\]\*\* " + pattern + "$")
         self.assertEqual((out + err).count("Finished git-repository-backup"), 1)
+
+
+@pytest.mark.slow
+class TestRestoreJsonFormat(RestoreTestCase):
+    def test_reports_target_source_and_branch(self) -> None:
+        self.backup("--no-archive")
+        source = self.mirrors / "alpha.git"
+        code, out, err = self.restore("--source", str(source), "--format", "json")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(
+            json.loads(out),
+            {"status": "restored", "kind": "mirror", "source": str(source), "target": str(self.target), "branch": "feature"},
+        )
+        self.assertIn("Restored mirror", err)
+
+    def test_dry_run_reports_would_restore(self) -> None:
+        self.backup("--no-archive")
+        source = self.mirrors / "alpha.git"
+        code, out, _ = self.restore("--source", str(source), "--dry-run", "--format", "json")
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(out)["status"], "would-restore")
+        self.assertFalse(self.target.exists())
+
+    def test_failed_restore_reports_failure(self) -> None:
+        self.backup("--no-archive")
+        source = self.mirrors / "alpha.git"
+        failing = mock.patch.object(backup_git_repos, "restore_from_mirror", side_effect=backup_git_repos.BackupError("boom"))
+        with failing:
+            code, out, _ = self.restore("--source", str(source), "--format", "json")
+        self.assertEqual(code, 1)
+        document = json.loads(out)
+        self.assertEqual((document["status"], document["detail"], document["branch"]), ("failed", "boom", None))
+
+    def test_text_format_keeps_log_lines(self) -> None:
+        self.backup("--no-archive")
+        code, out, err = self.restore("--source", str(self.mirrors / "alpha.git"))
+        self.assertEqual(code, 0, err)
+        self.assertIn("Restored mirror", out + err)
+        self.assertNotIn('"target"', out)
 
 
 @pytest.mark.slow
