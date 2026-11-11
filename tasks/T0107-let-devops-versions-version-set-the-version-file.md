@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 579.6, input: 128810, output: 15534, cache_read: 2431744, cache_write: 0}
+review_status: pending
+review_round: 1
 ---
 # T0107: Let devops versions VERSION set the version file and top CHANGELOG heading for Gradle projects, like Python ones
 
@@ -41,4 +45,7 @@ Completion check: `python scripts/devops.py check`.
 
 - [2026-11-12] **[Verify]**
   Full check passed: 1258 fast tests, 166 slow tests, Ruff, formatting, and builds. Markdown lint passed. Evidence: validation-proof.md. Session 91259; pytest PIDs 72392/82344; build PID 14664.
+
+- [2026-11-12] **[Review]**
+  Round 1 requested (mode: agent).
 
