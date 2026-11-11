@@ -5,17 +5,20 @@ session: claude-20261111-6038ef
 needs: []
 branch: task/T0077-add-format-text-json-to-agent-digest-generate
 worktree: .plan/work/T0077-add-format-text-json-to-agent-digest-generate
-status: active
+status: completed
 started_at: "2026-11-11T00:56:31Z"
-ended_at: —
+ended_at: "2026-11-11T01:01:18Z"
 review: agent
 preview: none
 protocol: adhoc
 usage:
   worker: {turns: 4, duration_s: 395.0, input: 140, output: 29822, cache_read: 4130534, cache_write: 122046}
-work_duration: 180.2
-review_status: pending
+  review: {turns: 2, duration_s: 89.4, input: 28, output: 3952, cache_read: 527694, cache_write: 56972}
+work_duration: 286.2
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: 0988d3bbcf76dbf6048366a580b480ad300e1be9
 ---
 # T0077: Add --format text|json to agent-digest generate, reporting written and unchanged digest and skill files
 
@@ -32,7 +35,7 @@ Reuse the status names of `check --format json` where they apply.
 - [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Document the JSON document in agent-digest.md and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -63,4 +66,11 @@ Reuse the status names of `check --format json` where they apply.
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: The work meets the goals.
+  - Findings: [review-findings-1.md](T0077-add-format-text-json-to-agent-digest-generate/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
