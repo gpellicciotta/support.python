@@ -5,17 +5,20 @@ session: claude-20261111-0be961
 needs: []
 branch: task/T0105-rewrite-github-links-ending-in-docs-guidelines-name
 worktree: .plan/work/T0105-rewrite-github-links-ending-in-docs-guidelines-name
-status: active
+status: completed
 started_at: "2026-11-11T07:04:43Z"
-ended_at: —
+ended_at: "2026-11-11T07:07:37Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 215.0, input: 88, output: 14366, cache_read: 1973004, cache_write: 79656}
-work_duration: 84.4
-review_status: pending
+  review: {turns: 2, duration_s: 48.8, input: 20, output: 2562, cache_read: 328506, cache_write: 45516}
+work_duration: 174.4
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: efd2ccfc3bbbd3dfd9545c9a8f341a879090cf0e
 ---
 # T0105: Rewrite GitHub links ending in docs/guidelines/{{name}}.md to the skill reference, as links ending in skills/{{name}}/SKILL.md are today
 
@@ -33,7 +36,7 @@ Specifications: [technical-spec.md](T0105-rewrite-github-links-ending-in-docs-gu
 - [x] **[Implement]** Extend the link rewriting to the new URL form.
 - [x] **[Verify]**    Run the affected tests and the integration scenario.
 - [x] **[Doc]**       Update docs/tools/agent-digest.md and CHANGELOG.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -65,4 +68,11 @@ Specifications: [technical-spec.md](T0105-rewrite-github-links-ending-in-docs-gu
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: The change meets the goals.
+  - Findings: [review-findings-1.md](T0105-rewrite-github-links-ending-in-docs-guidelines-name/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
