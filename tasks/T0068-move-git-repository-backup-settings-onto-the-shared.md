@@ -1,11 +1,12 @@
 ---
 id: T0068
-owner: ~
+owner: "@claude"
+session: claude-20261111-3dfcb8
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0068-move-git-repository-backup-settings-onto-the-shared
+worktree: .plan/work/T0068-move-git-repository-backup-settings-onto-the-shared
+status: active
+started_at: "2026-11-11T01:01:38Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Ignore unknown keys and malformed files with one warning instead of exiting 2.
 Add the `config` group through `add_config_actions`, targeting the user file by default.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the configuration guidelines, config.py, and the configuration tutorial before changing the tool.
-- [ ] **[Implement]** Write failing tests for environment variables, system file, unknown keys, malformed files, and config actions.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Declare the settings in a `SettingsSchema` and resolve them with `resolve_settings` and `add_config_actions`.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document every setting in git-repository-backup.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the configuration guidelines, config.py, and the configuration tutorial before changing the tool.
+- [x] **[Implement]** Write failing tests for environment variables, system file, unknown keys, malformed files, and config actions.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Declare the settings in a `SettingsSchema` and resolve them with `resolve_settings` and `add_config_actions`.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document every setting in git-repository-backup.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
