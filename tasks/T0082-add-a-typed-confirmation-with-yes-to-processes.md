@@ -5,17 +5,20 @@ session: claude-20261111-989ee9
 needs: []
 branch: task/T0082-add-a-typed-confirmation-with-yes-to-processes
 worktree: .plan/work/T0082-add-a-typed-confirmation-with-yes-to-processes
-status: active
+status: completed
 started_at: "2026-11-11T00:45:54Z"
-ended_at: —
+ended_at: "2026-11-11T00:50:16Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 368.6, input: 120, output: 20496, cache_read: 3221288, cache_write: 106998}
-work_duration: 175.7
-review_status: pending
+  review: {turns: 2, duration_s: 65.4, input: 28, output: 5052, cache_read: 525826, cache_write: 59216}
+work_duration: 261.4
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: 110e892d296b6678f69836b05a7c623f83388284
 ---
 # T0082: Add a typed confirmation with --yes to processes kill, or document why it is exempt from that CLI rule
 
@@ -33,7 +36,7 @@ Document the behavior in processes.md.
 - [x] **[Implement]** Implement the chosen confirmation behavior in the `processes kill` handler.
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Update processes.md and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -63,4 +66,11 @@ Document the behavior in processes.md.
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: Approved.
+  - Findings: [review-findings-1.md](T0082-add-a-typed-confirmation-with-yes-to-processes/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 

@@ -3,7 +3,7 @@ task: T0082
 round: 1
 verdict: approved
 reviewer: "@claude-2"
-reviewed_at: 2026-11-11T00:49:38Z
+reviewed_at: 2026-11-11T00:50:14Z
 reviewed_commit: "d6f462d"
 base_commit: "ee614a7"
 branch: task/T0082-add-a-typed-confirmation-with-yes-to-processes
