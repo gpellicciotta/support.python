@@ -5,18 +5,20 @@ session: claude-20261111-e56b1a
 needs: []
 branch: task/T0074-add-format-text-json-to-processes-kill-reporting
 worktree: .plan/work/T0074-add-format-text-json-to-processes-kill-reporting
-status: active
+status: completed
 started_at: "2026-11-11T00:50:36Z"
-ended_at: —
+ended_at: "2026-11-11T00:56:11Z"
 review: agent
 preview: none
 protocol: adhoc
 usage:
   worker: {turns: 6, duration_s: 417.2, input: 136, output: 25846, cache_read: 3693360, cache_write: 119674}
-  review: {turns: 2, duration_s: 60.0, input: 24, output: 4438, cache_read: 432670, cache_write: 56386}
-work_duration: 238.9
-review_status: pending
+  review: {turns: 4, duration_s: 102.8, input: 44, output: 7162, cache_read: 769256, cache_write: 113032}
+work_duration: 334.9
+review_status: approved
 review_round: 2
+reviewed_by: "@claude-2"
+completion-commit: 955b3a6d30bb5c7d138951ce6a9ea454a63a28ac
 ---
 # T0074: Add --format text|json to processes kill, reporting each killed, skipped, and failed PID
 
@@ -33,7 +35,7 @@ Report `would-kill` and `would-skip-protected` outcomes for `--dry-run`.
 - [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
 - [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
 - [x] **[Doc]**       Document the JSON document in processes.md and add a CHANGELOG.md entry.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -74,4 +76,11 @@ Report `would-kill` and `would-skip-protected` outcomes for `--dry-run`.
 
 - [2026-11-11] **[Review]**
   Round 2 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 2 approved by @claude-2: The round 1 defect is fixed: in `json` mode `run_kill` redirects the confirmation summary and prompt to `stderr`, with a.
+  - Findings: [review-findings-2.md](T0074-add-format-text-json-to-processes-kill-reporting/review-findings-2.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
