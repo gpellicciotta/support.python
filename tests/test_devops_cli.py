@@ -216,9 +216,16 @@ class VersionsActionTests(DevopsCliTestCase):
         code, _, _ = run_cli(self.cli(venv=False, changelog="# Versioned Changes\n"), "versions")
         self.assertEqual(code, 1)
 
-    def test_versions_exit_1_without_a_version_file(self) -> None:
+    def test_versions_exit_0_with_only_a_changelog(self) -> None:
         cli = self.cli(venv=False)
         (self.root / "pyproject.toml").unlink()
+        code, _, _ = run_cli(cli, "versions")
+        self.assertEqual(code, 0)
+
+    def test_versions_exit_1_without_any_version_source(self) -> None:
+        cli = self.cli(venv=False)
+        (self.root / "pyproject.toml").unlink()
+        (self.root / "CHANGELOG.md").unlink()
         code, _, _ = run_cli(cli, "versions")
         self.assertEqual(code, 1)
 

@@ -136,6 +136,10 @@ Its actions are:
   It attaches the outputs of that post-freeze build, never the `-pre` build from `check`.
 - `help` and `version`, from `ToolHarness`.
 
+Without supported manifests, `version`, `versions`, and `release` use the first `## v` heading in [CHANGELOG.md](../../CHANGELOG.md).
+`versions VERSION` updates only that heading; release freezes it and opens the next development heading.
+Supported manifests take precedence; manifests without declared versions still fail rather than using the changelog.
+
 Commands go through an injectable `runner` (default `run_step_command`), and `add_action` adds project-specific actions.
 Each adapter's `action_summaries()` replaces the generic help summaries, and `test_selection_example` sets the `test` help example.
 `GradleProject` names the Gradle tasks of each action in its help, and its `release_task` in the `release` summary.

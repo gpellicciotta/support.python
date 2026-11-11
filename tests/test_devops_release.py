@@ -102,6 +102,33 @@ class VersionFileTests(unittest.TestCase):
             read_version(self.root)
 
 
+@pytest.mark.parametrize("version", ["1.2.3-pre", "1.2.3"])
+def test_changelog_version_fallback(tmp_path, version):
+    path = tmp_path / "CHANGELOG.md"
+    original = f"# Changes\r\n\r\n## v{version} [2026-01-01]\r\n- Feature.\r\n## v0.1.0\r\n"
+    path.write_bytes(original.encode())
+    assert read_version(tmp_path) == version
+    assert find_version_file(tmp_path) == path
+    write_version(tmp_path, "2.0.0-pre")
+    assert path.read_bytes() == original.replace(f"v{version}", "v2.0.0-pre", 1).encode()
+
+
+def test_changelog_does_not_override_manifest(tmp_path):
+    (tmp_path / "CHANGELOG.md").write_text("## v9.0.0-pre\n", encoding="utf-8")
+    manifest = tmp_path / "pyproject.toml"
+    manifest.write_text('[project]\nversion = "1.0.0"\n', encoding="utf-8")
+    assert read_version(tmp_path) == "1.0.0"
+    manifest.write_text("[project]\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        read_version(tmp_path)
+
+
+def test_changelog_without_heading(tmp_path):
+    (tmp_path / "CHANGELOG.md").write_text("# Changes\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        read_version(tmp_path)
+
+
 class VersionArithmeticTests(unittest.TestCase):
     def test_release_version_strips_pre(self) -> None:
         self.assertEqual(release_version("1.2.3-pre"), "1.2.3")

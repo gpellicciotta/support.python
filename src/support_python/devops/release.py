@@ -45,6 +45,7 @@ VERSION_FILES: tuple[VersionFile, ...] = (
 )
 
 _PARTS = ("major", "minor", "patch")
+_CHANGELOG_VERSION = VersionFile("CHANGELOG.md", re.compile(r"^##[ \t]+v(\S+)", re.MULTILINE), "## v{version}")
 
 
 def _read_raw(path: Path) -> str:
@@ -53,11 +54,11 @@ def _read_raw(path: Path) -> str:
 
 
 def _resolve(root: Path) -> tuple[Path, VersionFile, str, re.Match[str]]:
-    """Return the first version file under ``root`` that declares a version, with its text and version match.
+    """Resolve a declaring manifest or, when no manifests exist, the first changelog version heading.
 
     Raises:
-        FileNotFoundError: If no supported version file exists.
-        ValueError: If version files exist but none declares a version.
+        FileNotFoundError: If neither a supported manifest nor CHANGELOG.md exists.
+        ValueError: If manifests declare no version, or the fallback changelog has no version heading.
     """
     present = False
     for entry in VERSION_FILES:
@@ -71,11 +72,18 @@ def _resolve(root: Path) -> tuple[Path, VersionFile, str, re.Match[str]]:
     names = ", ".join(entry.name for entry in VERSION_FILES)
     if present:
         raise ValueError(f"No version declared in {names} under {root}")
-    raise FileNotFoundError(f"No version file ({names}) found under {root}")
+    path = Path(root) / _CHANGELOG_VERSION.name
+    if path.is_file():
+        text = _read_raw(path)
+        match = _CHANGELOG_VERSION.pattern.search(text)
+        if match:
+            return path, _CHANGELOG_VERSION, text, match
+        raise ValueError(f"No version heading declared in CHANGELOG.md under {root}")
+    raise FileNotFoundError(f"No version file ({names}, CHANGELOG.md) found under {root}")
 
 
 def find_version_file(root: Path) -> Path | None:
-    """Return the first supported version file under ``root`` that declares a version, or ``None``."""
+    """Return the declaring manifest, or the changelog when no manifest exists; otherwise return ``None``."""
     try:
         return _resolve(root)[0]
     except (FileNotFoundError, ValueError):
@@ -83,21 +91,21 @@ def find_version_file(root: Path) -> Path | None:
 
 
 def read_version(root: Path) -> str:
-    """Return the project version, including any ``-pre`` suffix.
+    """Return the manifest version, falling back to the top changelog version when no manifest exists.
 
     Raises:
-        FileNotFoundError: If no supported version file exists.
-        ValueError: If version files exist but none declares a version.
+        FileNotFoundError: If neither a supported manifest nor CHANGELOG.md exists.
+        ValueError: If manifests declare no version, or the fallback changelog has no version heading.
     """
     return _resolve(root)[3].group(1).strip()
 
 
 def write_version(root: Path, version: str) -> None:
-    """Write ``version`` into the first version file, atomically and keeping its line endings.
+    """Write ``version`` into the manifest or fallback changelog, atomically and preserving line endings.
 
     Raises:
-        FileNotFoundError: If no supported version file exists.
-        ValueError: If version files exist but none declares a version.
+        FileNotFoundError: If neither a supported manifest nor CHANGELOG.md exists.
+        ValueError: If manifests declare no version, or the fallback changelog has no version heading.
     """
     path, entry, text, match = _resolve(root)
     updated = text[: match.start()] + entry.template.format(version=version) + text[match.end() :]
@@ -265,7 +273,7 @@ _Step = tuple[str, Callable[[], bool]]
 class ReleasePipeline:
     """Release the project under ``root``: freeze, tag, push, publish a GitHub release, and reopen development.
 
-    ``root`` must be the repository root, holding ``CHANGELOG.md`` and a supported version file, with an
+    ``root`` must hold ``CHANGELOG.md``, optionally a supported manifest, and an
     ``origin`` remote on GitHub. Every precondition runs before any change. Read-only commands run through
     ``query``; every command with side effects runs through ``runner``.
 
@@ -423,12 +431,12 @@ class ReleasePipeline:
         freeze: bool,
     ) -> list[_Step]:
         status = f"released: {self.today().isoformat()}"
-        changed = ["CHANGELOG.md", version_name]
+        changed = list(dict.fromkeys(["CHANGELOG.md", version_name]))
         steps: list[_Step] = []
         if freeze:
             steps += [
                 self._edit(root, "CHANGELOG.md", f"## v{release} [{status}]", lambda text: freeze_changelog(text, release, status)),
-                self._set_version(root, entry, version_name, release),
+                *([] if version_name == "CHANGELOG.md" else [self._set_version(root, entry, version_name, release)]),
                 self._command(root, ["git", "add", *changed]),
                 self._command(root, ["git", "commit", "-m", f"Released version {release}."]),
             ]
@@ -440,7 +448,7 @@ class ReleasePipeline:
             self._command(root, ["git", "push", "origin", tag]),
             self._publish(root, tag, notes, assets, built=self.build is not None),
             self._edit(root, "CHANGELOG.md", f"## v{next_version}", lambda text: open_dev_changelog(text, next_version)),
-            self._set_version(root, entry, version_name, next_version),
+            *([] if version_name == "CHANGELOG.md" else [self._set_version(root, entry, version_name, next_version)]),
             self._command(root, ["git", "add", *changed]),
             self._command(root, ["git", "commit", "-m", f"Started version {next_version} after the {release} release."]),
             self._command(root, ["git", "push", "origin", self.main_branch]),

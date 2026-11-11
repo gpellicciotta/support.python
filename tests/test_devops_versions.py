@@ -68,8 +68,9 @@ def test_missing_manifest(project):
         if path.name != "CHANGELOG.md":
             path.unlink()
     before = snapshot(project.root)
-    assert DevopsCli(project).run(["versions", "2.0.0"]) == 1
-    assert snapshot(project.root) == before
+    assert DevopsCli(project).run(["versions", "2.0.0"]) == 0
+    assert read_version(project.root) == "2.0.0-pre"
+    assert set(snapshot(project.root)) == set(before)
 
 
 @pytest.mark.slow
@@ -86,4 +87,24 @@ def test_real_gradle_entrypoint(tmp_path):
     for args in (["versions", "2.0.0"], ["versions"]):
         result = subprocess.run([sys.executable, str(script), *args], env=env, capture_output=True, text=True, timeout=30)
         assert result.returncode == 0, result.stdout + result.stderr
+    assert read_version(tmp_path) == "2.0.0-pre"
+
+
+@pytest.mark.slow
+def test_real_changelog_entrypoint(tmp_path):
+    script = tmp_path / "devops.py"
+    script.write_text(
+        "from pathlib import Path\nfrom support_python.devops import DevopsCli, PythonProject\n"
+        "raise SystemExit(DevopsCli(PythonProject(Path(__file__).parent)).run())\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "CHANGELOG.md").write_text("## v1.0.0-pre\n- Feature.\n", encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1] / "src"))
+    for args in (["version"], ["versions"], ["versions", "2.0.0", "--dry-run"], ["versions", "2.0.0"]):
+        result = subprocess.run([sys.executable, str(script), *args], env=env, capture_output=True, text=True, timeout=30)
+        assert result.returncode == 0, result.stdout + result.stderr
+        if args == ["version"]:
+            assert "v1.0.0-pre" in result.stdout
+        if "--dry-run" in args:
+            assert read_version(tmp_path) == "1.0.0-pre"
     assert read_version(tmp_path) == "2.0.0-pre"

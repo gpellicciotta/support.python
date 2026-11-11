@@ -177,6 +177,32 @@ class PipelineTestBase(unittest.TestCase):
         self.assertEqual(self.gh.steps, [])
 
 
+class ChangelogOnlyTests(PipelineTestBase):
+    def test_release_without_manifest(self):
+        git(self.root, "rm", "pyproject.toml")
+        git(self.root, "commit", "-qm", "Removed manifest.")
+        before = (self.root / "CHANGELOG.md").read_bytes()
+        assert self.run_pipeline(dry_run=True) == 0
+        assert (self.root / "CHANGELOG.md").read_bytes() == before
+        assert self.gh.steps == []
+        assert self.run_pipeline(assume_yes=True) == 0
+        text = (self.root / "CHANGELOG.md").read_text(encoding="utf-8")
+        assert "## v1.0.1-pre" in text
+        heading = "## v1.0.0 [released: 2026-11-10]" if self.version.endswith("-pre") else "## v1.0.0 [2026-11-01]"
+        assert heading in text
+        frozen = git(self.root, "show", "v1.0.0:CHANGELOG.md")
+        assert heading in frozen
+        assert "1.0.1-pre" not in frozen
+        assert not (self.root / "pyproject.toml").exists()
+        adds = [step for step in self.gh.steps if step[:2] == ["git", "add"]]
+        assert adds == [["git", "add", "CHANGELOG.md"]] * (2 if self.version.endswith("-pre") else 1)
+
+
+class FrozenChangelogOnlyTests(ChangelogOnlyTests):
+    changelog = FROZEN_CHANGELOG
+    version = "1.0.0"
+
+
 class PreconditionTests(PipelineTestBase):
     def assert_precondition_failure(self, expected: str, **overrides: object) -> None:
         before, origin_before = self.snapshot(), self.origin_log()
