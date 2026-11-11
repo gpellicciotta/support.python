@@ -11,6 +11,10 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 675.4, input: 117670, output: 17176, cache_read: 2992896, cache_write: 0}
+review_status: pending
+review_round: 1
 ---
 # T0111: Add a ReleasePipeline hook that syncs extra version targets after the next pre version starts, so projects with component versions stay in parity
 
@@ -46,4 +50,7 @@ Add a ReleasePipeline hook that syncs extra version targets after the next pre v
 
 - [2026-11-12] **[Doc]**
   Documented the synchronization contract and updated the active changelog. Committed locally as 98869e6; orchestrated agent review remains pending.
+
+- [2026-11-12] **[Review]**
+  Round 1 requested (mode: agent).
 
