@@ -311,6 +311,33 @@ class TestLinkBaseAndSkillLinks(unittest.TestCase):
             self.assertIn("Follow the `custom-skill` skill.", digest)
             self.assertIn("Follow the `research-guidelines` skill.", skills["testing-guidelines"])
 
+    def test_github_docs_guidelines_urls_rewrite_to_skill_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            core = root / "core.md"
+            skill = root / "testing.md"
+            base = "https://github.com/gpellicciotta/plan/blob/main/docs/guidelines"
+            core.write_text(
+                "# Core\n\n"
+                f"- Follow [Plan Task Usage]({base}/plan-task-usage-guidelines.md).\n"
+                f"- Follow [Section]({base}/research-guidelines.md#rules).\n"
+                "- See [Other](https://example.com/docs/guidelines/other.md).\n",
+                encoding="utf-8",
+            )
+            skill.write_text(
+                "---\nskill:\n  name: testing-guidelines\n  description: Testing.\n---\n# Testing\n\n"
+                f"- Follow [Research]({base}/research-guidelines.md).\n",
+                encoding="utf-8",
+            )
+
+            digest = generate_agent_digest.build_digest([core, skill])
+            skills = generate_agent_digest.build_skills([core, skill])
+
+            self.assertIn("Follow the `plan-task-usage-guidelines` skill.", digest)
+            self.assertIn("Follow the `research-guidelines` skill.", digest)
+            self.assertIn("https://example.com/docs/guidelines/other.md", digest)
+            self.assertIn("Follow the `research-guidelines` skill.", skills["testing-guidelines"])
+
     def test_link_base_override_and_missing_origin_keeps_relative_links(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

@@ -78,6 +78,7 @@ skill:
 `agent-digest` rewrites Markdown links outside code fences for core digest content and derived skill files:
 - Links targeting a skill-bearing input file rewrite to ``the `{{name}}` skill``.
 - Relative or `https://github.com/...` links whose target ends in `/skills/{{name}}/SKILL.md` rewrite to ``the `{{name}}` skill``.
+- `https://github.com/...` links whose target ends in `/docs/guidelines/{{name}}.md` rewrite the same way, matching where plan keeps its bundled skill sources.
 - Links targeting another digest-bound core guideline collapse to plain link text (`[text](other.md)` becomes `text`).
 - Links inside a derived skill targeting `{{skills-dir}}/{{name}}/...` or one of its listed references rewrite to a path relative to the linking file.
 - Remaining relative repository links rewrite against `--link-base` when a base URL is provided or derived from Git.

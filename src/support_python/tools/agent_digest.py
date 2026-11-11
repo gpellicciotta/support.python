@@ -386,6 +386,11 @@ def rewrite_markdown_links(
             ):
                 return f"the `{skill_ref.group(1)}` skill"
 
+            # Rewrite GitHub links ending in /docs/guidelines/<name>.md, where plan keeps its bundled skill sources
+            guideline_ref = re.search(r"/docs/guidelines/([^/]+)\.md$", url_path)
+            if guideline_ref and raw_target.startswith(("https://github.com/", "http://github.com/")):
+                return f"the `{guideline_ref.group(1)}` skill"
+
             if raw_target.startswith(("http://", "https://", "mailto:", "#")):
                 return match.group(0)
 
