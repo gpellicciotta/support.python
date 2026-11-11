@@ -31,7 +31,7 @@ An overview of all tasks and their planning.
 - [x] T0078 Add --format text|json to git-repository-backup backup and restore, reporting per-repository results.
 - [x] T0081 Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
 - [x] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
-- [ ] T0103 [protocol: adhoc] Release all changes with devops release after running its dry run, once every other task is done.
+- [x] T0103 [owner: @claude, session: claude-20261111-011c8e] [protocol: adhoc] Release all changes with devops release after running its dry run, once every other task is done.
 
 ---
 
