@@ -129,6 +129,9 @@ Its actions are:
 - `lint`, `format`, `test` (with `--slow` for the slow suite), `build`, and `clean`.
 - `check`, which runs lint, fast and slow tests, and build, stopping at the first failure.
 - `versions`, which exits 1 when the version file and the top `CHANGELOG.md` heading differ.
+- `versions VERSION [--dry-run]`, which sets the manifest and active changelog heading to `MAJOR.MINOR.PATCH-pre`.
+  `VERSION` accepts an optional `-pre`; malformed versions and finalized headings are refused before writing.
+  All three adapters share `Project.set_version(version, dry_run=False)`, returning whether the update succeeds.
 - `release`, which runs `ReleasePipeline` with `check` as its quality check and `build` as its post-freeze build hook.
   It attaches the outputs of that post-freeze build, never the `-pre` build from `check`.
 - `help` and `version`, from `ToolHarness`.

@@ -7,7 +7,7 @@ Run `python scripts/bootstrap-dev-environment.py` first to create the virtual en
 Usage:
   python scripts/devops.py lint | format | build | check | clean
   python scripts/devops.py test [SELECTION...] [-- PYTEST-OPTIONS...]
-  python scripts/devops.py versions
+  python scripts/devops.py versions [VERSION] [--dry-run]
   python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
   python scripts/devops.py help [--verbose] | version
 """

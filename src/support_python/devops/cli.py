@@ -230,10 +230,11 @@ class DevopsCli:
         add("clean", "remove build outputs", self._operation("clean"), usage_suffix="")
         add(
             "versions",
-            "compare the version file with the CHANGELOG.md top heading",
+            "compare or set the version file and CHANGELOG.md top heading",
             self._versions,
-            detail="Compare the version file with the CHANGELOG.md top heading; exit 1 when they differ.",
-            usage_suffix="",
+            detail="Without VERSION, check version agreement. With VERSION, set both files; require an active -pre heading.",
+            usage_suffix="[VERSION] [--dry-run]",
+            configure_parser=_configure_versions,
         )
         add(
             "release",
@@ -262,6 +263,9 @@ class DevopsCli:
         return 0 if self.project.test(args.selection) else 1
 
     def _versions(self, args: argparse.Namespace, logger: CliLogger) -> int:
+        if args.target_version is not None:
+            self.project.logger = logger
+            return 0 if self.project.set_version(args.target_version, dry_run=args.dry_run) else 1
         root = self.project.root
         try:
             version = read_version(root)
@@ -296,6 +300,11 @@ class DevopsCli:
             runner=self.project.runner,
         )
         return pipeline.run()
+
+
+def _configure_versions(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("target_version", nargs="?", metavar="VERSION", help="MAJOR.MINOR.PATCH with optional -pre")
+    parser.add_argument("--dry-run", action="store_true", help="validate and report changes without writing files")
 
 
 def _configure_test(parser: argparse.ArgumentParser) -> None:

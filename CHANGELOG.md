@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v3.1.1-pre
+## v3.2.0-pre
+- DevEx: Added `devops versions VERSION` to update Python, Gradle, and Node versions and active changelog headings, including dry runs.
 - Docs: Moved the breaking changes since v2.0.0 from [migration-v2.md](docs/migration-v2.md) into the new [migration-v3.md](docs/migration-v3.md).
 
 ## v3.1.0 [released: 2026-11-11]

@@ -36,6 +36,10 @@ The build writes a source distribution (`dist/*.tar.gz`) and a wheel (`dist/*.wh
   - `version` in [pyproject.toml](../pyproject.toml), without a `v` prefix.
   - The top heading of [CHANGELOG.md](../CHANGELOG.md), such as `## v2.0.51-pre`.
 - Check them with `python scripts/devops.py versions`, which exits 1 when they differ.
+- Set both with `python scripts/devops.py versions {{major}}.{{minor}}.{{patch}}`; add `--dry-run` to preview.
+- The setter accepts an optional `-pre` suffix and always writes a development version.
+- It refuses malformed versions and requires an untagged top `-pre` heading.
+- The same adapter API, `Project.set_version`, supports Python, Gradle, and Node version files.
 - Leave the patch number alone: `plan tasks stop` raises it in both places when a task completes.
 - Bump the minor or major version by renaming both together, in the commit that needs the bump.
 - At runtime, tools read the version from package metadata and append the commit hash, such as `v2.0.51-pre+c194515`.
@@ -70,7 +74,7 @@ It imports the package from `src/`, so it needs no install; its commands run thr
 ```bash
 python scripts/devops.py lint | format | build | check | clean
 python scripts/devops.py test [--slow] [SELECTION...] [-- PYTEST-OPTIONS...]
-python scripts/devops.py versions
+python scripts/devops.py versions [VERSION] [--dry-run]
 python scripts/devops.py release [--dry-run] [--skip-checks] [--yes]
 python scripts/devops.py help [--verbose] | version
 ```
@@ -79,7 +83,7 @@ python scripts/devops.py help [--verbose] | version
 - `build` removes `dist/` and runs `python -m build -o dist`.
 - `check` runs lint, fast and slow tests, and build, stopping at the first failure.
 - `clean` removes `dist/`, `build/`, and `src/*.egg-info`; it needs no venv.
-- `versions` compares `pyproject.toml` with the top `CHANGELOG.md` heading and exits 1 on drift.
+- `versions` checks agreement; with `VERSION`, it updates the manifest and top development heading together.
 - `release` runs `ReleasePipeline`, as described under [Making a Release](#making-a-release).
 - A missing venv exits 1 with a hint to run `bootstrap-dev-environment.py`; unknown actions exit 2.
 

@@ -10,6 +10,7 @@ npm scripts.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from abc import ABC, abstractmethod
@@ -17,7 +18,8 @@ from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from ..logging import CliLogger
-from .release import confirm_typed, read_version, release_version
+from ..files import atomic_write_text
+from .release import confirm_typed, read_version, release_version, write_version
 from .steps import resolve_executable, run_step_command
 
 #: Runs a command as ``runner(argv, cwd, logger)`` and returns its exit code.
@@ -80,6 +82,35 @@ class Project(ABC):
     def release_assets(self) -> list[Path]:
         """Return the build outputs to attach to a release."""
         return []
+
+    def set_version(self, version: str, *, dry_run: bool = False) -> bool:
+        """Set the manifest and active changelog heading to ``MAJOR.MINOR.PATCH-pre``.
+
+        Accept a version with or without ``-pre``. Validate both files before writing either.
+        Return False for invalid input or inaccessible files; dry runs only report validated changes.
+        """
+        if not re.fullmatch(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-pre)?", version):
+            self.logger.error(f"Invalid version: {version!r}; expected MAJOR.MINOR.PATCH with optional -pre.")
+            return False
+        target = release_version(version) + "-pre"
+        changelog = self.root / "CHANGELOG.md"
+        try:
+            read_version(self.root)
+            with changelog.open(encoding="utf-8", newline="") as stream:
+                text = stream.read()
+            heading = re.search(r"^##\s+v[^\r\n]*", text, re.MULTILINE)
+            if heading is None or not re.fullmatch(r"##[ \t]+v\d+\.\d+\.\d+-pre[ \t]*", heading.group()):
+                self.logger.error("CHANGELOG.md top version heading must be an untagged -pre heading.")
+                return False
+            updated = text[: heading.start()] + "## v" + target + text[heading.end() :]
+            self.logger.info(f"{'Would set' if dry_run else 'Setting'} version file and CHANGELOG.md to {target}.")
+            if not dry_run:
+                write_version(self.root, target)
+                atomic_write_text(changelog, updated, newline="")
+        except (OSError, ValueError) as exc:
+            self.logger.error(str(exc))
+            return False
+        return True
 
     def action_summaries(self) -> dict[str, str]:
         """Return help summaries replacing the generic ones of :class:`~support_python.devops.cli.DevopsCli`, by action."""
