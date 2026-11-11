@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 325.8, input: 96, output: 18750, cache_read: 2532986, cache_write: 96122}
+  worker: {turns: 4, duration_s: 368.6, input: 120, output: 20496, cache_read: 3221288, cache_write: 106998}
 work_duration: 175.7
+review_status: pending
+review_round: 1
 ---
 # T0082: Add a typed confirmation with --yes to processes kill, or document why it is exempt from that CLI rule
 
@@ -58,4 +60,7 @@ Document the behavior in processes.md.
 
 - [2026-11-11] **[Doc]**
   Updated processes.md, migration-v2.md, and CHANGELOG.md.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
