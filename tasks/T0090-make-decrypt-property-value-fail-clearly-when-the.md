@@ -11,6 +11,9 @@ ended_at: —
 review: none
 preview: none
 protocol: adhoc
+usage:
+  worker: {turns: 2, duration_s: 428.4, input: 48, output: 11892, cache_read: 1002750, cache_write: 68220}
+work_duration: 226.3
 ---
 # T0090: Make decrypt_property_value fail clearly when the cryptography package is missing instead of returning the ciphertext
 
@@ -40,3 +43,25 @@ Raise a clear error naming the missing package or the decryption failure instead
 
 - [2026-11-11] **[Verify]**
   Red phase: 2 new tests failed (`ImportError not raised`, `ValueError not raised`). Green: `devops.py check` passed (1113 passed, 3 skipped; slow 159 passed). Committed on task branch; CHANGELOG, migration-v2.md, script-utilities.md updated. No validation-proof.md was created.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 3 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF019.
+  - TF020.
+
+
+- [2026-11-11] **[Decided]**
+  Left the `crypto` extra out of pyproject.toml pending user feedback; the change raises clear errors without it.
+
+- [2026-11-11] **[Implement]**
+  Added tests for the missing-package error and malformed ciphertext in tests/test_crypto.py.
+
+- [2026-11-11] **[Implement]**
+  Raised `ImportError` and `ValueError` in crypto.py instead of returning the ciphertext.
+
+- [2026-11-11] **[Doc]**
+  Updated script-utilities.md, migration-v2.md, and CHANGELOG.md.
+
+- [2026-11-11] **[Verify]**
+  Recorded red-phase and green-phase output in validation-proof.md.
