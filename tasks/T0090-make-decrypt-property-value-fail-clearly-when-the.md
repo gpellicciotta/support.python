@@ -5,15 +5,16 @@ session: claude-20261111-b7562a
 needs: []
 branch: task/T0090-make-decrypt-property-value-fail-clearly-when-the
 worktree: .plan/work/T0090-make-decrypt-property-value-fail-clearly-when-the
-status: active
+status: completed
 started_at: "2026-11-11T00:26:17Z"
-ended_at: —
+ended_at: "2026-11-11T00:30:53Z"
 review: none
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 2, duration_s: 428.4, input: 48, output: 11892, cache_read: 1002750, cache_write: 68220}
-work_duration: 226.3
+  worker: {turns: 4, duration_s: 476.6, input: 76, output: 15172, cache_read: 1808128, cache_write: 86128}
+work_duration: 276.5
+completion-commit: 4bdaaf4ab5356af9d42f406b67db8c0796dca0fe
 ---
 # T0090: Make decrypt_property_value fail clearly when the cryptography package is missing instead of returning the ciphertext
 
@@ -65,3 +66,7 @@ Raise a clear error naming the missing package or the decryption failure instead
 
 - [2026-11-11] **[Verify]**
   Recorded red-phase and green-phase output in validation-proof.md.
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
+
