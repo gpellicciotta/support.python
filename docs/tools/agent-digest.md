@@ -24,7 +24,7 @@ agent-digest version
 | `--max-bytes N`      | `20480`             | Maximum UTF-8 byte size for the generated digest                   |
 | `--skill-index FILE` | None                | Index Markdown file that must link to every skill source (`check`) |
 | `--dry-run`          | Off                 | Report planned writes without writing anything (`generate`)        |
-| `--format FORMAT`    | `text`              | Print the `check` result as `text` or one `json` document          |
+| `--format FORMAT`    | `text`              | Print the result as `text` or one `json` document                  |
 
 Standard logging options (`--log-file PATH`, `--log-level LEVEL`, `--debug`, `--verbose`) apply to `generate` and `check`.
 `--debug` sets the `DEBUG` threshold and implies `--verbose`; an explicit `--log-level` still sets the threshold.
@@ -103,6 +103,34 @@ skill:
 `agent-digest generate --dry-run` builds every output in memory and writes nothing:
 - Each output file, including reference copies, logs `Would create {{path}}`, `Would update {{path}}`, or `{{path}} is up to date.`
 - The digest byte budget still applies, so an oversized digest exits `1`.
+
+---
+
+## JSON Output in `generate`
+`agent-digest generate --format json` prints one JSON document on `stdout` for exit codes `0` and `1`:
+```json
+{
+  "ok": true,
+  "dry_run": false,
+  "digest": {"path": "guidelines/agent-digest.md", "status": "updated", "bytes": 1234, "max_bytes": 20480},
+  "skills": [
+    {
+      "name": "python-guidelines",
+      "path": "skills/python-guidelines/SKILL.md",
+      "status": "unchanged",
+      "files": [{"path": "skills/python-guidelines/references/recipes.md", "status": "created"}]
+    }
+  ],
+  "issues": []
+}
+```
+
+- `digest.status`, `skills[].status`, and `skills[].files[].status` take `created`, `updated`, or `unchanged`.
+- With `--dry-run`, `dry_run` is `true` and the statuses say what a real run would do; nothing is written.
+- `ok` is `true` exactly when the exit code is `0`.
+- `issues[].check` is `frontmatter`, `missing-reference`, or `digest-size`; `digest` is `null` when no digest was built.
+- An oversized digest is still written, so `digest.status` is set alongside the `digest-size` issue.
+- Log messages go to `stderr`; exit code `2` errors print nothing on `stdout`.
 
 ---
 

@@ -834,12 +834,21 @@ def same_file_content(path: Path, expected: bytes) -> bool:
     return current == expected
 
 
-def report_planned_write(path: Path, content: str | bytes, detail: str, logger: CliLogger, repo_root: Path | None = None) -> None:
-    """Log whether a dry run would create, update, or leave ``path`` unchanged when writing ``content``."""
-    shown = display_path(path, repo_root)
+def write_status(path: Path, content: str | bytes) -> str:
+    """Return ``created``, ``updated``, or ``unchanged`` for writing ``content`` to ``path``."""
     if not path.exists():
+        return "created"
+    if (not same_file_content(path, content)) if isinstance(content, bytes) else (path.read_text(encoding="utf-8") != content):
+        return "updated"
+    return "unchanged"
+
+
+def report_planned_write(path: Path, status: str, detail: str, logger: CliLogger, repo_root: Path | None = None) -> None:
+    """Log whether a dry run would create, update, or leave ``path`` unchanged, given its ``status``."""
+    shown = display_path(path, repo_root)
+    if status == "created":
         logger.info(f"Would create {shown} ({detail}).")
-    elif (not same_file_content(path, content)) if isinstance(content, bytes) else (path.read_text(encoding="utf-8") != content):
+    elif status == "updated":
         logger.info(f"Would update {shown} ({detail}).")
     else:
         logger.info(f"{shown} is up to date.")
@@ -855,14 +864,26 @@ def action_generate(
     logger: CliLogger | None = None,
     *,
     dry_run: bool = False,
+    output_format: str = "text",
 ) -> int:
     """Generate the digest file and all derived skills from the given input paths.
 
     With ``dry_run``, report which files would be created or updated and write nothing.
+    With ``output_format="json"``, also emit one JSON document listing the digest and skill file statuses.
     """
     logger = logger or CliLogger()
     digest_out = Path(digest_path)
     skills_out = Path(skills_dir)
+    is_json = output_format == "json"
+    if is_json:
+        logger.json_output = True
+    issues: List[Dict[str, Any]] = []
+    skill_results: List[Dict[str, Any]] = []
+
+    def emit(ok: bool, digest_info: Dict[str, Any] | None) -> None:
+        if is_json:
+            doc = {"ok": ok, "dry_run": dry_run, "digest": digest_info, "skills": skill_results, "issues": issues}
+            logger.emit_json(doc, indent=2)
 
     try:
         input_files = collect_input_files(paths, digest_path=digest_out, skills_dir=skills_out)
@@ -871,6 +892,8 @@ def action_generate(
         return 2
     except FrontmatterError as exc:
         logger.error(str(exc))
+        issues.append({"check": "frontmatter", "path": None, "message": str(exc).splitlines()[0].rstrip(":")})
+        emit(False, None)
         return 1
 
     repo_root = find_project_root(Path(paths[0]))
@@ -884,7 +907,10 @@ def action_generate(
     )
     if missing_references:
         for guideline, rel in missing_references:
-            logger.error(f"Reference '{rel}' listed in {guideline.name} does not exist.")
+            message = f"Reference '{rel}' listed in {guideline.name} does not exist."
+            logger.error(message)
+            issues.append({"check": "missing-reference", "path": display_path(guideline, repo_root), "message": message})
+        emit(False, None)
         return 1
     skills = build_skills(
         input_files,
@@ -896,16 +922,23 @@ def action_generate(
     for skill_name, skill_content in sorted(skills.items()):
         skill_dir = skills_out / skill_name
         skill_path = skill_dir / "SKILL.md"
+        skill_status = write_status(skill_path, skill_content)
+        file_results: List[Dict[str, Any]] = []
+        skill_results.append(
+            {"name": skill_name, "path": display_path(skill_path, repo_root), "status": skill_status, "files": file_results}
+        )
         if dry_run:
-            report_planned_write(skill_path, skill_content, f"{len(skill_content.splitlines())} lines", logger, repo_root)
+            report_planned_write(skill_path, skill_status, f"{len(skill_content.splitlines())} lines", logger, repo_root)
         else:
             skill_dir.mkdir(parents=True, exist_ok=True)
             _write_lf(skill_path, skill_content)
             logger.info(f"Generated {display_path(skill_path, repo_root)} ({len(skill_content.splitlines())} lines).")
         for rel, data in sorted(reference_copies.get(skill_name, {}).items()):
             target = skill_dir / rel
+            target_status = write_status(target, data)
+            file_results.append({"path": display_path(target, repo_root), "status": target_status})
             if dry_run:
-                report_planned_write(target, data, f"{len(data)} bytes", logger, repo_root)
+                report_planned_write(target, target_status, f"{len(data)} bytes", logger, repo_root)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)
@@ -920,15 +953,21 @@ def action_generate(
     )
     is_valid, byte_count, limit = check_size_budget(digest_text, max_bytes)
     digest_detail = f"{len(digest_text.splitlines())} lines, {byte_count} bytes"
+    digest_status = write_status(digest_out, digest_text)
     if dry_run:
-        report_planned_write(digest_out, digest_text, digest_detail, logger, repo_root)
+        report_planned_write(digest_out, digest_status, digest_detail, logger, repo_root)
     else:
         digest_out.parent.mkdir(parents=True, exist_ok=True)
         _write_lf(digest_out, digest_text)
         logger.info(f"Generated {display_path(digest_out, repo_root)} ({digest_detail}).")
+    digest_info = {"path": display_path(digest_out, repo_root), "status": digest_status, "bytes": byte_count, "max_bytes": limit}
     if not is_valid:
-        logger.error(f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes).")
+        message = f"Digest size ({byte_count} bytes) exceeds the hard budget limit ({limit} bytes)."
+        logger.error(message)
+        issues.append({"check": "digest-size", "path": digest_info["path"], "message": message})
+        emit(False, digest_info)
         return 1
+    emit(True, digest_info)
     return 0
 
 
@@ -1272,9 +1311,10 @@ def configure_paths_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def configure_generate_parser(parser: argparse.ArgumentParser) -> None:
-    """Configure the PATH arguments and the '--dry-run' option for 'generate'."""
+    """Configure the PATH arguments and the '--dry-run' and '--format' options for 'generate'."""
     configure_paths_parser(parser)
     parser.add_argument("--dry-run", action="store_true", help="report which files would be created or updated without writing")
+    ToolHarness.add_format_option(parser)
 
 
 def configure_check_parser(parser: argparse.ArgumentParser) -> None:
@@ -1410,10 +1450,12 @@ def build_harness() -> DigestHarness:
             max_bytes=args.max_bytes,
             logger=logger,
             dry_run=args.dry_run,
+            output_format=args.format,
         ),
         detail="Collects Markdown files from each PATH, orders them by front-matter 'index' then\n"
         "argument and path order, writes derived skills to --skills-dir, and writes the digest to --digest.\n"
-        "With --dry-run, reports which files would be created or updated and writes nothing.",
+        "With --dry-run, reports which files would be created or updated and writes nothing.\n"
+        "With --format json, prints one JSON document with the created, updated, or unchanged status of the digest and skill files.",
         usage_suffix="{{path}}... [options]",
         configure_parser=configure_generate_parser,
     )

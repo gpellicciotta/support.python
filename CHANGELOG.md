@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.28-pre
+## v2.0.29-pre
+- CLI: Added `--format text|json` to `agent-digest generate`, reporting each digest and skill file as created, updated, or unchanged ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
 - CLI: Added `--format text|json` to `processes kill`, reporting each killed, skipped, not-found, and failed PID as one JSON document ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md)).
 - Library: Added `safe_kill_report` returning the per-PID outcomes of `safe_kill` ([processes.py](src/support_python/processes.py), [process-management.md](docs/tutorials/process-management.md)).
 - CLI: **[breaking]** Made `processes kill` ask for a typed confirmation, skippable with `--yes`, and exit `2` without `--yes` when `stdin` is not a terminal ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md), [migration-v2.md](docs/migration-v2.md)).

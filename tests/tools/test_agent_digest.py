@@ -1096,5 +1096,124 @@ class TestSkillReferences(unittest.TestCase):
             self.assertRegex(out, r"\S*references/recipes\.md is up to date\.")
 
 
+class GenerateJsonFormatTests(unittest.TestCase):
+    """Cover 'generate --format json' output, statuses, dry runs, and failures."""
+
+    @staticmethod
+    def _argv(src_dir: Path, digest_path: Path, skills_dir: Path, *extra: str) -> list[str]:
+        return ["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--format", "json", *extra]
+
+    def test_json_reports_created_then_unchanged_then_updated(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            code, out, err = run_main(self._argv(src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 0, err)
+            doc = json.loads(out)
+            self.assertTrue(doc["ok"])
+            self.assertFalse(doc["dry_run"])
+            self.assertEqual(doc["digest"]["status"], "created")
+            self.assertEqual(doc["digest"]["path"], display_rel(root, digest_path))
+            self.assertGreater(doc["digest"]["bytes"], 0)
+            self.assertEqual(doc["issues"], [])
+            skill = doc["skills"][0]
+            self.assertEqual(skill["name"], "ref-guidelines")
+            self.assertEqual(skill["status"], "created")
+            self.assertEqual(
+                skill["files"],
+                [{"path": display_rel(root, skills_dir / "ref-guidelines" / "references" / "recipes.md"), "status": "created"}],
+            )
+            self.assertIn("Generated", err)
+
+            doc = json.loads(run_main(self._argv(src_dir, digest_path, skills_dir))[1])
+            self.assertEqual(doc["digest"]["status"], "unchanged")
+            self.assertEqual({s["status"] for s in doc["skills"]}, {"unchanged"})
+            self.assertEqual({f["status"] for s in doc["skills"] for f in s["files"]}, {"unchanged"})
+
+            (skills_dir / "ref-guidelines" / "SKILL.md").write_text("changed\n", encoding="utf-8")
+            digest_path.write_text("changed\n", encoding="utf-8")
+            doc = json.loads(run_main(self._argv(src_dir, digest_path, skills_dir))[1])
+            self.assertEqual(doc["digest"]["status"], "updated")
+            self.assertEqual(doc["skills"][0]["status"], "updated")
+            self.assertEqual(doc["skills"][0]["files"][0]["status"], "unchanged")
+
+    def test_json_dry_run_reports_statuses_and_writes_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            code, out, err = run_main(self._argv(src_dir, digest_path, skills_dir, "--dry-run"))
+            self.assertEqual(code, 0, err)
+            doc = json.loads(out)
+            self.assertTrue(doc["dry_run"])
+            self.assertEqual(doc["digest"]["status"], "created")
+            self.assertEqual({s["status"] for s in doc["skills"]}, {"created"})
+            self.assertFalse(digest_path.exists())
+            self.assertFalse(skills_dir.exists())
+            self.assertIn("Would create", err)
+
+    def test_json_stdout_is_one_document_without_log_lines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            _, out, _ = run_main(self._argv(src_dir, digest_path, skills_dir, "-v"))
+            json.loads(out)
+
+    def test_text_format_prints_no_json(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            code, out, err = run_main(
+                ["generate", str(src_dir), "--digest", str(digest_path), "--skills-dir", str(skills_dir), "--format", "text"]
+            )
+            self.assertEqual(code, 0, err)
+            self.assertIn("Generated", out)
+            self.assertNotIn('"ok"', out)
+
+    def test_json_over_budget_digest_exits_1_with_issue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            code, out, err = run_main(self._argv(src_dir, digest_path, skills_dir, "--max-bytes", "10"))
+            self.assertEqual(code, 1)
+            doc = json.loads(out)
+            self.assertFalse(doc["ok"])
+            self.assertEqual(doc["digest"]["status"], "created")
+            self.assertEqual([i["check"] for i in doc["issues"]], ["digest-size"])
+            self.assertIn("exceeds the hard budget limit", err)
+
+    def test_json_missing_reference_exits_1_with_issue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_reference_sources(root)
+            (src_dir / "references" / "recipes.md").unlink()
+            code, out, err = run_main(self._argv(src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 1)
+            doc = json.loads(out)
+            self.assertFalse(doc["ok"])
+            self.assertIsNone(doc["digest"])
+            self.assertEqual(doc["skills"], [])
+            self.assertEqual([i["check"] for i in doc["issues"]], ["missing-reference"])
+            self.assertIn("references/recipes.md", err)
+
+    def test_json_invalid_front_matter_exits_1_with_issue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            src_dir, digest_path, skills_dir = make_sources(root)
+            (src_dir / "ui-guidelines.md").write_text("---\nskill: [\n---\n# UI\n", encoding="utf-8")
+            code, out, _ = run_main(self._argv(src_dir, digest_path, skills_dir))
+            self.assertEqual(code, 1)
+            doc = json.loads(out)
+            self.assertFalse(doc["ok"])
+            self.assertEqual([i["check"] for i in doc["issues"]], ["frontmatter"])
+
+    def test_json_invalid_path_exits_2_with_empty_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            code, out, err = run_main(self._argv(root / "missing", root / "d.md", root / "skills"))
+            self.assertEqual(code, 2)
+            self.assertEqual(out, "")
+            self.assertTrue(err)
+
+
 if __name__ == "__main__":
     unittest.main()
