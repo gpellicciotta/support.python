@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 430.6, input: 120, output: 24758, cache_read: 3954386, cache_write: 140086}
+  worker: {turns: 4, duration_s: 473.4, input: 136, output: 26384, cache_read: 4684086, cache_write: 152458}
 work_duration: 227.9
+review_status: pending
+review_round: 1
 ---
 # T0079: Show every action's options in ToolHarness help --verbose, with metavars and consistent help text
 
@@ -62,4 +64,7 @@ List positional arguments with their help text too; template.python's T0015 had 
 
 - [2026-11-11] **[Doc]**
   Updated cli-harness-and-logging.md and CHANGELOG.md.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
