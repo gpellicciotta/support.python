@@ -83,6 +83,14 @@ class Project(ABC):
         """Return the build outputs to attach to a release."""
         return []
 
+    def sync_versions(self, version: str) -> list[str]:
+        """Sync extra version targets after the pipeline opens the next development version.
+
+        Return repository-relative changed paths for the same development commit, or raise an exception to abort.
+        The default changes nothing. Dry runs never invoke this hook.
+        """
+        return []
+
     def set_version(self, version: str, *, dry_run: bool = False) -> bool:
         """Set the manifest and active changelog heading to ``MAJOR.MINOR.PATCH-pre``.
 

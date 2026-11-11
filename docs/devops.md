@@ -108,6 +108,13 @@ The standard release pipeline freezes that heading, tags, pushes, and opens the 
 It attaches no build artifacts and supports `--skip-checks`, `--skip-github-release`, and `--dry-run`.
 Use `release --dry-run --skip-github-release` to inspect a release without GitHub publication.
 
+### Component Versions
+Override `Project.sync_versions(version)` to synchronize component versions when the release pipeline opens the next development version.
+The hook runs after the manifest and changelog edits, before staging the development commit.
+Return repository-relative changed paths; the pipeline stages them in that commit, leaving the release commit unchanged.
+Raise an exception to stop before the development commit and push; earlier release steps remain in place.
+Dry runs list the hook without invoking it. Direct `ReleasePipeline` users can supply the optional `sync_versions` callable.
+
 ### Repository Scripts
 Cross-platform Python scripts under `scripts/`; they are not installed with the package.
 

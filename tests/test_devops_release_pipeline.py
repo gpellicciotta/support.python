@@ -203,6 +203,75 @@ class FrozenChangelogOnlyTests(ChangelogOnlyTests):
     version = "1.0.0"
 
 
+class SyncVersionsTests(PipelineTestBase):
+    def sync(self, version):
+        from support_python.devops import read_version
+
+        assert read_version(self.root) == version
+        assert f"## v{version}" in (self.root / "CHANGELOG.md").read_text(encoding="utf-8")
+        assert self.gh.steps[-1][:3] != ["git", "add", "CHANGELOG.md"]
+        (self.root / "component.txt").write_text(version, encoding="utf-8")
+        return ["component.txt"]
+
+    def test_sync_stages_component_in_next_commit_only(self):
+        assert self.run_pipeline(sync_versions=self.sync, assume_yes=True) == 0
+        assert git(self.root, "show", "HEAD:component.txt") == "1.0.1-pre"
+        assert "component.txt" not in git(self.root, "ls-tree", "--name-only", "v1.0.0")
+        assert git(self.root, "status", "--porcelain") == ""
+        assert git(self.origin, "show", "main:component.txt") == "1.0.1-pre"
+
+    def test_sync_updates_tracked_component_without_changing_release(self):
+        (self.root / "component.txt").write_text("1.0.0", encoding="utf-8")
+        git(self.root, "add", "component.txt")
+        git(self.root, "commit", "-qm", "Added component version.")
+        assert self.run_pipeline(sync_versions=self.sync, assume_yes=True) == 0
+        assert git(self.root, "show", "v1.0.0:component.txt") == "1.0.0"
+        assert git(self.root, "show", "HEAD:component.txt") == "1.0.1-pre"
+
+    def test_dry_run_plans_sync_without_calling_it(self):
+        before, origin_before = self.snapshot(), self.origin_log()
+        assert self.run_pipeline(sync_versions=self.sync, dry_run=True) == 0
+        self.assert_untouched(before, origin_before)
+        assert not (self.root / "component.txt").exists()
+        assert "sync extra version targets to 1.0.1-pre" in self.logger.text()
+
+    def test_default_has_no_sync_step(self):
+        assert self.run_pipeline(dry_run=True) == 0
+        assert "sync extra version targets" not in self.logger.text()
+
+    def test_hook_failure_stops_next_commit_and_push(self):
+        def fail(version):
+            raise RuntimeError("component sync failed")
+
+        assert self.run_pipeline(sync_versions=fail, assume_yes=True) == 1
+        assert "component sync failed" in self.logger.text()
+        assert git(self.root, "log", "-1", "--format=%s") == "Released version 1.0.0."
+        assert self.gh.steps[-1][:3] == ["gh", "release", "create"]
+
+    def test_cli_passes_project_hook_to_pipeline(self):
+        from unittest.mock import patch
+
+        from support_python.devops import DevopsCli, DocsProject
+
+        owner = self
+
+        class ComponentProject(DocsProject):
+            def sync_versions(self, version):
+                return owner.sync(version)
+
+        project = ComponentProject(self.root, runner=self.gh.runner)
+        from support_python.devops import cli
+
+        original = cli.ReleasePipeline
+
+        def pipeline(**kwargs):
+            return original(**kwargs, query=self.gh.query)
+
+        with patch.object(cli, "ReleasePipeline", pipeline), redirect_stdout(io.StringIO()):
+            assert DevopsCli(project).run(["release", "--yes", "--skip-checks"]) == 0
+        assert git(self.root, "show", "HEAD:component.txt") == "1.0.1-pre"
+
+
 class PreconditionTests(PipelineTestBase):
     def assert_precondition_failure(self, expected: str, **overrides: object) -> None:
         before, origin_before = self.snapshot(), self.origin_log()

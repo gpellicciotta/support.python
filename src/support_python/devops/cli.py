@@ -298,6 +298,7 @@ class DevopsCli:
             quality_check=None if args.skip_checks else self.project.check,
             assets=self.project.release_assets,
             build=self.project.build,
+            sync_versions=self.project.sync_versions,
             dry_run=args.dry_run,
             assume_yes=args.yes,
             skip_github_release=args.skip_github_release,

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Callable, Sequence
+from typing import Callable, Optional, Sequence
 
 from ..files import atomic_write_text
 from ..git import parse_github_remote, parse_status_porcelain
@@ -294,6 +294,8 @@ class ReleasePipeline:
         query: Runs a read-only command as ``query(argv, root)`` and returns its exit code and output.
         input_fn: Prompt function used for the typed confirmation.
         today: Returns the release date written into the CHANGELOG.md status tag.
+        sync_versions: Optional hook receiving the next development version after its manifest and changelog edits.
+            Return repository-relative changed paths to stage in the development commit; raise an exception to abort.
     """
 
     root: Path
@@ -309,6 +311,7 @@ class ReleasePipeline:
     input_fn: Callable[[str], str] = input
     today: Callable[[], date] = date.today
     skip_github_release: bool = False
+    sync_versions: Optional[Callable[[str], list[str]]] = None
 
     def run(self) -> int:
         """Run the pipeline.
@@ -435,6 +438,7 @@ class ReleasePipeline:
     ) -> list[_Step]:
         status = f"released: {self.today().isoformat()}"
         changed = list(dict.fromkeys(["CHANGELOG.md", version_name]))
+        next_add = ["git", "add", *changed]
         steps: list[_Step] = []
         if freeze:
             steps += [
@@ -452,11 +456,24 @@ class ReleasePipeline:
             *([] if self.skip_github_release else [self._publish(root, tag, notes, assets, built=self.build is not None)]),
             self._edit(root, "CHANGELOG.md", f"## v{next_version}", lambda text: open_dev_changelog(text, next_version)),
             *([] if version_name == "CHANGELOG.md" else [self._set_version(root, entry, version_name, next_version)]),
-            self._command(root, ["git", "add", *changed]),
+            *([] if self.sync_versions is None else [self._sync_versions(next_version, next_add)]),
+            self._command(root, next_add),
             self._command(root, ["git", "commit", "-m", f"Started version {next_version} after the {release} release."]),
             self._command(root, ["git", "push", "origin", self.main_branch]),
         ]
         return steps
+
+    def _sync_versions(self, version: str, next_add: list[str]) -> _Step:
+        def action() -> bool:
+            try:
+                paths = self.sync_versions(version) if self.sync_versions is not None else []
+                next_add.extend(path for path in dict.fromkeys(paths) if path not in next_add[2:])
+            except Exception as exc:
+                self.logger.error(f"Could not sync extra version targets: {exc}")
+                return False
+            return True
+
+        return f"sync extra version targets to {version}", action
 
     def _asset_paths(self, root: Path) -> list[Path]:
         return [root / Path(asset) for asset in self.assets()] if self.assets is not None else []
