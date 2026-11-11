@@ -5,15 +5,16 @@ session: claude-20261111-9f764f
 needs: []
 branch: task/T0085-require-an-explicit-salt-and-aes-key-in
 worktree: .plan/work/T0085-require-an-explicit-salt-and-aes-key-in
-status: active
+status: completed
 started_at: "2026-11-11T00:23:08Z"
-ended_at: —
+ended_at: "2026-11-11T00:25:57Z"
 review: none
 preview: none
 protocol: adhoc
 usage:
-  worker: {turns: 2, duration_s: 227.0, input: 64, output: 19238, cache_read: 1478528, cache_write: 79586}
-work_duration: 125.6
+  worker: {turns: 4, duration_s: 262.0, input: 84, output: 20656, cache_read: 1957318, cache_write: 89406}
+work_duration: 169.0
+completion-commit: c2d1be90c6f5fc61fb83a05d705e98261f1c4f03
 ---
 # T0085: Require an explicit salt and AES key in the crypto helpers, removing STANDARD_SALT and DEFAULT_AES_KEY_HEX
 
@@ -59,4 +60,7 @@ Hashes and decryptions computed with explicitly passed values must stay identica
 
 - [2026-11-11] **[Doc]**
   Updated script-utilities.md, sql-anonymizer.md, migration-v2.md, and CHANGELOG.md.
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
