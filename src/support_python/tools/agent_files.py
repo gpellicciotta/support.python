@@ -138,6 +138,8 @@ def format_duration(seconds: float) -> str:
 
 @dataclass(frozen=True)
 class Tool:
+    """An agent CLI that reviews its global instruction file: its command, target file, and review arguments."""
+
     name: str
     command: str
     target_file: Path
@@ -153,10 +155,12 @@ class Tool:
 
 
 def claude_review_args(prompt: str, target_filename: str, timeout: int) -> list[str]:
+    """Return the Claude CLI arguments for a non-interactive review that may edit files."""
     return ["-p", "--permission-mode", "acceptEdits"]
 
 
 def antigravity_review_args(prompt: str, target_filename: str, timeout: int) -> list[str]:
+    """Return the Antigravity CLI arguments, with a print timeout set to 90% of ``timeout``."""
     # agy's own --print-timeout defaults to 5m; set it to 90% of our wrapper's timeout so our
     # wrapper (not agy) is the one that fires on a real hang.
     agy_timeout_seconds = max(60, int(timeout * 0.9))
@@ -165,6 +169,7 @@ def antigravity_review_args(prompt: str, target_filename: str, timeout: int) -> 
 
 
 def codex_review_args(prompt: str, target_filename: str, timeout: int) -> list[str]:
+    """Return the Codex CLI arguments for a non-interactive review with full file access."""
     # danger-full-access is required: workspace-write determines the writable area by git root
     # detection, and this repo is the git root, which is what we actually want write access to.
     return ["exec", "--sandbox", "danger-full-access", "--skip-git-repo-check"]
@@ -226,6 +231,7 @@ def load_digest() -> str:
 
 
 def build_guarded_block(digest: str, skills_catalog: str = "") -> str:
+    """Wrap the digest, and the skills catalog when present, between the guarded-block markers."""
     content = digest.strip()
     if skills_catalog.strip():
         content = f"{content}\n\n{skills_catalog.strip()}"
@@ -298,6 +304,7 @@ def collect_tools_info() -> list[dict[str, str | bool]]:
 
 
 def print_tools(logger: CliLogger | None = None) -> None:
+    """Print a table of the supported tools and whether each one is available."""
     rows = [
         (
             str(i["tool"]),
@@ -332,6 +339,7 @@ def select_tools(tool_names: list[str]) -> list[Tool]:
 
 
 def backup(target_file: Path) -> Path | None:
+    """Copy ``target_file`` to a timestamped ``.bak-`` sibling and return its path, or None when the file is missing."""
     if not target_file.exists():
         return None
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
@@ -441,6 +449,8 @@ def get_available_skills(skills_root: Path | None = None) -> list[Path]:
 
 @dataclass(frozen=True)
 class SkillMetadata:
+    """A skill's name, description, and directory, read from its ``SKILL.md`` front matter."""
+
     name: str
     description: str
     directory: Path
@@ -813,6 +823,7 @@ def sync_tool_skills(
 
 
 def run_review(tool: Tool, verbose: bool, timeout: int, logger: CliLogger) -> bool:
+    """Run the agent review for one tool; return True on success or when the tool is not installed."""
     resolved_command = resolve_command(tool)
     if resolved_command is None:
         logger.info(f"skip: '{tool.command}' not found on PATH or in known locations", origin=tool.name)
@@ -901,6 +912,7 @@ def configure_check_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def action_list(args: argparse.Namespace, logger: CliLogger) -> int:
+    """Handle the ``list`` action: show the supported tools as JSON or a table; return the exit code."""
     output_format = getattr(args, "format", "text")
     if output_format == "json":
         logger.emit_json(collect_tools_info(), indent=2)

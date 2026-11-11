@@ -66,6 +66,7 @@ class ApiRoute:
     path: Optional[str] = None
 
     def __post_init__(self) -> None:
+        """Default ``uri_pattern`` from ``path`` or ``path`` from ``uri_pattern`` when only one is given."""
         if self.uri_pattern is None and self.path is not None:
             object.__setattr__(self, "uri_pattern", self.path)
         elif self.path is None and self.uri_pattern is not None:
@@ -126,6 +127,7 @@ class ApiInfo:
     api_endpoints: Optional[Tuple[ApiRoute, ...]] = None
 
     def __post_init__(self) -> None:
+        """Mirror the legacy ``api_end_points`` field into ``api_endpoints`` and the reverse when only one is given."""
         if self.api_end_points and self.api_endpoints is None:
             object.__setattr__(self, "api_endpoints", tuple(self.api_end_points))
         elif self.api_endpoints and not self.api_end_points:

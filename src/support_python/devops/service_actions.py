@@ -71,6 +71,7 @@ class ServiceActions:
         service_url: Optional[str] = None,
         testdb_env_file: Optional[Path] = None,
     ) -> None:
+        """Create the actions from the optional service managers; see the class docstring for the arguments."""
         invalid = [target for target in db_targets if not LocalMySqlManager.is_valid_target(target)]
         if invalid:
             raise ValueError(f"Unsupported db_targets {invalid}: use 'local', 'testdb', or '<name>_test'.")

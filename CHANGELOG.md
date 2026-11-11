@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.36-pre
+## v2.0.37-pre
+- Library: Documented every public module, class, function, method, and `__init__` in `src/`, and enabled ruff `D100`-`D107` for `src/` so missing docstrings fail the lint ([pyproject.toml](pyproject.toml)).
 - Docs: Added `docs/specs/` with the config file formats of `agent-files`, `lint-markdown`, and `git-repository-backup`, the `agent-digest` front-matter, and every `--format json` document ([specs](docs/specs/json-output.md), [index.md](docs/index.md)).
 - CLI: Added `--format text|json` to `git-repository-backup backup` and `restore`, reporting each repository and layer outcome, and the restore source, target, and branch ([git_repository_backup.py](src/support_python/tools/git_repository_backup.py), [git-repository-backup.md](docs/tools/git-repository-backup.md)).
 - CLI: Added `--format text|json` to `lint-markdown fix`, reporting each fixed file with its fixes and every remaining issue in the `check` issue shape ([lint_markdown.py](src/support_python/tools/lint_markdown.py), [lint-markdown.md](docs/tools/lint-markdown.md)).

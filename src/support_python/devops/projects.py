@@ -43,6 +43,7 @@ class Project(ABC):
     test_selection_example: str = ""
 
     def __init__(self, root: Path, *, runner: Runner = run_step_command, logger: Optional[CliLogger] = None) -> None:
+        """Bind the project to its root folder, step runner, and logger."""
         self.root = Path(root).resolve()
         self.runner = runner
         self.logger = logger if logger is not None else CliLogger()
@@ -115,32 +116,40 @@ class PythonProject(Project):
 
     @property
     def dist_dir(self) -> Path:
+        """Return the folder that holds the built distribution files."""
         return self.root / "dist"
 
     def lint(self) -> bool:
+        """Run ruff check and ruff format --check; return whether both pass."""
         return self._python("-m", "ruff", "check", ".") and self._python("-m", "ruff", "format", "--check", ".")
 
     def format(self) -> bool:
+        """Run ruff format over the project; return whether it succeeded."""
         return self._python("-m", "ruff", "format", ".")
 
     def test(self, selection: Sequence[str] = ()) -> bool:
+        """Run pytest quietly, limited to ``selection`` when given; return whether it passed."""
         return self._python("-m", "pytest", "-q", *selection)
 
     def test_slow(self, selection: Sequence[str] = ()) -> bool:
+        """Run the tests marked slow with a 120-second timeout; return whether they passed."""
         return self._python("-m", "pytest", "-m", "slow", "--timeout=120", *selection)
 
     def build(self) -> bool:
+        """Build the distribution files into :attr:`dist_dir`; return whether the build succeeded."""
         if not self._has_venv():
             return False
         self.remove_tree(self.dist_dir)
         return self._python("-m", "build", "-o", "dist")
 
     def clean(self) -> bool:
+        """Remove the distribution, build, and egg-info folders; return whether the cleanup succeeded."""
         for path in (self.dist_dir, self.root / "build", *sorted((self.root / "src").glob("*.egg-info"))):
             self.remove_tree(path)
         return True
 
     def release_assets(self) -> list[Path]:
+        """Return the wheel and source archive files in :attr:`dist_dir`."""
         return sorted(self.dist_dir.glob("*.whl")) + sorted(self.dist_dir.glob("*.tar.gz"))
 
     def _has_venv(self) -> bool:
@@ -191,6 +200,7 @@ class GradleProject(Project):
         release_task: Optional[str] = None,
         release_args: Sequence[str] = (),
     ) -> None:
+        """Bind the project to its root and set the Gradle task lists, options, and release task."""
         super().__init__(root, runner=runner, logger=logger)
         self.lint_tasks = list(lint_tasks)
         self.format_tasks = list(format_tasks)
@@ -209,9 +219,11 @@ class GradleProject(Project):
         return self.root / ("gradlew.bat" if sys.platform == "win32" else "gradlew")
 
     def lint(self) -> bool:
+        """Run the lint Gradle tasks; return whether they succeeded."""
         return self._gradle(*self.lint_tasks)
 
     def format(self) -> bool:
+        """Run the format Gradle tasks; return whether they succeeded."""
         return self._gradle(*self.format_tasks)
 
     def test(self, selection: Sequence[str] = ()) -> bool:
@@ -232,15 +244,19 @@ class GradleProject(Project):
         return self._gradle(*self.slow_test_tasks, *filters)
 
     def build(self) -> bool:
+        """Run the build Gradle tasks; return whether they succeeded."""
         return self._gradle(*self.build_tasks)
 
     def check(self) -> bool:
+        """Run the check Gradle tasks; return whether they succeeded."""
         return self._gradle(*self.check_tasks)
 
     def clean(self) -> bool:
+        """Run the clean Gradle tasks; return whether they succeeded."""
         return self._gradle(*self.clean_tasks)
 
     def release_assets(self) -> list[Path]:
+        """Return the JAR files under the root and subproject ``build/libs`` folders."""
         return sorted(self.root.glob("build/libs/*.jar")) + sorted(self.root.glob("*/build/libs/*.jar"))
 
     def action_summaries(self) -> dict[str, str]:
@@ -303,12 +319,15 @@ class NodeProject(Project):
 
     @property
     def dist_dir(self) -> Path:
+        """Return the folder that holds the packed npm archives."""
         return self.root / "dist"
 
     def lint(self) -> bool:
+        """Run the npm ``lint`` script; return whether it succeeded."""
         return self._npm_script("lint")
 
     def format(self) -> bool:
+        """Run the npm ``format`` script; return whether it succeeded."""
         return self._npm_script("format")
 
     def test(self, selection: Sequence[str] = ()) -> bool:
@@ -326,6 +345,7 @@ class NodeProject(Project):
         return self._npm("run", "test:slow", *(["--", *selection] if selection else []))
 
     def build(self) -> bool:
+        """Run the npm ``build`` script when the package defines one; return whether it succeeded."""
         scripts = self._scripts()
         if scripts is None:
             return False
@@ -336,10 +356,12 @@ class NodeProject(Project):
         return self._npm("pack", "--pack-destination", "dist")
 
     def clean(self) -> bool:
+        """Remove the distribution folder; return True."""
         self.remove_tree(self.dist_dir)
         return True
 
     def release_assets(self) -> list[Path]:
+        """Return the ``.tgz`` archives in :attr:`dist_dir`."""
         return sorted(self.dist_dir.glob("*.tgz"))
 
     def _scripts(self) -> Optional[dict]:

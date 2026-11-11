@@ -65,6 +65,8 @@ DEFAULT_EXCLUDES = [
 
 @dataclass
 class LintIssue:
+    """One lint finding: where it is, which rule raised it, and whether ``fix`` can repair it."""
+
     file_path: Path
     line_number: int
     column_number: int
@@ -75,6 +77,7 @@ class LintIssue:
     fixable: bool = False
 
     def format(self, relative_to: Optional[Path] = None) -> str:
+        """Format the issue as ``path:line:column: ID [name] message``, with the path relative to ``relative_to`` when possible."""
         path_str = str(self.file_path)
         if relative_to:
             try:
@@ -434,6 +437,7 @@ class MarkdownLinter:
         registry: Optional[RuleRegistry] = None,
         github_owners: Optional[Iterable[str]] = None,
     ) -> None:
+        """Configure the enabled rules, link checking, project root, profile, rule registry, and trusted GitHub owners."""
         self.registry: RuleRegistry = registry if registry is not None else DEFAULT_REGISTRY
         resolved_profile = get_profile(profile, self.registry) if isinstance(profile, str) else profile
         self.profile: Optional[LintProfile] = resolved_profile
@@ -481,6 +485,7 @@ class MarkdownLinter:
         return root
 
     def is_rule_enabled(self, rule_id: str) -> bool:
+        """Return whether ``rule_id`` is enabled for this linter."""
         return rule_id in self.enabled_rules
 
     @staticmethod
@@ -597,6 +602,7 @@ class MarkdownLinter:
         raw_bytes: bytes,
         project_root: Optional[Path] = None,
     ) -> List[LintIssue]:
+        """Lint Markdown bytes and return the issues found, resolving relative links against the project root."""
         issues: List[LintIssue] = []
         current_project_root = project_root.resolve() if project_root is not None else self._resolve_project_root(file_path)
         actual_file_path = file_path if file_path.is_absolute() else (current_project_root / file_path).resolve()
@@ -942,6 +948,7 @@ class MarkdownLinter:
 
 
 def should_exclude(path: Path, base_dir: Path, excludes: List[str]) -> bool:
+    """Return whether any part of ``path``, taken relative to ``base_dir``, matches one of the ``excludes`` patterns."""
     try:
         rel_path = path.relative_to(base_dir)
     except ValueError:
@@ -987,6 +994,7 @@ def find_git_ignored(paths: List[Path], cwd: Path) -> Set[Path]:
 
 
 def discover_markdown_files(paths: List[Path], base_dir: Path, excludes: List[str]) -> List[Path]:
+    """Return the Markdown files under ``paths``, skipping excluded and Git-ignored ones, without duplicates."""
     results: List[Path] = []
     seen: Set[Path] = set()
 

@@ -63,6 +63,7 @@ class Lock(ABC):
         ...
 
     def __enter__(self) -> "Lock":
+        """Acquire the lock and return it."""
         self.acquire()
         return self
 
@@ -72,6 +73,7 @@ class Lock(ABC):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        """Release the lock when the block exits, whatever the outcome."""
         self.release()
 
 
@@ -167,6 +169,7 @@ class FileLock(Lock):
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         max_jitter: float = DEFAULT_MAX_JITTER,
     ) -> None:
+        """Resolve the lock file path and store the timeout and polling settings."""
         self.lock_path = Path(lock_path).resolve()
         self.timeout = timeout
         self.poll_interval = poll_interval
@@ -281,6 +284,7 @@ class NullLock(Lock):
     """No-op lock implementation for tests or environments with disabled locking."""
 
     def __init__(self) -> None:
+        """Create an unlocked no-op lock."""
         self._locked = False
 
     @property
@@ -343,6 +347,7 @@ class RedisLock(Lock):
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         max_jitter: float = DEFAULT_MAX_JITTER,
     ) -> None:
+        """Store the Redis key, URL, timeout, time-to-live, and polling settings."""
         self.key = key
         self.redis_url = redis_url
         self.timeout = timeout
@@ -491,6 +496,7 @@ class MySQLLock(Lock):
         poll_interval: float = DEFAULT_POLL_INTERVAL,
         max_jitter: float = DEFAULT_MAX_JITTER,
     ) -> None:
+        """Store the MySQL lock key, URL, timeout, and polling settings."""
         self.key = key
         self.mysql_url = mysql_url
         self.timeout = timeout

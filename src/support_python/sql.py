@@ -294,6 +294,7 @@ class RowView:
         col_names: Optional[Sequence[str]] = None,
         positions: Optional[Mapping[str, int]] = None,
     ) -> None:
+        """Wrap a row with optional column names and name-to-position fallbacks."""
         self._row = tuple(row)
         self._col_names = tuple(col_names) if col_names is not None else None
         self._positions = {_normalize_col_name(k): v for k, v in positions.items()} if positions is not None else None

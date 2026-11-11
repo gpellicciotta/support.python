@@ -52,6 +52,7 @@ class MD001HeadingIncrement(Rule):
     description = "Heading levels should only increment by 1 level at a time"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD001 issues found for the current lint context."""
         if ctx.prev_heading_level > 0 and ctx.heading_level > ctx.prev_heading_level + 1:
             return [self.issue(ctx, f"Heading level skipped from H{ctx.prev_heading_level} to H{ctx.heading_level}")]
         return []
@@ -64,6 +65,7 @@ class MD002SingleH1(Rule):
     description = "Document should contain at most one top-level H1 heading"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD002 issues found for the current lint context."""
         if ctx.heading_level == 1 and ctx.h1_count > 1:
             return [self.issue(ctx, f"Multiple H1 headings found (H1 #{ctx.h1_count})")]
         return []
@@ -76,6 +78,7 @@ class MD003NoNumberedHeadings(Rule):
     description = "Headings must not start with numbering prefixes"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD003 issues found for the current lint context."""
         if _RE_NUMBERED_HEADING.match(ctx.unquoted_line):
             return [self.issue(ctx, f"Numbered heading prefix found: '{ctx.heading_title.strip()}'")]
         return []
@@ -88,6 +91,7 @@ class MD004NoBoldHeading(Rule):
     description = "Bold text on its own line must not be used as a heading substitute"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD004 issues found for the current lint context."""
         if not ctx.line.strip().startswith(">") and not ctx.unquoted_line.startswith(("- ", "|")):
             m = _RE_BOLD_HEADING.match(ctx.unquoted_line)
             if m and len(m.group(1).split()) < 8:
@@ -102,6 +106,7 @@ class MD005DashBullets(Rule):
     description = "Unordered list items must use dash '-' bullets"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD005 issues found for the current lint context."""
         if ctx.bullet_match and ctx.bullet_match.group(2) in ("*", "+"):
             indent_ws, bullet_char, _ = ctx.bullet_match.groups()
             col = len(ctx.line) - len(ctx.unquoted_line) + len(indent_ws) + 1
@@ -116,6 +121,7 @@ class MD006NoFullyBoldBullet(Rule):
     description = "Bullet items should not bold the entire sentence or clause"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD006 issues found for the current lint context."""
         if ctx.bullet_match:
             indent_ws, _, item_body = ctx.bullet_match.groups()
             body = item_body.strip()
@@ -134,6 +140,7 @@ class MD007CodeBlockLanguage(Rule):
     description = "Fenced code blocks must specify a language identifier"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD007 issues found for the current lint context."""
         if not ctx.fence_lang:
             return [self.issue(ctx, "Fenced code block lacks a language identifier", column_number=len(ctx.fence_indent) + 1)]
         return []
@@ -146,6 +153,7 @@ class MD008NoRawUrls(Rule):
     description = "Raw unformatted URLs in prose must use markdown links or code spans"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD008 issues found for the current lint context."""
         cleaned = re.sub(r"\[[^\]]*\]\([^\)]*\)", "", ctx.sanitized)
         cleaned = re.sub(r"^\s*\[[^\]]+\]:\s*\S+", "", cleaned)
         cleaned = re.sub(r"<https?://[^>]+>", "", cleaned)
@@ -168,6 +176,7 @@ class MD009NoFileUri(Rule):
     description = "Local file:/// URIs must not be used for repository references"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD009 issues found for the current lint context."""
         m = _RE_FILE_URI.search(ctx.sanitized)
         if m:
             return [
@@ -187,6 +196,7 @@ class MD010NoTabs(Rule):
     description = "Hard tabs must not be used for indentation"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD010 issues found for the current lint context."""
         if "\t" in ctx.line:
             return [self.issue(ctx, "Line contains hard tab character; indent with spaces", column_number=ctx.line.index("\t") + 1)]
         return []
@@ -199,6 +209,7 @@ class MD011TrailingWhitespace(Rule):
     description = "Lines must not end in a tab or in more than two spaces"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD011 issues found for the current lint context."""
         trailing = ctx.line[len(ctx.line.rstrip(" \t")) :]
         if "\t" in trailing or len(trailing) > 2:
             return [
@@ -216,6 +227,7 @@ class MD012LineEndings(Rule):
     description = "Files should use LF line endings"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD012 issues found for the current lint context."""
         if b"\r\n" in ctx.raw_bytes and b"\n" in ctx.raw_bytes.replace(b"\r\n", b""):
             return [
                 self.issue(
@@ -232,6 +244,7 @@ class MD013NoTaskIdsInChangelog(Rule):
     description = "Changelog bullets must not contain task identifiers (Tnnnn or Annnn)"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD013 issues found for the current lint context."""
         if ctx.is_changelog and ctx.bullet_match:
             indent_ws, _, item_body = ctx.bullet_match.groups()
             m = _RE_TASK_ID.search(item_body)
@@ -260,6 +273,7 @@ class MD014ValidRelativeLinks(Rule):
         )
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD014 issues found for the current lint context."""
         if ctx.is_historical_task or ctx.in_released_changelog:
             return []
         issues: list[LintIssue] = []
@@ -312,6 +326,7 @@ class MD015NoBlankLineAfterSubheading(Rule):
     description = "Headings below H1 (H2 through H6) must not be followed by a blank line"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD015 issues found for the current lint context."""
         if not ctx.is_historical_task and ctx.heading_level >= 2 and ctx.line_number < len(ctx.lines):
             if _RE_UNQUOTE.sub("", ctx.lines[ctx.line_number]).strip() == "":
                 k = ctx.line_number
@@ -332,6 +347,7 @@ class MD016NoBlankLineBeforeList(Rule):
     description = "Sentences introducing a list must not be followed by a blank line"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD016 issues found for the current lint context."""
         uq = ctx.unquoted_line
         if uq.rstrip().endswith(":") and not _RE_HEADING.match(uq) and not uq.strip().startswith(("|", "<!--")):
             if ctx.line_number < len(ctx.lines) and _RE_UNQUOTE.sub("", ctx.lines[ctx.line_number]).strip() == "":
@@ -350,6 +366,7 @@ class MD017AlignedTables(Rule):
     description = "Markdown table columns must be vertically aligned with padding spaces"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD017 issues found for the current lint context."""
         from support_python.markdown.lint import check_table_alignment
 
         return check_table_alignment(ctx.lines, file_path=ctx.file_path, rule_id=self.rule_id, rule_name=self.name)
@@ -362,6 +379,7 @@ class MD018ValidExternalLinks(Rule):
     description = "External markdown links must return HTTP 200/OK"
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD018 issues found for the current lint context."""
         if ctx.linter is None or ctx.linter.offline:
             return []
         issues: list[LintIssue] = []
@@ -393,6 +411,7 @@ class MD019FileReferencesAsLinks(Rule):
         )
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
+        """Return the MD019 issues found for the current lint context."""
         from support_python.markdown.lint import MarkdownLinter
 
         if ctx.is_historical_task or ctx.in_released_changelog or ctx.is_task_file:

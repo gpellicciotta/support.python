@@ -57,6 +57,7 @@ class DevopsCli:
         description: Optional[str] = None,
         copyright: str = COPYRIGHT,
     ) -> None:
+        """Create the command group for a project; see the class docstring for the arguments."""
         self.project = project
         self._default_description = description is None
         self._deploy_enabled = False

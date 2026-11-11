@@ -38,6 +38,7 @@ class DeployStep:
     action: Callable[[DeployContext], bool] | None = None
 
     def __post_init__(self) -> None:
+        """Require exactly one of ``command`` and ``action`` and freeze the command into a tuple."""
         if (self.command is None) == (self.action is None):
             raise ValueError(f"Deploy step '{self.name}' needs exactly one of command and action")
         if self.command is not None:

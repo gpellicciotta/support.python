@@ -103,6 +103,7 @@ class Setting:
     normalize: Optional[Callable[[Any], Any]] = None
 
     def __post_init__(self) -> None:
+        """Validate the setting name and type, and normalize the name and aliases to dashes."""
         name = self.name.replace("_", "-")
         if not _NAME_PATTERN.match(name):
             raise ValueError(f"Invalid setting name {self.name!r}: use lowercase letters, digits, dashes, and dots.")
@@ -143,6 +144,7 @@ class SettingsSchema:
         environ: Optional[Mapping[str, str]] = None,
         platform: Optional[str] = None,
     ) -> None:
+        """Create a resolver for one tool; see the class docstring for the arguments."""
         self.tool = tool
         self.settings: dict[str, Setting] = {}
         for setting in settings:
