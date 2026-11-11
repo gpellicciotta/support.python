@@ -5,17 +5,20 @@ session: claude-20261111-d032f1
 needs: []
 branch: task/T0081-specify-the-configuration-file-formats-and-json-output
 worktree: .plan/work/T0081-specify-the-configuration-file-formats-and-json-output
-status: active
+status: completed
 started_at: "2026-11-11T01:45:13Z"
-ended_at: —
+ended_at: "2026-11-11T01:51:17Z"
 review: agent
 preview: none
 protocol: standard
 usage:
   worker: {turns: 4, duration_s: 525.6, input: 184, output: 48624, cache_read: 8561418, cache_write: 245066}
-work_duration: 254.8
-review_status: pending
+  review: {turns: 2, duration_s: 112.4, input: 40, output: 6448, cache_read: 882584, cache_write: 83532}
+work_duration: 363.7
+review_status: approved
 review_round: 1
+reviewed_by: "@claude-2"
+completion-commit: f9bc47f9138dd038e7def5ca0bcec3ce85eec649
 ---
 # T0081: Specify the configuration file formats and JSON output documents of all five tools under docs/specs/
 
@@ -30,7 +33,7 @@ Link the specs from docs/index.md, the tool pages, and the AGENTS.md architectur
 - [x] **[Doc]**       Write one spec per configuration format under docs/specs/.
 - [x] **[Doc]**       Write the JSON output document spec under docs/specs/.
 - [x] **[Doc]**       Link the specs from docs/index.md, the tool pages, and AGENTS.md.
-- [ ] **[Review]**    Obtain review approval of the finished work before completion.
+- [x] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
 - [2026-11-10] **[Doc]**
@@ -51,4 +54,11 @@ Link the specs from docs/index.md, the tool pages, and the AGENTS.md architectur
 
 - [2026-11-11] **[Review]**
   Round 1 requested (mode: agent).
+
+- [2026-11-11] **[Review]**
+  Round 1 approved by @claude-2: Five specs under docs/specs/ cover all config formats and every `--format json` document.
+  - Findings: [review-findings-1.md](T0081-specify-the-configuration-file-formats-and-json-output/review-findings-1.md).
+
+- [2026-11-11] **[Complete]**
+  Task completed successfully.
 
