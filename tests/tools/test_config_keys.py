@@ -12,6 +12,7 @@ import unittest
 from pathlib import Path
 from typing import Any
 
+from support_python.config import resolve_settings
 from support_python.markdown.profiles import load_profile
 from support_python.tools import agent_files as agent_files_mod
 from support_python.tools import agent_files_config as cfg_mod
@@ -26,6 +27,9 @@ class _Recorder:
 
     def warn(self, message: str, *args: object, **kwargs: object) -> None:
         self.messages.append(message)
+
+    def debug(self, message: str, *args: object, **kwargs: object) -> None:
+        pass
 
 
 def _first_json_block(doc_name: str) -> dict[str, Any]:
@@ -125,9 +129,9 @@ class DocumentedExampleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             cfg_file = Path(tmp_dir) / "config.json"
             cfg_file.write_text(json.dumps(example), encoding="utf-8")
-            data = backup_mod.load_config(cfg_file, logger)
+            resolved = resolve_settings(backup_mod.build_schema(), config_path=cfg_file, logger=logger)
         self.assertEqual(logger.messages, [])
-        self.assertEqual(data, example)
+        self.assertEqual({name: item.value for name, item in resolved.items() if item.source != "default"}, example)
 
 
 class AgentFilesConfigFlagIntegrationTests(unittest.TestCase):

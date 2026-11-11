@@ -115,6 +115,7 @@ Each tool reads its legacy path with a deprecation warning until `v3.0.0`; renam
 The `git-repository-backup` user config file location is listed in [git-repository-backup.md](tools/git-repository-backup.md#configuration-discovery-and-schema).
 Configuration keys in every tool accept kebab-case and snake_case spellings, so existing files keep working; docs use kebab-case.
 `--config PATH` still overrides discovery on every tool that reads configuration.
+`git-repository-backup` now warns, instead of exiting `2`, about unknown keys, malformed files, and invalid values, and also reads `GIT_REPOSITORY_BACKUP_*` variables and a system file.
 
 ---
 

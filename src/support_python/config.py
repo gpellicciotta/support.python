@@ -412,8 +412,8 @@ def add_config_actions(harness: "ToolHarness", schema: SettingsSchema, *, launch
     """Register the standard ``config`` command group of the Configuration Guidelines on ``harness``.
 
     Usage: ``tool config [list|names|path|get|set|delete|edit] [name] [value]``; ``list`` is the default. Put options
-    after the positional words. ``--config PATH`` replaces file discovery, unless the harness already has a global
-    ``--config`` option.
+    after the positional words. ``--config PATH`` replaces file discovery, and ``get --source`` prints the full card,
+    unless the harness already has a global option of that name; ``get --verbose`` always prints the card.
 
     Args:
         harness: The tool harness to extend.
@@ -427,7 +427,8 @@ def add_config_actions(harness: "ToolHarness", schema: SettingsSchema, *, launch
         parser.add_argument("name", nargs="?", help="setting name for get, set, and delete")
         parser.add_argument("value", nargs="?", help="new value for set")
         parser.add_argument("--all", action="store_true", help="path: print the path of every file")
-        parser.add_argument("--source", action="store_true", help="get: print the full setting card")
+        if not any("--source" in flags for flags, _ in harness._global_args):
+            parser.add_argument("--source", action="store_true", help="get: print the full setting card")
         group = parser.add_mutually_exclusive_group()
         group.add_argument("--user", action="store_true", help="select the user file")
         group.add_argument("--system", action="store_true", help="select the system file")
@@ -478,7 +479,7 @@ def add_config_actions(harness: "ToolHarness", schema: SettingsSchema, *, launch
             entry = _entry(resolved[setting.name])  # type: ignore[union-attr]
             if as_json:
                 logger.emit_json(entry)
-            elif args.source or args.verbose:
+            elif getattr(args, "source", False) or args.verbose:
                 for key in ("name", "value", "source", "type", "default", "description"):
                     logger.emit(f"{key}: {_show(entry[key])}")
             else:

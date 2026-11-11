@@ -14,7 +14,9 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.29-pre
+## v2.0.30-pre
+- CLI: **[breaking]** Moved `git-repository-backup` settings onto the shared resolver, adding `GIT_REPOSITORY_BACKUP_*` variables, a system config file, and the `config` action; unknown keys, malformed files, and invalid values now warn instead of exiting `2` ([git_repository_backup.py](src/support_python/tools/git_repository_backup.py), [git-repository-backup.md](docs/tools/git-repository-backup.md), [migration-v2.md](docs/migration-v2.md)).
+- Library: Made `add_config_actions` skip its `get --source` flag when the harness already has a global `--source` option ([config.py](src/support_python/config.py), [configuration.md](docs/tutorials/configuration.md)).
 - CLI: Added `--format text|json` to `agent-digest generate`, reporting each digest and skill file as created, updated, or unchanged ([agent_digest.py](src/support_python/tools/agent_digest.py), [agent-digest.md](docs/tools/agent-digest.md)).
 - CLI: Added `--format text|json` to `processes kill`, reporting each killed, skipped, not-found, and failed PID as one JSON document ([processes.py](src/support_python/tools/processes.py), [processes.md](docs/tools/processes.md)).
 - Library: Added `safe_kill_report` returning the per-PID outcomes of `safe_kill` ([processes.py](src/support_python/processes.py), [process-management.md](docs/tutorials/process-management.md)).

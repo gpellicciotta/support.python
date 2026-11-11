@@ -70,4 +70,4 @@ my-tool config edit                     # $VISUAL, then $EDITOR, then the platfo
 - `set` and `delete` write kebab-case keys in sorted order with two-space indentation and keep unrelated keys.
 - Secret settings print as `***` in `list` and `get`, in text and JSON.
 - Every printing action supports `--format text|json`.
-- Put options after the positional words. The group adds `--config PATH` unless the harness has a global `--config`.
+- Put options after the positional words. The group adds `--config PATH` and `get --source` unless the harness has a global option of that name; `get --verbose` always prints the card.

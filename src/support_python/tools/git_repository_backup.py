@@ -22,10 +22,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Optional, Sequence
 
 from support_python.cli import PROJECT_VERSION, ToolHarness, get_full_version  # noqa: E402
-from support_python.config import normalize_config_keys  # noqa: E402
+from support_python.config import Setting, SettingsSchema, add_config_actions, resolve_settings  # noqa: E402
 from support_python.env import user_config_path  # noqa: E402
 from support_python.logging import CliLogger  # noqa: E402
 from support_python.tools import TOOLS_COPYRIGHT
@@ -41,7 +41,6 @@ EXIT_CODES = {
     2: "invalid arguments or configuration, or no usable password source",
     130: "interrupted with Ctrl+C; a partial restore target is cleaned up when possible",
 }
-CONFIG_KEYS = ("roots", "mirror-dir", "archive-dir", "depth", "seven-zip", "password-env", "password-keyring")
 DEFAULT_DEPTH = 2
 STATE_FILE_NAME = "backup-state.json"
 PASSWORD_CHECK_NAME = "password-check.7z"
@@ -104,6 +103,7 @@ Usage:
   git-repository-backup list [options]
   git-repository-backup restore (--source PATH | --name NAME) --target DIR [options]
   git-repository-backup set-password --archive-dir PATH --password-keyring NAME
+  git-repository-backup config [list|names|path|get|set|delete|edit] [name] [value] [options]
   git-repository-backup version
   git-repository-backup help [--verbose]
 
@@ -112,13 +112,14 @@ Actions:
   list                   list discovered repos and their backup names without writing anything
   restore                rebuild a working repo from one mirror or archive
   set-password           verify the archive password and store it in the OS keyring
+  config                 list, get, set, or delete settings in the user or system file (default: list)
   version                show version information and exit
   help                   show help message and exit (use --verbose for details)
 
 Options:
   -h, --help             show help message and exit
   --version              show version information and exit
-  --config PATH          JSON config file (default: the user config file, if present; see help --verbose)
+  --config PATH          JSON config file that replaces the user and system files (see help --verbose)
   --root PATH            directory to scan for repos; repeatable, replaces config roots
   --depth N              maximum scan depth below each root (default: {DEFAULT_DEPTH})
   --mirror-dir PATH      directory holding one bare mirror repo per project
@@ -199,8 +200,19 @@ Detailed Action Descriptions:
       action descriptions, the config file format, and examples. Running without arguments
       shows this help; options must follow an action.
 
+Settings:
+  Each setting comes from the first of these sources that gives a valid value:
+    1. the command-line option;
+    2. the environment variable GIT_REPOSITORY_BACKUP_{{{{NAME}}}}, such as GIT_REPOSITORY_BACKUP_MIRROR_DIR;
+    3. the user config file;
+    4. the system config file;
+    5. the built-in default.
+  The tool has no project config file. Lists such as roots take comma-separated items or a JSON array.
+  An invalid value, an unreadable or malformed file, or a wrong-typed key warns once and is skipped.
+  Unknown keys are ignored and listed with --debug.
+
 Config File Format:
-  A JSON object whose keys match the option names; command-line values override config values:
+  A JSON object whose keys match the option names; see `config names --verbose` for the types:
     {{
       "roots": ["{{{{root-1}}}}", "{{{{root-2}}}}"],
       "mirror-dir": "{{{{mirror-directory}}}}",
@@ -211,11 +223,13 @@ Config File Format:
       "password-keyring": "{{{{keyring-service}}}}"
     }}
   Set at most one of "password-env" and "password-keyring".
-  Without --config, the first existing file of these is read:
-    $XDG_CONFIG_HOME/git-repository-backup/config.json, when XDG_CONFIG_HOME is an absolute path;
+  Without --config, the files are:
+    user: $XDG_CONFIG_HOME/git-repository-backup/config.json, when XDG_CONFIG_HOME is an absolute path;
     otherwise %APPDATA%/git-repository-backup/config.json on Windows or ~/.config/git-repository-backup/config.json;
-    then the old ~/.config/git-repository-backup/config.json and the legacy ~/.config/backup-git-repos/config.json,
-    each with a deprecation warning until v3.0.0.
+    then the old ~/.config/git-repository-backup/config.json and the legacy ~/.config/backup-git-repos/config.json
+    stand in for an absent user file, each with a deprecation warning until v3.0.0.
+    system: %PROGRAMDATA%/git-repository-backup/config.json on Windows or /etc/git-repository-backup/config.json.
+  The config action reads and writes the user file by default; use --system for the system file.
 
 Restoring:
   From the configured mirror or archive directory:
@@ -239,6 +253,8 @@ Examples:
   git-repository-backup list --root ~/projects --format json
   git-repository-backup backup --root ~/projects --mirror-dir //server/backups/git --no-archive
   git-repository-backup backup --config ~/backup.json --verbose
+  git-repository-backup config set mirror-dir //server/backups/git
+  git-repository-backup config list --verbose
 """
 
 
@@ -274,38 +290,57 @@ def legacy_config_path() -> Path:
     return Path.home() / ".config" / LEGACY_TOOL_NAME / "config.json"
 
 
-def load_config(path: Path | None, logger: CliLogger | None = None) -> dict[str, Any]:
-    """Load the JSON config file; an explicit path must exist, the default path falls back to the legacy path."""
-    explicit = path is not None
-    if explicit:
-        assert path is not None
-        config_path = path
-        if not config_path.exists():
-            raise UsageError(f"Config file not found: {config_path}")
-    else:
-        found, kind = find_default_config()
-        if found is None:
-            return {}
-        config_path = found
-        default_path = default_config_path()
-        warn_logger = logger if logger is not None else CliLogger()
-        if kind == "old location":
-            warn_logger.warn(
-                f"Reading config {found} from its old location; move it to {default_path}. The old location is dropped in v3.0.0."
-            )
-        elif kind == "legacy":
-            warn_logger.warn(f"Reading legacy config {found}; move it to {default_path}. The legacy path is dropped in v3.0.0.")
-    try:
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise UsageError(f"Cannot read config file {config_path}: {exc}") from exc
-    if not isinstance(data, dict):
-        raise UsageError(f"Config file {config_path} must contain a JSON object.")
-    data = normalize_config_keys(data, style="kebab", source=config_path, logger=logger)
-    unknown = sorted(set(data) - set(CONFIG_KEYS))
-    if unknown:
-        raise UsageError(f"Unknown config keys in {config_path}: {', '.join(unknown)}")
-    return data
+class BackupSchema(SettingsSchema):
+    """Settings schema whose user file may be a deprecated location that is still read until v3.0.0."""
+
+    user_file: Optional[Path] = None
+
+    def path(self, tier: str) -> Path:
+        """Return the file of ``tier``, using ``user_file`` for the user tier when it is set."""
+        if tier == "user" and self.user_file is not None:
+            return self.user_file
+        return super().path(tier)
+
+
+def system_config_path() -> Path:
+    """Return the system config file location: ``%PROGRAMDATA%/git-repository-backup/config.json`` or ``/etc/...``."""
+    return SettingsSchema(TOOL_NAME, [], tiers=("system",)).path("system")
+
+
+def build_schema(user_file: Optional[Path] = None) -> BackupSchema:
+    """Return the declared settings; the tool has user and system files but no project file.
+
+    ``user_file`` replaces the user file path, so a deprecated location is read like the user file.
+    """
+    schema = BackupSchema(
+        TOOL_NAME,
+        [
+            Setting("roots", "list", [], "Directories scanned for Git repositories."),
+            Setting("mirror-dir", "string", None, "Directory holding one bare mirror repository per project."),
+            Setting("archive-dir", "string", None, "Directory holding one encrypted 7-Zip archive per project."),
+            Setting("depth", "integer", DEFAULT_DEPTH, "Maximum scan depth below each root."),
+            Setting("seven-zip", "string", None, "7-Zip executable; defaults to 7z, 7zz or 7za on PATH."),
+            Setting("password-env", "string", None, "Environment variable holding the archive password."),
+            Setting("password-keyring", "string", None, "OS keyring service holding the archive password."),
+        ],
+        tiers=("user", "system"),
+        system_path=system_config_path(),
+    )
+    schema.user_file = user_file
+    return schema
+
+
+def warn_deprecated_config(logger: CliLogger) -> Optional[Path]:
+    """Warn when the user file comes from a deprecated location and return the file that is read, if any."""
+    found, kind = find_default_config()
+    default_path = default_config_path()
+    if kind == "old location":
+        logger.warn(
+            f"Reading config {found} from its old location; move it to {default_path}. The old location is dropped in v3.0.0."
+        )
+    elif kind == "legacy":
+        logger.warn(f"Reading legacy config {found}; move it to {default_path}. The legacy path is dropped in v3.0.0.")
+    return found
 
 
 def to_path(value: str) -> Path:
@@ -313,34 +348,43 @@ def to_path(value: str) -> Path:
     return Path(os.path.expanduser(value))
 
 
-def resolve_settings(args: argparse.Namespace, config: dict[str, Any]) -> Settings:
-    """Merge command-line arguments over config values and validate the result."""
-    roots = args.root if args.root else config.get("roots", [])
-    if not isinstance(roots, list) or not all(isinstance(root, str) for root in roots):
-        raise UsageError("Config key 'roots' must be a list of paths.")
-
-    for key in ("mirror-dir", "archive-dir", "seven-zip", "password-env", "password-keyring"):
-        if key in config and not isinstance(config[key], str):
-            raise UsageError(f"Config key '{key}' must be a string.")
-
-    mirror_dir = None if args.no_mirror else (args.mirror_dir or config.get("mirror-dir"))
-    archive_dir = None if args.no_archive else (args.archive_dir or config.get("archive-dir"))
-
-    depth = args.depth if args.depth is not None else config.get("depth", DEFAULT_DEPTH)
-    if not isinstance(depth, int) or isinstance(depth, bool) or depth < 1:
+def load_settings(args: argparse.Namespace, logger: CliLogger) -> Settings:
+    """Resolve the settings from options, environment variables, and files, then validate the result."""
+    config_path = to_path(args.config) if args.config else None
+    user_file = None
+    if config_path is not None:
+        if not config_path.exists():
+            raise UsageError(f"Config file not found: {config_path}")
+    else:
+        user_file = warn_deprecated_config(logger)
+    cli = {
+        "roots": args.root,
+        "mirror-dir": args.mirror_dir,
+        "archive-dir": args.archive_dir,
+        "depth": args.depth,
+        "seven-zip": args.seven_zip,
+        "password-env": args.password_env,
+        "password-keyring": args.password_keyring,
+    }
+    values = {
+        name: item.value
+        for name, item in resolve_settings(build_schema(user_file), cli=cli, config_path=config_path, logger=logger).items()
+    }
+    mirror_dir = None if args.no_mirror else values["mirror-dir"]
+    archive_dir = None if args.no_archive else values["archive-dir"]
+    depth = values["depth"]
+    if depth < 1:
         raise UsageError("Depth must be a positive integer.")
-
-    password_env = args.password_env or config.get("password-env")
-    password_keyring = args.password_keyring or config.get("password-keyring")
+    password_env = values["password-env"] or None
+    password_keyring = values["password-keyring"] or None
     if password_env and password_keyring:
         raise UsageError("Set only one of --password-env and --password-keyring.")
-
     return Settings(
-        roots=[to_path(root) for root in roots],
+        roots=[to_path(root) for root in values["roots"]],
         mirror_dir=to_path(mirror_dir) if mirror_dir else None,
         archive_dir=to_path(archive_dir) if archive_dir else None,
         depth=depth,
-        seven_zip=args.seven_zip or config.get("seven-zip"),
+        seven_zip=values["seven-zip"] or None,
         password_env=password_env,
         password_keyring=password_keyring,
         dry_run=args.dry_run,
@@ -936,7 +980,7 @@ def run_restore(settings: Settings, args: argparse.Namespace, logger: CliLogger)
 
 def run_action(action: str, args: argparse.Namespace, logger: CliLogger) -> int:
     """Resolve the settings and run one action; raises UsageError for invalid arguments or configuration."""
-    settings = resolve_settings(args, load_config(to_path(args.config) if args.config else None, logger=logger))
+    settings = load_settings(args, logger)
     if action == "set-password":
         return run_set_password(settings, logger)
     if action == "restore":
@@ -1078,6 +1122,7 @@ def build_harness() -> BackupHarness:
     )
     harness.add_action("restore", "rebuild a working repo from one mirror or archive", handler=action_handler("restore"))
     harness.add_action("set-password", "verify the archive password and store it", handler=action_handler("set-password"))
+    add_config_actions(harness, build_schema())
     return harness
 
 

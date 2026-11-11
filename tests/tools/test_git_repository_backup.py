@@ -21,6 +21,7 @@ from unittest import mock
 
 import pytest
 
+from support_python.config import resolve_settings
 from support_python.tools import git_repository_backup as backup_git_repos
 
 SRC_DIR = Path(__file__).resolve().parents[2] / "src"
@@ -195,9 +196,11 @@ class TestCli(BackupTestCase):
         self.config.unlink()
         self.assertEqual(self.run_main("list", "--root", str(self.root))[0], 2)
 
-    def test_invalid_config_json_exits_two(self) -> None:
+    def test_invalid_config_json_warns_and_is_ignored(self) -> None:
         self.config.write_text("{not json", encoding="utf-8")
-        self.assertEqual(self.run_main("list", "--root", str(self.root))[0], 2)
+        code, _, err = self.run_main("list", "--root", str(self.root))
+        self.assertEqual(code, 0)
+        self.assertEqual(err.count("**[WARN]**"), 1)
 
     def test_missing_password_env_exits_two(self) -> None:
         make_repo(self.root / "alpha")
@@ -465,6 +468,135 @@ class TestConfig(BackupTestCase):
         self.assertEqual(code, 2)
 
 
+class TestSharedSettings(BackupTestCase):
+    """Settings resolve through the shared resolver: environment, user file, system file, and the config group."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.system_cfg = self.tmp / "system" / "config.json"
+        patcher = mock.patch.object(backup_git_repos, "system_config_path", return_value=self.system_cfg)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def write_json(self, path: Path, data: Any) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+    def list_names(self, *args: str, env: dict[str, str] | None = None) -> tuple[int, list[str], str]:
+        with mock.patch.dict(os.environ, env or {}):
+            code, out, err = self.run_raw("list", *args)
+        return code, [line.split("  ")[0] for line in out.splitlines()], err
+
+    def test_environment_variable_supplies_roots(self) -> None:
+        make_repo(self.root / "alpha")
+        code, names, err = self.list_names(env={"GIT_REPOSITORY_BACKUP_ROOTS": str(self.root)})
+        self.assertEqual((code, names, err), (0, ["alpha"], ""))
+
+    def test_environment_variable_beats_user_file_and_loses_to_option(self) -> None:
+        other = self.tmp / "other"
+        third = self.tmp / "third"
+        make_repo(self.root / "alpha")
+        make_repo(other / "beta")
+        make_repo(third / "gamma")
+        self.write_json(self.new_cfg, {"roots": [str(third)]})
+        env = {"GIT_REPOSITORY_BACKUP_ROOTS": str(self.root)}
+        self.assertEqual(self.list_names(env=env)[1], ["alpha"])
+        self.assertEqual(self.list_names("--root", str(other), env=env)[1], ["beta"])
+
+    def test_environment_variable_sets_depth(self) -> None:
+        make_repo(self.root / "group" / "deep")
+        env = {"GIT_REPOSITORY_BACKUP_DEPTH": "1"}
+        self.assertEqual(self.list_names("--root", str(self.root), env=env)[1], [])
+        self.assertEqual(self.list_names("--root", str(self.root), env={"GIT_REPOSITORY_BACKUP_DEPTH": "2"})[1], ["deep"])
+
+    def test_invalid_environment_value_warns_and_falls_through(self) -> None:
+        make_repo(self.root / "alpha")
+        self.write_json(self.new_cfg, {"roots": [str(self.root)], "depth": 2})
+        code, names, err = self.list_names(env={"GIT_REPOSITORY_BACKUP_DEPTH": "many"})
+        self.assertEqual((code, names), (0, ["alpha"]))
+        self.assertEqual(err.count("**[WARN]**"), 1)
+        self.assertIn("GIT_REPOSITORY_BACKUP_DEPTH", err)
+
+    def test_system_file_is_the_lowest_file_source(self) -> None:
+        other = self.tmp / "other"
+        make_repo(self.root / "alpha")
+        make_repo(other / "beta")
+        self.write_json(self.system_cfg, {"roots": [str(other)], "depth": 2})
+        self.assertEqual(self.list_names(), (0, ["beta"], ""))
+        self.write_json(self.new_cfg, {"roots": [str(self.root)]})
+        self.assertEqual(self.list_names(), (0, ["alpha"], ""))
+
+    def test_system_file_supplies_settings_next_to_old_location_user_file(self) -> None:
+        make_repo(self.root / "alpha")
+        self.write_json(self.system_cfg, {"roots": [str(self.root)]})
+        self.write_json(self.old_cfg, {"depth": 3})
+        code, names, err = self.list_names()
+        self.assertEqual((code, names), (0, ["alpha"]))
+        self.assertEqual(err.count("**[WARN]**"), 1)
+        self.assertIn("old location", err)
+
+    def test_unknown_keys_are_ignored(self) -> None:
+        make_repo(self.root / "alpha")
+        self.write_json(self.config, {"roots": [str(self.root)], "future-setting": True})
+        code, out, err = self.run_raw("list", "--config", str(self.config))
+        self.assertEqual((code, err), (0, ""))
+        self.assertIn("alpha", out)
+
+    def test_malformed_file_warns_once_and_is_ignored(self) -> None:
+        make_repo(self.root / "alpha")
+        self.new_cfg.parent.mkdir(parents=True)
+        self.new_cfg.write_text("{not json", encoding="utf-8")
+        code, out, err = self.run_raw("list", "--root", str(self.root))
+        self.assertEqual(code, 0, err)
+        self.assertIn("alpha", out)
+        self.assertEqual(err.count("**[WARN]**"), 1)
+        self.assertIn(str(self.new_cfg), err)
+
+    def test_wrong_typed_value_in_file_warns_instead_of_exiting_two(self) -> None:
+        make_repo(self.root / "alpha")
+        self.write_json(self.config, {"mirror-dir": 5})
+        code, _, err = self.run_raw("list", "--root", str(self.root), "--config", str(self.config))
+        self.assertEqual(code, 0, err)
+        self.assertEqual(err.count("**[WARN]**"), 1)
+
+    def test_config_path_targets_user_file(self) -> None:
+        code, out, err = self.run_raw("config", "path")
+        self.assertEqual((code, out.strip(), err), (0, str(self.new_cfg), ""))
+        code, out, _ = self.run_raw("config", "path", "--all", "--format", "json")
+        self.assertEqual(json.loads(out), {"user": str(self.new_cfg), "system": str(self.system_cfg)})
+
+    def test_config_set_writes_user_file_and_get_reports_it(self) -> None:
+        self.assertEqual(self.run_raw("config", "set", "depth", "3")[0], 0)
+        self.assertEqual(json.loads(self.new_cfg.read_text(encoding="utf-8")), {"depth": 3})
+        code, out, _ = self.run_raw("config", "get", "depth", "--verbose")
+        self.assertEqual(code, 0)
+        self.assertIn("value: 3", out)
+        self.assertIn("source: user", out)
+        self.assertEqual(self.run_raw("config", "set", "roots", "a,b", "--system")[0], 0)
+        self.assertEqual(json.loads(self.system_cfg.read_text(encoding="utf-8")), {"roots": ["a", "b"]})
+
+    def test_config_list_reports_sources_as_json(self) -> None:
+        self.write_json(self.new_cfg, {"mirror-dir": "m"})
+        with mock.patch.dict(os.environ, {"GIT_REPOSITORY_BACKUP_DEPTH": "4"}):
+            code, out, _ = self.run_raw("config", "--format", "json")
+        self.assertEqual(code, 0)
+        by_name = {entry["name"]: entry for entry in json.loads(out)["settings"]}
+        self.assertEqual(
+            list(by_name),
+            ["roots", "mirror-dir", "archive-dir", "depth", "seven-zip", "password-env", "password-keyring"],
+        )
+        self.assertEqual((by_name["mirror-dir"]["value"], by_name["mirror-dir"]["source"]), ("m", "user"))
+        self.assertEqual((by_name["depth"]["value"], by_name["depth"]["source"]), (4, "env"))
+
+    def test_config_rejects_unknown_setting_and_invalid_value(self) -> None:
+        self.assertEqual(self.run_raw("config", "get", "bogus")[0], 2)
+        self.assertEqual(self.run_raw("config", "set", "depth", "many")[0], 2)
+        self.assertFalse(self.new_cfg.exists())
+
+    def test_config_has_no_project_file(self) -> None:
+        self.assertEqual(self.run_raw("config", "path", "--project")[0], 2)
+
+
 class TestDiscovery(BackupTestCase):
     def test_discovers_repos_up_to_depth(self) -> None:
         make_repo(self.root / "alpha")
@@ -653,12 +785,14 @@ class TestReviewRound1(BackupTestCase):
         self.assertEqual(refs_of(mirror), refs_of(alpha))
         self.assertEqual(git(mirror, "symbolic-ref", "HEAD"), "refs/heads/main")
 
-    def test_non_string_config_values_exit_two(self) -> None:
+    def test_non_string_config_values_warn_and_are_ignored(self) -> None:
         for key, value in (("seven-zip", 7), ("password-env", ["NAME"]), ("mirror-dir", 5), ("archive-dir", True)):
             with self.subTest(key=key):
                 config = {"roots": [str(self.root)], "mirror-dir": str(self.mirrors), key: value}
                 self.config.write_text(json.dumps(config), encoding="utf-8")
-                self.assertEqual(self.run_main("backup")[0], 2)
+                code, _, err = self.run_main("list")
+                self.assertEqual(code, 0, err)
+                self.assertIn(f"Invalid value for setting '{key}'", err)
 
     def test_empty_password_env_is_rejected(self) -> None:
         make_repo(self.root / "alpha")
@@ -854,10 +988,12 @@ class TestKeyring(KeyringTestCase):
                 self.assertIn("Set only one of --password-env and --password-keyring", err)
                 self.assertFalse((self.archives / "alpha.7z").exists())
 
-    def test_non_string_keyring_config_exits_two(self) -> None:
+    def test_non_string_keyring_config_warns_and_is_ignored(self) -> None:
         config = {"roots": [str(self.root)], "mirror-dir": str(self.mirrors), "password-keyring": 3}
         self.config.write_text(json.dumps(config), encoding="utf-8")
-        self.assertEqual(self.run_main("backup")[0], 2)
+        code, _, err = self.run_main("list")
+        self.assertEqual(code, 0)
+        self.assertIn("password-keyring", err)
 
     @unittest.skipUnless(SEVEN_ZIP, "7-Zip executable not available")
     def test_set_password_creates_verifier_and_stores_password(self) -> None:
@@ -1423,5 +1559,7 @@ class SnakeCaseConfigKeyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             cfg = Path(tmp) / "config.json"
             cfg.write_text('{"mirror_dir": "m", "seven_zip": "7z", "password_env": "PW"}', encoding="utf-8")
-            data = backup_git_repos.load_config(cfg)
-        self.assertEqual(data, {"mirror-dir": "m", "seven-zip": "7z", "password-env": "PW"})
+            resolved = resolve_settings(backup_git_repos.build_schema(), config_path=cfg)
+        self.assertEqual(resolved["mirror-dir"].value, "m")
+        self.assertEqual(resolved["seven-zip"].value, "7z")
+        self.assertEqual(resolved["password-env"].value, "PW")
