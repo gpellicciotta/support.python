@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: adhoc
+usage:
+  worker: {turns: 2, duration_s: 206.4, input: 72, output: 16718, cache_read: 1727444, cache_write: 90246}
+work_duration: 115.6
 ---
 # T0074: Add --format text|json to processes kill, reporting each killed, skipped, and failed PID
 
@@ -32,3 +35,27 @@ Report `would-kill` and `would-skip-protected` outcomes for `--dry-run`.
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 2 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the CLI guidelines and the kill handler of processes.
+
+- [2026-11-11] **[Implement]**
+  Wrote three failing tests for kill --format json, including dry-run and failure cases.
+
+- [2026-11-11] **[Verify]**
+  Red phase: the three new tests failed against the old source; see validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Added safe_kill_report and emitted per-PID results with emit_json in json mode.
+
+- [2026-11-11] **[Verify]**
+  Fast suite passed with 1133 tests; slow processes tests passed; output in validation-proof.md.
+
+- [2026-11-11] **[Doc]**
+  Documented the JSON document in processes.md and added CHANGELOG entries.
+
