@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.35-pre
+## v2.0.36-pre
+- Docs: Added `docs/specs/` with the config file formats of `agent-files`, `lint-markdown`, and `git-repository-backup`, the `agent-digest` front-matter, and every `--format json` document ([specs](docs/specs/json-output.md), [index.md](docs/index.md)).
 - CLI: Added `--format text|json` to `git-repository-backup backup` and `restore`, reporting each repository and layer outcome, and the restore source, target, and branch ([git_repository_backup.py](src/support_python/tools/git_repository_backup.py), [git-repository-backup.md](docs/tools/git-repository-backup.md)).
 - CLI: Added `--format text|json` to `lint-markdown fix`, reporting each fixed file with its fixes and every remaining issue in the `check` issue shape ([lint_markdown.py](src/support_python/tools/lint_markdown.py), [lint-markdown.md](docs/tools/lint-markdown.md)).
 - CLI: Added `--format text|json` to `agent-files sync`, reporting each tool's planned or applied instruction-file and skill changes as `synced`, `changes-pending`, `failed`, `unavailable`, or `up-to-date` ([agent_files.py](src/support_python/tools/agent_files.py), [agent-files.md](docs/tools/agent-files.md)).

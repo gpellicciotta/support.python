@@ -43,6 +43,15 @@ This project follows the cross-project [dev-guidelines](https://github.com/gpell
 
 ---
 
+## Specifications
+- [Agent Files Config](specs/config-agent-files.md): `.agent-files.json` sources, precedence, settings, and `tools` definitions.
+- [Lint Markdown Config](specs/config-lint-markdown.md): `.lint-markdown.json` sources, precedence, settings, and rule selection.
+- [Git Repository Backup Config](specs/config-git-repository-backup.md): User and system config file sources, settings, and password options.
+- [Agent Digest Front-Matter](specs/front-matter-agent-digest.md): `index` and `skill` keys, references, and the supported YAML subset.
+- [JSON Output Documents](specs/json-output.md): Every `--format json` document of the five tools, field by field, plus the `config` group.
+
+---
+
 ## Library Tutorials
 - [CLI harness and logging](tutorials/cli-harness-and-logging.md): `ToolHarness`, `Action`, build-metadata versions, `CliLogger` with 11-character severity padding and console/file teeing, table output, and token storage.
 - [Script utilities](tutorials/script-utilities.md): UTF-8 console setup, project version lookup, port checks, env-file parsing, and password hashing.

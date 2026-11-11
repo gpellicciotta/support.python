@@ -2,6 +2,7 @@
 
 Deterministic Markdown guideline digest and skill generator with built-in budget and link validation.
 Implemented in [agent_digest.py](../../src/support_python/tools/agent_digest.py) and exposed via the `agent-digest` console script.
+Specifications: [front-matter](../specs/front-matter-agent-digest.md) and [JSON output](../specs/json-output.md).
 
 ---
 

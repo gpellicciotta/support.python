@@ -30,6 +30,7 @@ See [README.md](README.md) for usage, [index.md](docs/index.md) for all document
 - [scripts/](scripts/): bootstrap, `devops.py`, and one-off repository maintenance scripts.
 - [tests/](tests/): pytest suite; [tests/tools/](tests/tools/) covers the console tools.
 - [docs/tools/](docs/tools/) and [docs/tutorials/](docs/tutorials/): per-tool references and library tutorials.
+- [docs/specs/](docs/specs/): config file formats, digest front-matter, and [JSON output documents](docs/specs/json-output.md).
 
 ## Project Conventions
 - Keep `dependencies` in [pyproject.toml](pyproject.toml) empty; optional backends go in extras such as `redis` and `mysql`.

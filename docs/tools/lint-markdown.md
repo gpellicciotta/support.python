@@ -1,6 +1,7 @@
 # Markdown Linter Rules and Profiles
 
 Automated Markdown style, structure, and link validation implemented in [lint.py](../../src/support_python/markdown/lint.py) and CLI module [lint_markdown.py](../../src/support_python/tools/lint_markdown.py), with rule classes in [rules.py](../../src/support_python/markdown/rules.py), registry in [registry.py](../../src/support_python/markdown/registry.py), and loadable profiles in [profiles.py](../../src/support_python/markdown/profiles.py).
+Specifications: [config file](../specs/config-lint-markdown.md) and [JSON output](../specs/json-output.md).
 
 ---
 

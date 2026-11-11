@@ -1,6 +1,7 @@
 # Git Repository Backup
 
 Dual-layer Git repository backup and restore utility implemented in [git_repository_backup.py](../../src/support_python/tools/git_repository_backup.py) and exposed on the command line as `git-repository-backup`.
+Specifications: [config file](../specs/config-git-repository-backup.md) and [JSON output](../specs/json-output.md).
 
 ---
 

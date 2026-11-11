@@ -1,6 +1,7 @@
 # Processes
 
 Cross-platform process listing and ancestor-protected termination, implemented in [processes.py](../../src/support_python/tools/processes.py) and exposed on the command line as `processes`.
+Specifications: [JSON output](../specs/json-output.md).
 
 ---
 

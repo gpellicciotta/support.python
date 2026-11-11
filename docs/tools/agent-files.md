@@ -3,6 +3,7 @@
 Deterministic installation of an existing agent digest and skills directory into installed AI coding tools.
 `agent-files` never generates or refreshes the digest; run [agent-digest](agent-digest.md) first.
 Implemented in [agent_files.py](../../src/support_python/tools/agent_files.py) and configured via [agent_files_config.py](../../src/support_python/tools/agent_files_config.py).
+Specifications: [config file](../specs/config-agent-files.md) and [JSON output](../specs/json-output.md).
 
 ---
 
