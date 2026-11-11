@@ -1,11 +1,12 @@
 ---
 id: T0075
-owner: ~
-needs: [T0070]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@claude"
+session: claude-20261111-4d3ca8
+needs: []
+branch: task/T0075-add-format-text-json-to-agent-files-sync
+worktree: .plan/work/T0075-add-format-text-json-to-agent-files-sync
+status: active
+started_at: "2026-11-11T01:26:30Z"
 ended_at: —
 review: agent
 preview: none
@@ -20,12 +21,12 @@ Keep the exit codes and the `text` output unchanged.
 Reuse the document shape of `check --format json` where the data overlaps.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the CLI guidelines and the current `sync` handler of `agent-files`.
-- [ ] **[Implement]** Write failing tests for `agent-files sync --format json`, including `--dry-run` and failure cases.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document the JSON document in agent-files.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the CLI guidelines and the current `sync` handler of `agent-files`.
+- [x] **[Implement]** Write failing tests for `agent-files sync --format json`, including `--dry-run` and failure cases.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document the JSON document in agent-files.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
