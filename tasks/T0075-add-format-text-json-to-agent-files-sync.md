@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 348.8, input: 96, output: 25486, cache_read: 3012526, cache_write: 123884}
+  worker: {turns: 4, duration_s: 394.2, input: 120, output: 27124, cache_read: 3843194, cache_write: 136232}
 work_duration: 187.1
+review_status: pending
+review_round: 1
 ---
 # T0075: Add --format text|json to agent-files sync, reporting each tool's planned and applied changes
 
@@ -57,4 +59,7 @@ Reuse the document shape of `check --format json` where the data overlaps.
 
 - [2026-11-11] **[Doc]**
   Documented the JSON document in agent-files.md and added the CHANGELOG entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
