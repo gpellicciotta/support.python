@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 429.0, input: 88, output: 35588, cache_read: 2902608, cache_write: 139586}
+work_duration: 227.2
 ---
 # T0078: Add --format text|json to git-repository-backup backup and restore, reporting per-repository results
 
@@ -33,3 +36,27 @@ Update the hand-written `BackupHarness` help, which lists `--format` for `list` 
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 2 errors; pending fix turn 1 of 2.
+  - TF018.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the CLI guidelines and the backup and restore handlers of git-repository-backup.
+
+- [2026-11-11] **[Implement]**
+  Wrote nine failing tests for backup and restore with --format json, including dry-run and failure cases.
+
+- [2026-11-11] **[Verify]**
+  Recorded the red-phase failures in validation-proof.md.
+
+- [2026-11-11] **[Implement]**
+  Collected per-repository results in run_backup and a report in run_restore, emitted through emit_json.
+
+- [2026-11-11] **[Verify]**
+  Fast suite and slow git-repository-backup tests passed; output recorded in validation-proof.md.
+
+- [2026-11-11] **[Doc]**
+  Documented the JSON output in git-repository-backup.md and added a CHANGELOG.md entry.
+
