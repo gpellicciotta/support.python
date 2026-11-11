@@ -1,15 +1,16 @@
 ---
 id: T0074
-owner: ~
+owner: "@claude"
+session: claude-20261111-e56b1a
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0074-add-format-text-json-to-processes-kill-reporting
+worktree: .plan/work/T0074-add-format-text-json-to-processes-kill-reporting
+status: active
+started_at: "2026-11-11T00:50:36Z"
 ended_at: —
 review: agent
 preview: none
-protocol: standard
+protocol: adhoc
 ---
 # T0074: Add --format text|json to processes kill, reporting each killed, skipped, and failed PID
 
@@ -20,12 +21,12 @@ Keep the exit codes and the `text` output unchanged.
 Report `would-kill` and `would-skip-protected` outcomes for `--dry-run`.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the CLI guidelines and the current `kill` handler of `processes`.
-- [ ] **[Implement]** Write failing tests for `processes kill --format json`, including `--dry-run` and failure cases.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document the JSON document in processes.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the CLI guidelines and the current `kill` handler of `processes`.
+- [x] **[Implement]** Write failing tests for `processes kill --format json`, including `--dry-run` and failure cases.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document the JSON document in processes.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
