@@ -14,8 +14,8 @@ An overview of all tasks and their planning.
 - [x] T0088 Make lint-markdown resolve GitHub links to sibling checkouts only for configured owners, defaulting to none.
 - [x] T0071 Split the test suite into a parallel fast default suite and a marked slow suite, with per-test timeouts.
 - [x] T0072 Let DevopsCli run the slow test suite through test --slow, and run both suites in check and release.
-- [ ] T0083 Add a declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer.
-- [ ] T0084 [needs: T0083] Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map.
+- [x] T0083 Add a declarative column-rule transformer builder and public SQL value helpers to the SQL anonymizer.
+- [ ] T0084 Remove the auth and counters schema transformers and the app parameter from the SQL anonymizer, requiring a transformers map.
 - [ ] T0085 [needs: T0084] Require an explicit salt and AES key in the crypto helpers, removing STANDARD_SALT and DEFAULT_AES_KEY_HEX.
 - [ ] T0090 [needs: T0085] Make decrypt_property_value fail clearly when the cryptography package is missing instead of returning the ciphertext.
 - [ ] T0086 [needs: T0084] Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers.
@@ -31,7 +31,7 @@ An overview of all tasks and their planning.
 - [ ] T0078 [needs: T0068] Add --format text|json to git-repository-backup backup and restore, reporting per-repository results.
 - [ ] T0081 [needs: T0068, T0069, T0070, T0074, T0075, T0076, T0077, T0078] Specify the configuration file formats and JSON output documents of all five tools under docs/specs/.
 - [ ] T0080 Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules.
-- [ ] T0103 [protocol: adhoc] [needs: T0083, T0084, T0085, T0090, T0086, T0079, T0082, T0074, T0077, T0068, T0069, T0070, T0075, T0076, T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
+- [ ] T0103 [protocol: adhoc] [needs: T0084, T0085, T0090, T0086, T0079, T0082, T0074, T0077, T0068, T0069, T0070, T0075, T0076, T0078, T0081, T0080] Release all changes with devops release after running its dry run, once every other task is done.
 
 ---
 

@@ -3,7 +3,7 @@ task: T0083
 round: 1
 verdict: approved
 reviewer: "@claude-2"
-reviewed_at: 2026-11-11T00:11:30Z
+reviewed_at: 2026-11-11T00:13:57Z
 reviewed_commit: "878e767"
 base_commit: "15c4987"
 branch: task/T0083-add-a-declarative-column-rule-transformer-builder-and
