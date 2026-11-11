@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v2.0.24-pre
+## v2.0.25-pre
+- Library: Added constructor parameters for the support.java flags, commands, health endpoint, running status, assets, and snapshot env-file names to the devops service managers ([services.py](src/support_python/devops/services.py), [devops-scripts.md](docs/tutorials/devops-scripts.md)).
 - Library: **[breaking]** Made `decrypt_property_value` raise `ImportError` when `cryptography` is missing and `ValueError` when an `aes:` value fails to decrypt, instead of returning the ciphertext ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Removed `STANDARD_SALT` and `DEFAULT_AES_KEY_HEX`, making the salt of `get_standard_password_hash` (keyword-only) and the key of `decrypt_property_value` required and validated ([crypto.py](src/support_python/crypto.py), [migration-v2.md](docs/migration-v2.md)).
 - Library: **[breaking]** Removed the `auth` and `counters` schema transformers and the `app` and `custom_password` parameters from the SQL anonymizer, which now requires a `transformers` map ([sql.py](src/support_python/sql.py), [migration-v2.md](docs/migration-v2.md)).

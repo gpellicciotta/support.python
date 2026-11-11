@@ -19,6 +19,11 @@ Every devops symbol below is importable from `support_python.devops`; the step r
 - `resolve_cloud_sql_proxy_bin` searches `PATH`, `repo_root`, and user or Cloud SDK `bin` directories for `cloud-sql-proxy`.
 - `CloudSqlProxyManager` uses that search, falls back to Docker, and fails cleanly when Docker is missing.
 - `LocalDockerManager`, `LocalMySqlManager`, `LocalServerManager`, `LocalMailManager`, and `LocalVerifier` manage local developer services.
+- Constructor parameters override the support.java conventions; each default keeps the current behavior.
+  - `LocalServerManager`: `environment_file_option`, `config_file_option`, `log_file_option` (`None` omits each), `mail_backend_args`, `memory_db_args`, `start_args`, `static_dir_env_var`.
+  - `LocalMailManager`: `test_mail_args`; it reuses the server manager's file options.
+  - `LocalVerifier`: `health_endpoint`, `running_status`, `default_assets`; local and remote checks share them.
+  - `LocalMySqlManager`: `prod_env_file_name` and `test_env_file_name` templates, with `{{app}}` and `{{db-name}}` or `{{db_name}}`.
 
 ```python
 from support_python import (

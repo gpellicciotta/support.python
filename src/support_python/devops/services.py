@@ -368,6 +368,8 @@ class LocalMySqlManager:
         env_dir: Optional[Union[Path, str]] = None,
         docker_mgr: Optional[LocalDockerManager] = None,
         snapshot_transformers: Optional[Mapping[str, TableTransformer]] = None,
+        prod_env_file_name: str = "{{app}}-proddb-cloudrun.env",
+        test_env_file_name: str = "{{db-name}}-testdb-devserver.env",
     ) -> None:
         """Initialize the local MySQL container manager.
 
@@ -387,6 +389,10 @@ class LocalMySqlManager:
             docker_mgr: Optional :class:`LocalDockerManager` instance.
             snapshot_transformers: Mapping of lowercase table name to :data:`~support_python.sql.TableTransformer`.
                 :meth:`snapshot_and_anonymize` refuses to run without at least one entry.
+            prod_env_file_name: Name template of the production database env file looked up in ``env_dir``.
+                Defaults to ``"{{app}}-proddb-cloudrun.env"``.
+            test_env_file_name: Name template of the test database env file looked up in ``env_dir``.
+                Defaults to ``"{{db-name}}-testdb-devserver.env"``.
         """
         self.logger = logger or CliLogger(origin="devops")
         self.docker_mgr = docker_mgr or LocalDockerManager(logger=self.logger)
@@ -398,6 +404,8 @@ class LocalMySqlManager:
         self.setup_sql_file = Path(setup_sql_file) if setup_sql_file else None
         self.repo_root = Path(repo_root) if repo_root else None
         self.env_dir = Path(env_dir) if env_dir else None
+        self.prod_env_file_name = prod_env_file_name
+        self.test_env_file_name = test_env_file_name
 
         self.env_vars: dict[str, str] = {}
         if self.mysql_env_file and self.mysql_env_file.exists():
@@ -407,6 +415,22 @@ class LocalMySqlManager:
         self.db_user = db_user or self.env_vars.get("MYSQL_USER", "app")
         self.db_password: Optional[str] = db_password or self.env_vars.get("MYSQL_PASSWORD")
         self.db_root_password: Optional[str] = db_root_password or self.env_vars.get("MYSQL_ROOT_PASSWORD")
+
+    def render_env_file_name(self, template: str, app: Optional[str] = None) -> str:
+        """Render an env file name template.
+
+        Args:
+            template: Name template with ``{{app}}``, ``{{db-name}}``, and ``{{db_name}}`` placeholders.
+            app: Application name for ``{{app}}``. Defaults to :attr:`db_name`.
+
+        Returns:
+            The file name with every placeholder replaced.
+        """
+        return (
+            template.replace("{{app}}", app or self.db_name)
+            .replace("{{db-name}}", self.db_name)
+            .replace("{{db_name}}", self.db_name)
+        )
 
     def _require_db_password(self) -> str:
         """Return the database user password, raising :class:`ValueError` when none was supplied."""
@@ -730,7 +754,7 @@ class LocalMySqlManager:
         elif self.is_valid_target(target_lower):
             env_file = Path(testdb_env_file) if testdb_env_file else None
             if not env_file and self.env_dir:
-                candidate = self.env_dir / f"{self.db_name}-testdb-devserver.env"
+                candidate = self.env_dir / self.render_env_file_name(self.test_env_file_name)
                 if candidate.exists():
                     env_file = candidate
 
@@ -858,7 +882,7 @@ class LocalMySqlManager:
 
                 env_file = Path(proddb_env_file) if proddb_env_file else None
                 if not env_file and self.env_dir:
-                    candidate = self.env_dir / f"{app}-proddb-cloudrun.env"
+                    candidate = self.env_dir / self.render_env_file_name(self.prod_env_file_name, app)
                     if candidate.exists():
                         env_file = candidate
 
@@ -973,6 +997,13 @@ class LocalServerManager:
         gradle_task: str = ":server:installDist",
         health_endpoint: str = "/api/status",
         cloud_sql_credentials: Optional[Union[Path, str]] = None,
+        environment_file_option: Optional[str] = "-Denvironment-properties-file",
+        config_file_option: Optional[str] = "--config-file",
+        log_file_option: Optional[str] = "--logging.file-path",
+        mail_backend_args: Sequence[str] = ("--mail.back-end-type=com.pellicciotta.support.mail.DummyBackEnd",),
+        memory_db_args: Sequence[str] = ("--db.jdbc-url=memory",),
+        start_args: Sequence[str] = ("start",),
+        static_dir_env_var: Optional[str] = None,
     ) -> None:
         """Initialize the local server manager.
 
@@ -992,6 +1023,15 @@ class LocalServerManager:
             gradle_task: Gradle task to run when building the distribution JAR. Defaults to ``":server:installDist"``.
             health_endpoint: HTTP health check endpoint path. Defaults to ``"/api/status"``.
             cloud_sql_credentials: Path to Google Application Credentials JSON file.
+            environment_file_option: Option rendered as ``{option}={env_file}``; None omits it.
+                Defaults to ``"-Denvironment-properties-file"``.
+            config_file_option: Option rendered as ``{option}={config_file}``; None omits it. Defaults to ``"--config-file"``.
+            log_file_option: Option rendered as ``{option}={log_file}``; None omits it. Defaults to ``"--logging.file-path"``.
+            mail_backend_args: Arguments that select the mail back end; empty omits them.
+                Defaults to the support.java ``DummyBackEnd`` flag.
+            memory_db_args: Arguments appended when starting with the in-memory database. Defaults to ``("--db.jdbc-url=memory",)``.
+            start_args: Arguments that start the server. Defaults to ``("start",)``.
+            static_dir_env_var: Environment variable that receives ``app_static_dir``. Defaults to ``"{APP_NAME}_STATIC_DIR"``.
         """
         self.logger = logger or CliLogger(origin="devops")
         self.port = port
@@ -1008,6 +1048,13 @@ class LocalServerManager:
         self.gradle_task = gradle_task
         self.health_endpoint = health_endpoint
         self.cloud_sql_credentials = Path(cloud_sql_credentials) if cloud_sql_credentials else None
+        self.environment_file_option = environment_file_option
+        self.config_file_option = config_file_option
+        self.log_file_option = log_file_option
+        self.mail_backend_args = list(mail_backend_args)
+        self.memory_db_args = list(memory_db_args)
+        self.start_args = list(start_args)
+        self.static_dir_env_var = static_dir_env_var or f"{self.app_name.upper()}_STATIC_DIR"
 
     def is_java_available(self) -> bool:
         """Check if the Java runtime executable is available on PATH.
@@ -1172,7 +1219,7 @@ class LocalServerManager:
 
         env = os.environ.copy()
         if self.app_static_dir:
-            env[f"{self.app_name.upper()}_STATIC_DIR"] = str(self.app_static_dir)
+            env[self.static_dir_env_var] = str(self.app_static_dir)
         env["PORT"] = str(self.port)
         env["BASE_URL"] = f"http://localhost:{self.port}"
         if self.cloud_sql_credentials and self.cloud_sql_credentials.exists():
@@ -1180,20 +1227,20 @@ class LocalServerManager:
         env.update(self.extra_env)
 
         cmd: list[str] = ["java"]
-        if self.env_file:
-            cmd.append(f"-Denvironment-properties-file={self.env_file}")
+        if self.env_file and self.environment_file_option:
+            cmd.append(f"{self.environment_file_option}={self.env_file}")
         cmd.extend(self.extra_jvm_args)
 
         if self.server_jar:
             cmd.extend(["-jar", str(self.server_jar)])
-        if self.config_file:
-            cmd.append(f"--config-file={self.config_file}")
-        cmd.append("--mail.back-end-type=com.pellicciotta.support.mail.DummyBackEnd")
-        if self.log_file:
-            cmd.append(f"--logging.file-path={self.log_file}")
+        if self.config_file and self.config_file_option:
+            cmd.append(f"{self.config_file_option}={self.config_file}")
+        cmd.extend(self.mail_backend_args)
+        if self.log_file and self.log_file_option:
+            cmd.append(f"{self.log_file_option}={self.log_file}")
         if memory_db:
-            cmd.append("--db.jdbc-url=memory")
-        cmd.append("start")
+            cmd.extend(self.memory_db_args)
+        cmd.extend(self.start_args)
 
         self.logger.debug(f"Executing: {' '.join(cmd)}")
         if self.pid_file:
@@ -1306,14 +1353,22 @@ class LocalServerManager:
 class LocalMailManager:
     """Manages email template test dispatching through the application server CLI."""
 
-    def __init__(self, logger: Optional[Any] = None, server_manager: Optional[LocalServerManager] = None) -> None:
+    def __init__(
+        self,
+        logger: Optional[Any] = None,
+        server_manager: Optional[LocalServerManager] = None,
+        test_mail_args: Sequence[str] = ("test-mail-formats",),
+    ) -> None:
         """Initialize the local mail manager.
 
         Args:
             logger: Logger instance. Defaults to CliLogger.
-            server_manager: Server manager providing runtime and JAR context.
+            server_manager: Server manager providing runtime, JAR context, and the environment and config file options.
+            test_mail_args: Server arguments that dispatch the sample emails, before the recipient and app name.
+                Defaults to ``("test-mail-formats",)``.
         """
         self.logger = logger or CliLogger(origin="devops")
+        self.test_mail_args = list(test_mail_args)
         self.server_manager = server_manager or LocalServerManager(logger=self.logger)
 
     def test_emails(
@@ -1349,54 +1404,68 @@ class LocalMailManager:
         target_app = app_name or self.server_manager.app_name
         self.logger.info(f"Dispatching test emails for templates ({target_app}) to '{recipient}' using {target_env.name}...")
 
-        cmd = [
-            "java",
-            f"-Denvironment-properties-file={target_env}",
-            "-jar",
-            str(self.server_manager.server_jar),
-        ]
-        if self.server_manager.config_file:
-            cmd.append(f"--config-file={self.server_manager.config_file}")
-        cmd.extend(["test-mail-formats", recipient, target_app])
+        cmd = ["java"]
+        if self.server_manager.environment_file_option:
+            cmd.append(f"{self.server_manager.environment_file_option}={target_env}")
+        cmd.extend(["-jar", str(self.server_manager.server_jar)])
+        if self.server_manager.config_file and self.server_manager.config_file_option:
+            cmd.append(f"{self.server_manager.config_file_option}={self.server_manager.config_file}")
+        cmd.extend([*self.test_mail_args, recipient, target_app])
 
         self.logger.debug(f"Executing: {' '.join(cmd)}")
+        command_name = " ".join(self.test_mail_args)
         try:
             res = subprocess.run(cmd, cwd=str(self.server_manager.repo_root) if self.server_manager.repo_root else None, text=True)
             if res.returncode == 0:
                 self.logger.info(f"All test emails successfully sent to '{recipient}'")
                 return True
             else:
-                self.logger.error(f"test-mail-formats exited with error code {res.returncode}")
+                self.logger.error(f"{command_name} exited with error code {res.returncode}")
                 return False
         except Exception as e:
-            self.logger.error(f"Failed to execute test-mail-formats: {e}")
+            self.logger.error(f"Failed to execute {command_name}: {e}")
             return False
 
 
 class LocalVerifier:
     """Verifies local running server endpoints, webapp static assets, and remote deployments."""
 
-    def __init__(self, logger: Optional[Any] = None, port: int = 8080) -> None:
+    def __init__(
+        self,
+        logger: Optional[Any] = None,
+        port: int = 8080,
+        health_endpoint: str = "/api/status",
+        running_status: str = "running",
+        default_assets: Sequence[str] = ("/css/main.css", "/js/main.mjs"),
+    ) -> None:
         """Initialize the local verifier.
 
         Args:
             logger: Logger instance. Defaults to CliLogger.
             port: Local TCP port where server is listening. Defaults to 8080.
+            health_endpoint: Health check path: the default of :meth:`verify_health_status` and the one
+                :meth:`verify_deployment` polls. Defaults to ``"/api/status"``.
+            running_status: ``status`` value that :meth:`verify_deployment` accepts. Defaults to ``"running"``.
+            default_assets: Asset paths :meth:`verify_static_assets` checks by default.
+                Defaults to ``("/css/main.css", "/js/main.mjs")``.
         """
         self.logger = logger or CliLogger(origin="devops")
         self.port = port
+        self.health_endpoint = health_endpoint
+        self.running_status = running_status
+        self.default_assets = list(default_assets)
         self.base_url = f"http://localhost:{port}"
 
-    def verify_health_status(self, endpoint: str = "/api/status") -> bool:
+    def verify_health_status(self, endpoint: Optional[str] = None) -> bool:
         """Verify that the server returns HTTP 200 and a valid JSON status response.
 
         Args:
-            endpoint: Health check endpoint URI path. Defaults to ``"/api/status"``.
+            endpoint: Health check endpoint URI path. Defaults to :attr:`health_endpoint`.
 
         Returns:
             True if health check returned HTTP 200 with valid JSON body, False otherwise.
         """
-        url = f"{self.base_url}{endpoint}"
+        url = f"{self.base_url}{endpoint or self.health_endpoint}"
         try:
             req = urllib.request.Request(url, headers={"Accept": "application/json"})
             with urllib.request.urlopen(req, timeout=5.0) as resp:
@@ -1441,12 +1510,12 @@ class LocalVerifier:
         """Verify that key static assets are served with HTTP 200.
 
         Args:
-            assets: Sequence of asset URL paths to check. Defaults to ``["/css/main.css", "/js/main.mjs"]``.
+            assets: Sequence of asset URL paths to check. Defaults to :attr:`default_assets`.
 
         Returns:
             True if all specified assets return HTTP 200, False if any asset fails.
         """
-        check_assets = list(assets) if assets else ["/css/main.css", "/js/main.mjs"]
+        check_assets = list(assets) if assets else self.default_assets
         for asset in check_assets:
             url = f"{self.base_url}{asset}"
             try:
@@ -1497,7 +1566,7 @@ class LocalVerifier:
         Returns:
             True if deployment responds with healthy status and matching version, False on failure.
         """
-        status_url = f"{url.rstrip('/')}/api/status"
+        status_url = f"{url.rstrip('/')}{self.health_endpoint}"
         self.logger.info(f"Verifying live deployment at {status_url} (expected version: {expected_version or 'any'})...")
 
         for attempt in range(1, attempts + 1):
@@ -1508,7 +1577,7 @@ class LocalVerifier:
                         data = json.loads(resp.read().decode("utf-8"))
                         status_val = data.get("status")
                         actual_version = data.get("version")
-                        if status_val == "running":
+                        if status_val == self.running_status:
                             if expected_version and actual_version != expected_version:
                                 self.logger.warning(
                                     f"[Attempt {attempt}/{attempts}] Server is running but version is '{actual_version}' (expected '{expected_version}')"
