@@ -1,11 +1,12 @@
 ---
 id: T0069
-owner: ~
+owner: "@claude"
+session: claude-20261111-447020
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0069-move-lint-markdown-settings-onto-the-shared-resolver
+worktree: .plan/work/T0069-move-lint-markdown-settings-onto-the-shared-resolver
+status: active
+started_at: "2026-11-11T01:09:41Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Replace list settings such as `enable`, `disable`, `exclude`, and `plugins` as a
 Add the `config` group through `add_config_actions`, targeting the project file by default.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the configuration guidelines, config.py, and profiles.py before changing the tool.
-- [ ] **[Implement]** Write failing tests for environment variables, user and system files, list replacement, and config actions.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Resolve the profile settings through `SettingsSchema`, keeping `load_profile` behavior for library callers.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document every setting in lint-markdown.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the configuration guidelines, config.py, and profiles.py before changing the tool.
+- [x] **[Implement]** Write failing tests for environment variables, user and system files, list replacement, and config actions.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Resolve the profile settings through `SettingsSchema`, keeping `load_profile` behavior for library callers.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document every setting in lint-markdown.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
