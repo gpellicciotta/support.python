@@ -1,11 +1,12 @@
 ---
 id: T0078
-owner: ~
-needs: [T0068]
-branch: —
-worktree: —
-status: ready
-started_at: —
+owner: "@claude"
+session: claude-20261111-75fdd6
+needs: []
+branch: task/T0078-add-format-text-json-to-git-repository-backup
+worktree: .plan/work/T0078-add-format-text-json-to-git-repository-backup
+status: active
+started_at: "2026-11-11T01:39:30Z"
 ended_at: —
 review: agent
 preview: none
@@ -21,12 +22,12 @@ Add `--format` to `restore` too, reporting the target, source, and checked-out b
 Update the hand-written `BackupHarness` help, which lists `--format` for `list` only.
 
 ## Task Execution Steps
-- [ ] **[Read]**      Read the CLI guidelines and the current `backup` handler of `git-repository-backup`.
-- [ ] **[Implement]** Write failing tests for `git-repository-backup backup --format json`, including `--dry-run` and failure cases.
-- [ ] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
-- [ ] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
-- [ ] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
-- [ ] **[Doc]**       Document the JSON document in git-repository-backup.md and add a CHANGELOG.md entry.
+- [x] **[Read]**      Read the CLI guidelines and the current `backup` handler of `git-repository-backup`.
+- [x] **[Implement]** Write failing tests for `git-repository-backup backup --format json`, including `--dry-run` and failure cases.
+- [x] **[Verify]**    Run the new tests and record their expected failures in validation-proof.md as red-phase proof.
+- [x] **[Implement]** Collect per-item results in the handler and emit them with `CliLogger.emit_json` in `json` mode.
+- [x] **[Verify]**    Run the fast suite and affected slow tests, recording verbatim output in validation-proof.md.
+- [x] **[Doc]**       Document the JSON document in git-repository-backup.md and add a CHANGELOG.md entry.
 - [ ] **[Review]**    Obtain review approval of the finished work before completion.
 
 ## Execution Log
