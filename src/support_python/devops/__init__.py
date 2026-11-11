@@ -6,7 +6,7 @@ email template testing, and endpoint verification in :mod:`support_python.devops
 plus version-file, CHANGELOG.md, release-notes, and GitHub-origin helpers, the typed
 :func:`confirm_typed` prompt, and the dry-runnable :class:`ReleasePipeline` in
 :mod:`support_python.devops.release`. :class:`Project`, :class:`PythonProject`,
-:class:`GradleProject`, and :class:`NodeProject` in :mod:`support_python.devops.projects` adapt a
+:class:`GradleProject`, :class:`NodeProject`, and :class:`DocsProject` in :mod:`support_python.devops.projects` adapt a
 repository's build, and :class:`DevopsCli` in :mod:`support_python.devops.cli` exposes them as the
 standard ``devops`` actions. :class:`DeployStep`, :class:`DeployContext`, and :class:`DeployPipeline` in
 :mod:`support_python.devops.deploy` back its optional ``deploy`` action, and :class:`ServiceActions` in
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from .cli import DevopsCli
 from .deploy import DeployContext, DeployPipeline, DeployStep
-from .projects import GradleProject, NodeProject, Project, PythonProject
+from .projects import DocsProject, GradleProject, NodeProject, Project, PythonProject
 from .release import (
     VERSION_FILES,
     ReleasePipeline,
@@ -86,6 +86,7 @@ __all__ = [
     "PythonProject",
     "GradleProject",
     "NodeProject",
+    "DocsProject",
     "DevopsCli",
     "DeployStep",
     "DeployContext",

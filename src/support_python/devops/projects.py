@@ -4,7 +4,7 @@ A :class:`Project` exposes the standard operations of one repository: lint, form
 check, and the files to attach to a release. Every command runs through an injectable ``runner``, so tests
 can stub it. :class:`PythonProject` runs ruff, pytest, and build through the repository's own ``.venv``;
 :class:`GradleProject` runs Gradle tasks through the repository's own Gradle wrapper; :class:`NodeProject` runs
-npm scripts.
+npm scripts. :class:`DocsProject` runs lint-markdown for documentation-only repositories.
 """
 
 from __future__ import annotations
@@ -137,6 +137,54 @@ class Project(ABC):
         if path.exists():
             self.logger.info(f"Removing {path.relative_to(self.root).as_posix()}")
             shutil.rmtree(path)
+
+
+class DocsProject(Project):
+    """A documentation-only repository checked with lint-markdown from PATH.
+
+    Markdown checks and fixes run offline. Tests, builds, and cleanup are successful no-ops.
+    Manifest-free repositories use CHANGELOG.md through the standard version and release pipeline.
+    """
+
+    def lint(self) -> bool:
+        """Check Markdown without external link requests."""
+        return self._lint_markdown("check")
+
+    def format(self) -> bool:
+        """Fix Markdown formatting without external link requests."""
+        return self._lint_markdown("fix")
+
+    def test(self, selection: Sequence[str] = ()) -> bool:
+        """Skip tests because documentation-only repositories have no test suite."""
+        self.logger.info("No tests configured; skipping.")
+        return True
+
+    def build(self) -> bool:
+        """Skip builds because documentation-only repositories have no outputs."""
+        self.logger.info("Nothing to build; skipping.")
+        return True
+
+    def clean(self) -> bool:
+        """Skip cleanup because documentation-only repositories have no outputs."""
+        return True
+
+    def action_summaries(self) -> dict[str, str]:
+        """Describe Markdown operations and skipped actions in CLI help."""
+        return {
+            "lint": "check Markdown formatting and local links offline",
+            "format": "fix Markdown formatting offline",
+            "test": "skipped: the project has no tests",
+            "build": "skipped: the project has no outputs",
+            "clean": "skipped: the project has no outputs",
+            "check": "check Markdown formatting and local links offline",
+        }
+
+    def _lint_markdown(self, action: str) -> bool:
+        executable = resolve_executable("lint-markdown")
+        if executable is None:
+            self.logger.error("lint-markdown not found on PATH; install support-python first.")
+            return False
+        return self.run_command([executable, action, "--offline"])
 
 
 class PythonProject(Project):
@@ -442,4 +490,4 @@ class NodeProject(Project):
         return self.run_command([npm, *args])
 
 
-__all__ = ["GradleProject", "NodeProject", "Project", "PythonProject", "Runner"]
+__all__ = ["DocsProject", "GradleProject", "NodeProject", "Project", "PythonProject", "Runner"]

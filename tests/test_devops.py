@@ -74,6 +74,7 @@ class DevopsPackageExportsTests(unittest.TestCase):
             "PythonProject",
             "GradleProject",
             "NodeProject",
+            "DocsProject",
             "DevopsCli",
             "DeployStep",
             "DeployContext",

@@ -91,6 +91,24 @@ python scripts/devops.py help [--verbose] | version
 - A missing venv exits 1 with a hint to run `bootstrap-dev-environment.py`; unknown actions exit 2.
 
 ### Scripts
+#### Documentation-only Repositories
+Use the public `DocsProject` adapter for repositories such as support.webapp:
+```python
+from pathlib import Path
+from support_python.devops import DevopsCli, DocsProject
+
+raise SystemExit(DevopsCli(DocsProject(Path(__file__).resolve().parent.parent)).run())
+```
+Install support-python so `lint-markdown` is available on `PATH`.
+`lint` and `check` run `lint-markdown check --offline`; `format` runs `lint-markdown fix --offline`.
+Tests, slow tests, builds, and cleanup succeed without producing artifacts.
+Missing tools or Markdown violations fail the operation.
+With no supported manifest, the top changelog version heading supplies the version.
+The standard release pipeline freezes that heading, tags, pushes, and opens the next development heading.
+It attaches no build artifacts and supports `--skip-checks`, `--skip-github-release`, and `--dry-run`.
+Use `release --dry-run --skip-github-release` to inspect a release without GitHub publication.
+
+### Repository Scripts
 Cross-platform Python scripts under `scripts/`; they are not installed with the package.
 
 | Script                           | Purpose                                                                          |

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from support_python.devops import DevopsCli, GradleProject, NodeProject, PythonProject
+from support_python.devops import DevopsCli, DocsProject, GradleProject, NodeProject, PythonProject
 from support_python.devops.release import read_version
 
 
@@ -16,6 +16,7 @@ from support_python.devops.release import read_version
         (GradleProject, "gradle.properties", "version=1.0.0-pre\n"),
         (PythonProject, "pyproject.toml", '[project]\nversion = "1.0.0-pre"\n'),
         (NodeProject, "package.json", '{"version": "1.0.0-pre", "name": "demo"}\n'),
+        (DocsProject, "CHANGELOG.md", "## v1.0.0-pre\n"),
     ]
 )
 def project(request, tmp_path):
