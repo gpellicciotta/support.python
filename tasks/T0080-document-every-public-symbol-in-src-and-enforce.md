@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 249.4, input: 100, output: 20760, cache_read: 2508248, cache_write: 98930}
+  worker: {turns: 4, duration_s: 295.8, input: 124, output: 22540, cache_read: 3210100, cache_write: 109728}
 work_duration: 137.5
+review_status: pending
+review_round: 1
 ---
 # T0080: Document every public symbol in src/ and enforce public docstrings with ruff pydocstyle rules
 
@@ -56,4 +58,7 @@ Review existing docstrings in the touched modules for accuracy against current b
 
 - [2026-11-11] **[Doc]**
   Added a CHANGELOG.md entry under v2.0.36-pre.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
