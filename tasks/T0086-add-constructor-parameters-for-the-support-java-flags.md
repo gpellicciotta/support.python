@@ -12,8 +12,10 @@ review: agent
 preview: none
 protocol: standard
 usage:
-  worker: {turns: 2, duration_s: 800.6, input: 140, output: 64950, cache_read: 5587034, cache_write: 192594}
+  worker: {turns: 4, duration_s: 844.8, input: 164, output: 66532, cache_read: 6758264, cache_write: 202782}
 work_duration: 412.5
+review_status: pending
+review_round: 1
 ---
 # T0086: Add constructor parameters for the support.java flags, commands, endpoints, and env-file names in the devops service managers
 
@@ -60,4 +62,7 @@ Also cover the mail test command, the verifier's health endpoint, running status
 
 - [2026-11-11] **[Doc]**
   Documented parameters in devops-scripts.md and added a CHANGELOG.md entry.
+
+- [2026-11-11] **[Review]**
+  Round 1 requested (mode: agent).
 
