@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 484.0, input: 168, output: 47286, cache_read: 7468926, cache_write: 224350}
+work_duration: 254.8
 ---
 # T0081: Specify the configuration file formats and JSON output documents of all five tools under docs/specs/
 
@@ -33,4 +36,14 @@ Link the specs from docs/index.md, the tool pages, and the AGENTS.md architectur
 
 - [2026-11-11] **[Doc]**
   Added docs/specs/ with five specs and linked them from the index, tool pages, and AGENTS.md; 1200 tests passed using the main checkout venv.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the --format json code paths and configuration loaders of all five tools.
+
+- [2026-11-11] **[Doc]**
+  Linked the specs from docs/index.md, the five tool pages, and AGENTS.md; added a CHANGELOG.md entry.
 
