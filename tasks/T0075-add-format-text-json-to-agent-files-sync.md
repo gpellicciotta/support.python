@@ -11,6 +11,9 @@ ended_at: —
 review: agent
 preview: none
 protocol: standard
+usage:
+  worker: {turns: 2, duration_s: 348.8, input: 96, output: 25486, cache_read: 3012526, cache_write: 123884}
+work_duration: 187.1
 ---
 # T0075: Add --format text|json to agent-files sync, reporting each tool's planned and applied changes
 
@@ -32,3 +35,26 @@ Reuse the document shape of `check --format json` where the data overlaps.
 ## Execution Log
 - [2026-11-10] **[Doc]**
   Companion task file scaffolded at task creation.
+
+- [2026-11-11] **[Verify]**
+  Completion validation found 1 errors; pending fix turn 1 of 2.
+  - TF020.
+
+- [2026-11-11] **[Read]**
+  Read the CLI guidelines, the sync handler, and the check JSON tests.
+
+- [2026-11-11] **[Implement]**
+  Wrote four failing sync --format json tests covering apply, dry-run, prune, and failure cases.
+
+- [2026-11-11] **[Verify]**
+  Recorded red-phase failures in validation-proof.md: three tests exit 2, text test passes.
+
+- [2026-11-11] **[Implement]**
+  Collected per-tool changes in sync handlers and emitted them through emit_json in json mode.
+
+- [2026-11-11] **[Verify]**
+  Full suite passed with 1190 tests; slow agent-files tests passed; proof recorded.
+
+- [2026-11-11] **[Doc]**
+  Documented the JSON document in agent-files.md and added the CHANGELOG entry.
+
