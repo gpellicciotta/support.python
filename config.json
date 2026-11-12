@@ -10,5 +10,6 @@
   "work-agent-default-models": {
     "agy": "gemini-3.8-flash-high",
     "claude": "claude-sonnet-5-5"
-  }
+  },
+  "work-process-retries": 0
 }
