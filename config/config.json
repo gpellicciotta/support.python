@@ -1,9 +1,14 @@
 {
-  "plan_version": "3.0.268-pre",
-  "work_agents": [
+  "plan-version": "3.0.268-pre",
+  "work-agents": [
     "agy",
+    "codex",
     "claude"
   ],
-  "work_max_usage": "week=50%",
-  "work_size_overrun_factor": 8.0
+  "work-max-usage": "week=65%",
+  "work-size-overrun-factor": 8.0,
+  "work-agent-default-models": {
+    "agy": "gemini-3.8-flash-high",
+    "claude": "claude-sonnet-5-5"
+  }
 }
