@@ -14,7 +14,7 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v3.2.0-pre
+## v3.2.0 [released: 2026-11-12]
 - DevEx: Added a release hook synchronizing component versions in the next development commit, with dry-run previews and failure handling.
 - DevEx: Added `DocsProject` for offline Markdown checks, formatting, and changelog-only releases without build artifacts.
 - DevEx: Added `--skip-github-release` and forwarded release skip flags to project-owned tasks, including Gradle properties.
