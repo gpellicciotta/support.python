@@ -4,7 +4,7 @@ An overview of all tasks and their planning.
 ---
 
 ## Next Milestone
-*(Currently no tasks)*
+- [ ] T0113 Let devops deploy take an optional version and deploy it from a temporary worktree of its tag.
 
 ---
 
