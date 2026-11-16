@@ -117,6 +117,7 @@ class DevopsCli:
                 assume_yes=args.yes,
                 query=query,
                 input_fn=input_fn,
+                version=args.release_version,
             )
             return pipeline.run()
 
@@ -130,7 +131,7 @@ class DevopsCli:
                 "without -pre, a v<version> tag on origin at HEAD, and a successful CI run for HEAD.\n"
                 f"Steps: {names}{'; then the post-deploy verification' if verify is not None else ''}."
             ),
-            usage_suffix="[--dry-run] [--yes] [--skip-ci-check]",
+            usage_suffix="[VERSION] [--dry-run] [--yes] [--skip-ci-check]",
             configure_parser=_configure_deploy,
         )
         example = f"{self.harness.name} deploy --dry-run"
@@ -325,9 +326,15 @@ def _configure_release(parser: argparse.ArgumentParser) -> None:
 
 
 def _configure_deploy(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "release_version",
+        nargs="?",
+        metavar="VERSION",
+        help="release to deploy from a temporary worktree of its tag, e.g. 1.2.0 or v1.2.0",
+    )
     parser.add_argument("--dry-run", action="store_true", help="check the preconditions and log the plan without deploying")
     parser.add_argument("--yes", action="store_true", help="skip the typed confirmation")
-    parser.add_argument("--skip-ci-check", action="store_true", help="skip the CI check for HEAD")
+    parser.add_argument("--skip-ci-check", action="store_true", help="skip the CI check for HEAD or the tag")
 
 
 __all__ = ["DEFAULT_DESCRIPTION", "DevopsCli", "EXIT_CODES"]

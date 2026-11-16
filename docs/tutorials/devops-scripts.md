@@ -208,8 +208,10 @@ A script missing from `package.json` fails with an error naming it.
 ## Deploy action
 `set_deploy(steps, verify=None, require_ci=True, environment="production")` adds a `deploy` action.
 Each `DeployStep` has a `name` and exactly one of `command` (run through the project runner) or `action`.
-An `action` and the `verify` callback receive a `DeployContext` with `project`, `version`, `logger`, and `dry_run`.
-`deploy [--dry-run] [--yes] [--skip-ci-check]` checks these preconditions before running anything:
+An `action` and the `verify` callback receive a `DeployContext` with `project`, `version`, `logger`, `dry_run`, and `root`.
+An `action` and `verify` must read `context.root`, not `context.project.root`: `root` is the folder the deploy runs from.
+Command steps run in `context.root` too.
+`deploy [VERSION] [--dry-run] [--yes] [--skip-ci-check]` checks these preconditions before running anything:
 - The working tree is clean, including untracked files.
 - The version has no `-pre` suffix.
 - Tag `v{{version}}` exists on `origin` and points at HEAD.
@@ -218,6 +220,23 @@ An `action` and the `verify` callback receive a `DeployContext` with `project`, 
 It then asks for the typed confirmation `deploy v{{version}}` unless `--yes` is given.
 It runs the steps in order, stops at the first failure, then runs `verify`; any failure exits 1.
 `--dry-run` checks the preconditions and logs the plan without prompting or running a step.
+
+### Deploying a version
+`deploy VERSION` (with or without a leading `v`) deploys that release from a temporary worktree of its tag.
+The checkout stays untouched, so it works from `main` after a release.
+It checks, in order, before creating anything:
+- Tag `v{{version}}` exists on `origin`; its commit is the deploy source.
+- The version has no `-pre` suffix.
+- With the CI check on, `gh run list` shows a successful run for the tag commit.
+
+It then creates a detached worktree of the tag in a temporary folder outside the repository and fetches the tag commit first.
+The version read from the worktree must match `VERSION`.
+The dirty-tree and tag-at-HEAD checks apply to bare `deploy` only.
+The typed confirmation names the tag and the folder.
+The worktree is removed on success, failure, and rollback.
+A removal failure retries, then logs a warning with the folder path and never changes the exit code.
+`--dry-run` verifies the tag on origin and prints the folder it would use, without creating a worktree.
+Untracked and ignored files are not in the worktree; submodules are initialized when `.gitmodules` exists.
 Without `set_deploy`, `deploy` is neither listed nor accepted:
 
 ```python

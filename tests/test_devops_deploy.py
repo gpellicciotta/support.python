@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import shutil
 import subprocess
 import sys
 import unittest
@@ -9,6 +10,7 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional, Sequence
+from unittest.mock import patch
 
 from support_python.devops import EXIT_COMMAND_NOT_FOUND, DeployContext, DeployStep, DevopsCli, PythonProject
 from support_python.devops.steps import run_step_command
@@ -333,6 +335,178 @@ class DeployIntegrationTests(DeployTestBase):
         self.assertEqual(self.events, ["verify:one,two"])
         self.assertEqual(self.prompts, [])
         self.assertEqual(len(self.gh.queries), 1)
+
+
+class VersionedDeployTests(DeployTestBase):
+    """``deploy VERSION`` deploys the tag from a temporary worktree and leaves the checkout alone."""
+
+    def advance_main(self) -> None:
+        (self.root / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "1.0.1-pre"\n', encoding="utf-8")
+        git(self.root, "commit", "-q", "-am", "Started version 1.0.1-pre.")
+        git(self.root, "push", "-q", "origin", "main")
+
+    def root_recorder(self, roots: list[Path]) -> DeployStep:
+        def action(context: DeployContext) -> bool:
+            roots.append(Path(context.root))
+            self.events.append(Path(context.root, "pyproject.toml").read_text(encoding="utf-8"))
+            return True
+
+        return DeployStep("record", action=action)
+
+    def worktrees(self) -> list[str]:
+        return [line for line in git(self.root, "worktree", "list", "--porcelain").splitlines() if line.startswith("worktree ")]
+
+    def test_deploys_the_tag_from_a_later_commit_and_leaves_the_checkout_untouched(self) -> None:
+        self.advance_main()
+        (self.root / "notes.txt").write_text("draft", encoding="utf-8")
+        head, status = git(self.root, "rev-parse", "HEAD"), git(self.root, "status", "--porcelain")
+        roots: list[Path] = []
+        code, output = self.deploy("--yes", "1.0.0", cli=self.cli([self.root_recorder(roots), self.marker_step("image")]))
+        self.assertEqual(code, 0, output)
+        worktree = roots[0]
+        self.assertNotEqual(worktree, self.root)
+        self.assertIn('version = "1.0.0"', self.events[0])
+        self.assertFalse(worktree.exists())
+        self.assertEqual(len(self.worktrees()), 1)
+        self.assertEqual(git(self.root, "rev-parse", "HEAD"), head)
+        self.assertEqual(git(self.root, "status", "--porcelain"), status)
+        self.assertEqual(git(self.root, "branch", "--show-current"), "main")
+        self.assertFalse((self.root / "markers").exists())
+
+    def test_accepts_a_leading_v(self) -> None:
+        code, output = self.deploy("--yes", "v1.0.0")
+        self.assertEqual(code, 0, output)
+
+    def test_command_steps_run_in_the_worktree(self) -> None:
+        cwds: list[Path] = []
+
+        def runner(argv: Sequence[str], cwd: Path, logger: CliLogger) -> int:
+            cwds.append(Path(cwd))
+            return 0
+
+        cli = DevopsCli(PythonProject(self.root, runner=runner))
+        cli.set_deploy([self.marker_step("image")], None, query=self.gh.query, input_fn=self.input_fn)
+        code, output = self.deploy("--yes", "1.0.0", cli=cli)
+        self.assertEqual(code, 0, output)
+        self.assertEqual(len(cwds), 1)
+        self.assertNotEqual(cwds[0], self.root)
+
+    def test_context_root_is_the_worktree_and_project_root_is_unchanged(self) -> None:
+        code, output = self.deploy("--yes", "1.0.0")
+        self.assertEqual(code, 0, output)
+        context = self.contexts[0]
+        self.assertNotEqual(Path(context.root), self.root)
+        self.assertEqual(Path(context.project.root), self.root)
+        self.assertEqual(context.version, "1.0.0")
+
+    def test_bare_deploy_context_root_is_the_project_root(self) -> None:
+        code, output = self.deploy("--yes")
+        self.assertEqual(code, 0, output)
+        self.assertEqual(Path(self.contexts[0].root), self.root)
+
+    def test_missing_tag_fails_before_any_worktree(self) -> None:
+        code, output = self.deploy("--yes", "9.9.9")
+        self.assertEqual(code, 1, output)
+        self.assertIn("v9.9.9", output)
+        self.assertEqual(self.events, [])
+        self.assertEqual(len(self.worktrees()), 1)
+
+    def test_pre_version_is_refused(self) -> None:
+        git(self.root, "tag", "v1.0.1-pre")
+        git(self.root, "push", "-q", "origin", "v1.0.1-pre")
+        code, output = self.deploy("--yes", "1.0.1-pre")
+        self.assertEqual(code, 1, output)
+        self.assertIn("-pre", output)
+        self.assertEqual(self.events, [])
+
+    def test_version_mismatch_in_the_worktree_fails_and_cleans_up(self) -> None:
+        (self.root / "pyproject.toml").write_text('[project]\nname = "demo"\nversion = "2.0.0"\n', encoding="utf-8")
+        git(self.root, "commit", "-q", "-am", "Changed the version.")
+        git(self.root, "tag", "v1.5.0")
+        git(self.root, "push", "-q", "origin", "v1.5.0")
+        code, output = self.deploy("--yes", "1.5.0")
+        self.assertEqual(code, 1, output)
+        self.assertIn("2.0.0", output)
+        self.assertEqual(self.events, [])
+        self.assertEqual(len(self.worktrees()), 1)
+
+    def test_ci_check_uses_the_tag_commit(self) -> None:
+        tagged = git(self.root, "rev-parse", "HEAD")
+        self.advance_main()
+        code, output = self.deploy("--yes", "1.0.0")
+        self.assertEqual(code, 0, output)
+        self.assertEqual(self.gh.queries[0][4], tagged)
+
+    def test_confirmation_names_the_tag_and_the_folder(self) -> None:
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+            code = self.cli().run(["deploy", "1.0.0"])
+        self.assertEqual(code, 0)
+        self.assertIn("deploy v1.0.0", self.prompts[0])
+        self.assertIn(str(self.contexts[0].root), out.getvalue())
+
+    def test_declined_confirmation_creates_no_worktree(self) -> None:
+        self.answer = "no"
+        code, _ = self.deploy("1.0.0")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.events, [])
+        self.assertEqual(len(self.worktrees()), 1)
+
+    def test_worktree_removed_after_step_failure(self) -> None:
+        roots: list[Path] = []
+        failing = DeployStep("fail", command=[sys.executable, "-c", "raise SystemExit(3)"])
+        code, _ = self.deploy("--yes", "1.0.0", cli=self.cli([self.root_recorder(roots), failing]))
+        self.assertEqual(code, 1)
+        self.assertFalse(roots[0].exists())
+        self.assertEqual(len(self.worktrees()), 1)
+
+    def test_worktree_removed_after_verify_failure(self) -> None:
+        self.verify_result = False
+        code, _ = self.deploy("--yes", "1.0.0")
+        self.assertEqual(code, 1)
+        self.assertFalse(Path(self.contexts[0].root).exists())
+        self.assertEqual(len(self.worktrees()), 1)
+
+    def test_removal_failure_only_warns(self) -> None:
+        def query(argv: Sequence[str], cwd: Path) -> tuple[int, str]:
+            if list(argv[:3]) == ["git", "worktree", "remove"]:
+                return 1, "file locked"
+            return self.gh.query(argv, cwd)
+
+        cli = DevopsCli(PythonProject(self.root, runner=self.gh.runner))
+        cli.set_deploy([self.record("first")], None, query=query, input_fn=self.input_fn)
+        with patch("support_python.devops.deploy.CLEANUP_DELAY", 0.0):
+            code, output = self.deploy("--yes", "1.0.0", cli=cli)
+        self.assertEqual(code, 0, output)
+        self.assertIn(str(self.contexts[0].root), output)
+        self.assertIn("could not remove", output.lower())
+        shutil.rmtree(self.contexts[0].root, ignore_errors=True)
+
+    def test_dry_run_with_a_version_creates_no_worktree(self) -> None:
+        code, output = self.deploy("--dry-run", "1.0.0")
+        self.assertEqual(code, 0, output)
+        self.assertEqual(self.events, [])
+        self.assertEqual(len(self.worktrees()), 1)
+        self.assertIn("v1.0.0", output)
+        self.assertIn("worktree", output.lower())
+
+    def test_dry_run_with_a_missing_tag_fails(self) -> None:
+        code, _ = self.deploy("--dry-run", "9.9.9")
+        self.assertEqual(code, 1)
+
+    def test_dirty_tree_is_ignored_with_a_version_but_not_without(self) -> None:
+        (self.root / "notes.txt").write_text("draft", encoding="utf-8")
+        code, output = self.deploy("--yes", "1.0.0")
+        self.assertEqual(code, 0, output)
+        code, _ = self.deploy("--yes")
+        self.assertEqual(code, 1)
+
+    def test_tag_not_at_head_is_fine_with_a_version_but_not_without(self) -> None:
+        self.advance_main()
+        code, output = self.deploy("--yes", "1.0.0")
+        self.assertEqual(code, 0, output)
+        code, _ = self.deploy("--yes")
+        self.assertEqual(code, 1)
 
 
 if __name__ == "__main__":
