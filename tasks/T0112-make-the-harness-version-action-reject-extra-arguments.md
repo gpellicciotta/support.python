@@ -1,11 +1,11 @@
 ---
 id: T0112
-owner: ~
+owner: "@claude"
 needs: []
-branch: —
-worktree: —
-status: ready
-started_at: —
+branch: task/T0112-make-the-harness-version-action-reject-extra-arguments
+worktree: .plan/work/T0112-make-the-harness-version-action-reject-extra-arguments
+status: active
+started_at: "2026-11-16T09:23:22Z"
 ended_at: —
 review: agent
 preview: none
