@@ -424,17 +424,14 @@ class ToolHarness:
         (``--verbose list``); otherwise the whole command line goes to the fallback action (``--url x``).
         Option arities come from the fallback action's parser, then from the other actions' parsers.
         An option with an optional or variable number of values never takes an action name as its value.
-        Leading options move after the target of ``help`` and ``version``, which ignore them.
+        Leading options move after the target of ``help``; ``version`` drops them, so their values never read as arguments.
         """
         if not self.fallback_action or self.fallback_action not in self._actions:
             return args
         if not args[0].startswith("-") or args[0] in ("-h", "--help", "--version"):
             return args
         names = {*self._actions, "version", "help"}
-        options: dict[str, argparse.Action] = {}
-        for action_name in (self.fallback_action, *self._actions):
-            for flag, option in self._build_parser(action_name)._option_string_actions.items():
-                options.setdefault(flag, option)
+        options = self._known_options()
         i = 0
         while i < len(args) and args[i].startswith("-") and args[i] != "--":
             option = self._lookup_option(options, args[i])
@@ -452,10 +449,51 @@ class ToolHarness:
                     if nargs == "?":
                         break
         if i < len(args) and args[i] in names:
-            if args[i] in ("help", "version"):
+            if args[i] == "version":
+                return [args[i], *args[i + 1 :]]
+            if args[i] == "help":
                 return [args[i], *args[i + 1 :], *args[:i]]
             return [args[i], *args[:i], *args[i + 1 :]]
         return [self.fallback_action, *args]
+
+    def _known_options(self) -> dict[str, argparse.Action]:
+        """Map every option flag of the fallback action, then the other actions, to its parser action."""
+        options: dict[str, argparse.Action] = {}
+        for action_name in (self.fallback_action, *self._actions):
+            if action_name is None:
+                continue
+            for flag, option in self._build_parser(action_name)._option_string_actions.items():
+                options.setdefault(flag, option)
+        return options
+
+    def _positional_arguments(self, args: Sequence[str]) -> list[str]:
+        """Return the tokens of ``args`` that are neither options nor the values of known options."""
+        options = self._known_options()
+        found: list[str] = []
+        i = 0
+        while i < len(args):
+            token = args[i]
+            i += 1
+            if token == "--":
+                found.extend(args[i:])
+                break
+            if not token.startswith("-") or token == "-":
+                found.append(token)
+                continue
+            option = self._lookup_option(options, token)
+            nargs = option.nargs if option is not None else 0
+            if nargs is None:
+                nargs = 1
+            if isinstance(nargs, int):
+                i += nargs
+            elif nargs == argparse.REMAINDER:
+                break
+            else:
+                while i < len(args) and not args[i].startswith("-"):
+                    i += 1
+                    if nargs == "?":
+                        break
+        return found
 
     @staticmethod
     def _lookup_option(options: dict[str, argparse.Action], token: str) -> Optional[argparse.Action]:
@@ -533,6 +571,13 @@ class ToolHarness:
         raw_args = self._reorder_leading_options(raw_args)
         first, rest = raw_args[0], raw_args[1:]
         if first in ("version", "--version"):
+            extras = self._positional_arguments(rest) if first == "version" else []
+            if extras:
+                hint = f"\nDid you mean: {self.name} versions {extras[0]}" if "versions" in self._actions else ""
+                early_logger = self._extract_early_logger(raw_args)
+                early_logger.error(f"Unexpected argument for version: '{extras[0]}'{hint}\nUsage: {self.name} version")
+                early_logger.close()
+                return 2
             print(self.format_version())
             return 0
         if first in ("help", "-h", "--help"):

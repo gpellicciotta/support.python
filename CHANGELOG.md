@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v3.2.1-pre
+## v3.2.2-pre
+- CLI: Made the harness `version` action fail with exit 2 on extra arguments, suggesting `versions` when the tool has it.
 
 ## v3.2.0 [released: 2026-11-12]
 - DevEx: Added a release hook synchronizing component versions in the next development commit, with dry-run previews and failure handling.

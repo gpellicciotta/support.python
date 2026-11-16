@@ -13,6 +13,8 @@ All symbols are re-exported from `support_python`.
   Pass `copyright` to `ToolHarness` to include ` - {copyright}` in banners.
   A `fallback_action` runs when the first argument names no action, as in `tool --url x` or `tool target`.
   Leading options keep a named action: `tool --verbose list` runs `list`.
+  `tool version` takes no arguments: `tool version 1.2.3` exits 2 with the usage line.
+  When the tool registers a `versions` action, the error suggests `tool versions 1.2.3`.
   `ToolHarness.add_format_option` adds `--format text|json`; with `json`, the action's `CliLogger` runs with `json_output` set.
   Its log messages then go to `stderr`, and only `emit`/`emit_json` write to `stdout`.
   `help --verbose` lists each action's positional arguments and options under its description, with metavars such as `PATH`, `{text,json}`, and `[PATH ...]`.

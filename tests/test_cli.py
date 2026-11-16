@@ -236,6 +236,38 @@ class ToolHarnessUnitTests(unittest.TestCase):
         self.assertIn("demo-tool v2.0.0", out.getvalue())
         self.assertIn("Usage:", out.getvalue())
 
+    def test_version_rejects_positional_arguments(self) -> None:
+        import contextlib
+
+        for harness in (self._make_harness(), self._make_harness(fallback_action="run")):
+            out, err = io.StringIO(), io.StringIO()
+            with redirect_stdout(out), contextlib.redirect_stderr(err):
+                self.assertEqual(harness.run(["version", "3.4.0-pre"]), 2)
+            self.assertEqual(out.getvalue(), "")
+            self.assertIn("'3.4.0-pre'", err.getvalue())
+            self.assertIn("Usage: demo-tool version", err.getvalue())
+            self.assertNotIn("demo-tool versions", err.getvalue())
+
+    def test_version_error_suggests_versions_action_when_registered(self) -> None:
+        import contextlib
+
+        harness = self._make_harness()
+        harness.add_action("versions", "show versions", lambda args, logger: 0)
+        err = io.StringIO()
+        with redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            self.assertEqual(harness.run(["version", "3.4.0-pre"]), 2)
+        self.assertIn("demo-tool versions 3.4.0-pre", err.getvalue())
+
+    def test_version_keeps_leading_options_with_values(self) -> None:
+        harness = self._make_harness(fallback_action="run")
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(harness.run(["--log-level", "DEBUG", "version"]), 0)
+            self.assertEqual(harness.run(["--target", "staging", "--verbose", "version"]), 0)
+            self.assertEqual(harness.run(["version", "--verbose"]), 0)
+            self.assertEqual(harness.run(["version", "--target", "staging"]), 0)
+        self.assertEqual(out.getvalue().count("demo-tool v2.0.0"), 4)
+
     def test_leading_options_use_each_actions_arity_and_skip_action_names(self) -> None:
         harness = self._make_harness(fallback_action="run")
         listed: list[object] = []
