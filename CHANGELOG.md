@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v3.3.2-pre
+## v3.3.3-pre
+- Library: Made `get_process_cwd` in [processes.py](src/support_python/processes.py) return `None` when procfs denies a process's working directory instead of running `lsof` for it, so `list_processes(cwd=...)` and `processes list --cwd` finish in milliseconds instead of about a minute on Linux.
 - CLI: Made `lint-markdown` rule `MD019` treat Git-ignored paths as missing files, so code spans naming them no longer demand links ([rules.py](src/support_python/markdown/rules.py)).
 
 ## v3.3.0 [released: 2026-11-16]

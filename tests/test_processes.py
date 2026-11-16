@@ -294,12 +294,27 @@ def test_child_process_lifecycle_integration() -> None:
             child.wait(timeout=5)
 
 
+def test_get_process_cwd_skips_lsof_when_procfs_denies_the_cwd() -> None:
+    # procfs answers for every process, so a denied /proc/<pid>/cwd needs no per-process lsof, which took a minute per listing
+    with (
+        mock.patch.object(processes.sys, "platform", "linux"),
+        mock.patch.object(Path, "exists", return_value=False),
+        mock.patch.object(Path, "is_symlink", return_value=True),
+        mock.patch.object(Path, "is_dir", return_value=True),
+        mock.patch.object(processes.os, "readlink", side_effect=PermissionError(13, "Permission denied")),
+        mock.patch.object(processes.subprocess, "run") as run,
+    ):
+        assert processes.get_process_cwd(1234) is None
+    run.assert_not_called()
+
+
 def test_get_process_cwd_and_open_files_posix_lsof_fallback(tmp_path: Path) -> None:
     assert processes.get_process_cwd(0) is None and processes.get_process_cwd(os.getpid()) == Path.cwd().resolve()
     with (
         mock.patch.object(processes.sys, "platform", "darwin"),
         mock.patch.object(Path, "exists", return_value=False),
         mock.patch.object(Path, "is_symlink", return_value=False),
+        mock.patch.object(Path, "is_dir", return_value=False),
         mock.patch.object(processes.subprocess, "run", return_value=mock.Mock(returncode=0, stdout=f"p1234\nn{tmp_path}\n")),
     ):
         assert processes.get_process_cwd(1234) == tmp_path.resolve()

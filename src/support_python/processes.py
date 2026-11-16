@@ -580,12 +580,16 @@ def get_process_cwd(pid: int) -> Path | None:
                 k32.CloseHandle(handle)
         except Exception:
             return None
-    proc_cwd = Path(f"/proc/{pid}/cwd")
+    proc_dir = Path(f"/proc/{pid}")
+    proc_cwd = proc_dir / "cwd"
     try:
         if proc_cwd.exists() or proc_cwd.is_symlink():
             return Path(os.readlink(proc_cwd)).resolve()
     except OSError:
         pass
+    if proc_dir.is_dir():
+        # procfs answers for every process: lsof cannot read a cwd procfs denies, and one lsof per process takes a minute
+        return None
     try:
         res = subprocess.run(["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"], capture_output=True, text=True, timeout=5)
         for line in res.stdout.splitlines():
