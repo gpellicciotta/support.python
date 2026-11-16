@@ -14,6 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
+## v3.3.1-pre
+
 ## v3.3.0 [released: 2026-11-16]
 - Devops: Let `deploy` take an optional `VERSION` and deploy it from a temporary worktree of its tag, with a new `DeployContext.root`.
 - CLI: Made the harness `version` action fail with exit 2 on extra arguments, suggesting `versions` when the tool has it.
