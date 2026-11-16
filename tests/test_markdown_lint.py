@@ -806,6 +806,29 @@ class TestRuleMD019FileReferencesAsLinks(unittest.TestCase):
             self.assertEqual(md019[0].line_number, 3)
             self.assertIn("Repository file reference", md019[0].message)
 
+    @unittest.skipIf(shutil.which("git") is None, "git is not installed")
+    def test_git_ignored_files_count_as_missing_for_md019(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            proj_root = Path(tmp_dir).resolve()
+            subprocess.run(["git", "init", "-q"], cwd=proj_root, check=True)
+            (proj_root / ".gitignore").write_text(".store/\n", encoding="utf-8")
+            (proj_root / ".store").mkdir()
+            (proj_root / ".store" / "config.json").write_text("{}\n", encoding="utf-8")
+            (proj_root / "src").mkdir()
+            (proj_root / "src" / "app.py").write_text("# app\n", encoding="utf-8")
+            subprocess.run(["git", "add", ".gitignore", "src/app.py"], cwd=proj_root, check=True)
+            ignored = b"# Guide\n\nThe `.store/config.json` file holds settings.\n"
+            issues = self.linter.lint_content(proj_root / "doc.md", ignored)
+            self.assertEqual([i for i in issues if i.rule_id == "MD019"], [])
+            bare = self.linter.lint_content(proj_root / "doc.md", b"# Guide\n\nEdit .store/config.json now.\n")
+            md019 = [i for i in bare if i.rule_id == "MD019"]
+            self.assertEqual(len(md019), 1)
+            self.assertIn("code span", md019[0].message)
+            tracked = self.linter.lint_content(proj_root / "doc.md", b"# Guide\n\nRun `src/app.py` directly.\n")
+            md019 = [i for i in tracked if i.rule_id == "MD019"]
+            self.assertEqual(len(md019), 1)
+            self.assertIn("Repository file reference", md019[0].message)
+
     def test_generic_files_not_flagged(self) -> None:
         content = b"# Guide\n\nCheck `package.json` and `CHANGELOG.md`.\n"
         issues = self.linter.lint_content(Path("doc.md"), content)

@@ -472,6 +472,7 @@ class MarkdownLinter:
         self._url_cache: dict[str, Optional[str]] = {}
         self._file_headings_cache: dict[Path, Set[str]] = {}
         self._project_root_cache: dict[Path, Path] = {}
+        self._git_ignored_cache: dict[Tuple[Path, Path], bool] = {}
 
     def _resolve_project_root(self, file_path: Path) -> Path:
         """Resolve the project root for the given file path."""
@@ -483,6 +484,16 @@ class MarkdownLinter:
         root = find_project_root(file_path)
         self._project_root_cache[parent] = root
         return root
+
+    def is_git_ignored(self, project_root: Path, rel_path: Path) -> bool:
+        """Return whether Git ignores ``rel_path``, relative to ``project_root``, caching each answer per project.
+
+        Returns False outside a Git work tree or when Git is unavailable.
+        """
+        key = (project_root, rel_path)
+        if key not in self._git_ignored_cache:
+            self._git_ignored_cache[key] = rel_path in find_git_ignored([rel_path], project_root)
+        return self._git_ignored_cache[key]
 
     def is_rule_enabled(self, rule_id: str) -> bool:
         """Return whether ``rule_id`` is enabled for this linter."""

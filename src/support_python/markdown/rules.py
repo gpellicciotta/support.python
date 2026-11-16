@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 import re
 from typing import TYPE_CHECKING
@@ -403,12 +404,22 @@ class MD019FileReferencesAsLinks(Rule):
 
     @staticmethod
     def _exists_in_repo(ctx: LintContext, val: str) -> bool:
-        """Return whether ``val`` names an existing file inside the project, from its root or the linted file."""
-        repo_f = (ctx.project_root / val).resolve()
-        local_f = (ctx.actual_file_path.parent / val).resolve()
-        return (repo_f.is_relative_to(ctx.project_root) and repo_f.exists()) or (
-            local_f.is_relative_to(ctx.project_root) and local_f.exists()
-        )
+        """Return whether ``val`` names an existing, not Git-ignored file inside the project, from its root or the linted file.
+
+        Git-ignored paths, such as a ``.plan/`` store worktree, exist only on some machines, so they count as missing.
+        """
+        for base in (ctx.project_root, ctx.actual_file_path.parent):
+            candidate = base / val
+            resolved = candidate.resolve()
+            if not (resolved.is_relative_to(ctx.project_root) and resolved.exists()):
+                continue
+            # Git is asked about the unresolved path, because symlinks may resolve into ignored directories.
+            normalized = Path(os.path.normpath(candidate))
+            if ctx.linter is None or not normalized.is_relative_to(ctx.project_root):
+                return True
+            if not ctx.linter.is_git_ignored(ctx.project_root, normalized.relative_to(ctx.project_root)):
+                return True
+        return False
 
     def check(self, ctx: LintContext) -> list[LintIssue]:
         """Return the MD019 issues found for the current lint context."""

@@ -27,6 +27,7 @@ Supported actions, profile, and rule options:
 - `--rules RULES` overrides active rules with a comma-separated list of `MD0xx` codes.
 - `--exclude GLOB` appends path exclusion globs to the profile and default excludes.
 - `--offline` disables external HTTP link checks (`MD018`).
+- `MD019` demands links only for existing files that Git does not ignore; Git-ignored paths, such as a `.plan/` store worktree, count as missing and stay code spans.
 - `config` lists, gets, sets, deletes, and edits settings; it targets the project file `.lint-markdown.json` in the current directory by default, or the user or system file with `--user` or `--system`; see [Settings Sources](#settings-sources).
 
 ---

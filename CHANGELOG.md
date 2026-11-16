@@ -14,7 +14,8 @@ A summarized overview of all changes, per version of this project.
 
 ---
 
-## v3.3.1-pre
+## v3.3.2-pre
+- CLI: Made `lint-markdown` rule `MD019` treat Git-ignored paths as missing files, so code spans naming them no longer demand links ([rules.py](src/support_python/markdown/rules.py)).
 
 ## v3.3.0 [released: 2026-11-16]
 - Devops: Let `deploy` take an optional `VERSION` and deploy it from a temporary worktree of its tag, with a new `DeployContext.root`.
